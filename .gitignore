@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.next/
+out/
+.wrangler/
+.data/
+.pnpm-store/
+artifacts/
+cache/
+typechain-types/
+coverage/
+dependencies/
+broadcast/
+.env*
+!.env.example
+*.tsbuildinfo
+next-env.d.ts

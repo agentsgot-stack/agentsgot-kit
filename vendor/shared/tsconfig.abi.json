@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "abi",
+    "outDir": "dist/abi",
+    "tsBuildInfoFile": "dist/.abi.tsbuildinfo"
+  },
+  "include": [
+    "abi/**/*.ts"
+  ]
+}

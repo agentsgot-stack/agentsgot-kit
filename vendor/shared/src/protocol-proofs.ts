@@ -1,0 +1,273 @@
+import { z } from "zod";
+import { agtToWei } from "./units.js";
+
+const Hex32Schema = z.string().regex(/^0x[0-9a-fA-F]{64}$/u);
+const AddressSchema = z.string().regex(/^0x[0-9a-fA-F]{40}$/u);
+const SignatureSchema = z.string().regex(/^0x[0-9a-fA-F]{130}$/u);
+const UintStringSchema = z.string().regex(/^(0|[1-9][0-9]*)$/u);
+
+export const CidV1Schema = z.string().regex(/^b[a-z2-7]{10,}$/u);
+
+export const ProtocolProofDomainSchema = z.object({
+  name: z.literal("AgentGrid Protocol"),
+  version: z.literal("1"),
+  chainId: z.number().int().positive(),
+  verifyingContract: AddressSchema,
+});
+
+export const ExecutorDeliverySchema = z.object({
+  taskId: Hex32Schema,
+  cidHash: Hex32Schema,
+});
+
+export const TesterAssignmentSchema = z.object({
+  taskId: Hex32Schema,
+  executor: AddressSchema,
+  testersHash: Hex32Schema,
+  seedCommitment: Hex32Schema,
+  executorTier: z.number().int().min(0).max(3),
+  nonce: UintStringSchema,
+  deadline: UintStringSchema,
+});
+
+export const TestReportProofSchema = z.object({
+  taskId: Hex32Schema,
+  cidHash: Hex32Schema,
+  executor: AddressSchema,
+  conclusionsHash: Hex32Schema,
+  approved: z.boolean(),
+  signature: SignatureSchema.optional(),
+});
+
+export const AssignmentVoucherSchema = z.object({
+  taskId: Hex32Schema,
+  executor: AddressSchema,
+  issuedAt: UintStringSchema,
+  expiresAt: UintStringSchema,
+  nonce: UintStringSchema,
+  signature: SignatureSchema.optional(),
+});
+
+export const PublisherProfileProofSchema = z.object({
+  publisher: AddressSchema,
+  completedTasks: z.number().int().min(0).max(0xffff_ffff),
+  reputation: z.number().int().min(0).max(2),
+  nonce: UintStringSchema,
+  deadline: UintStringSchema,
+  signature: SignatureSchema.optional(),
+});
+
+export const ValidatorStakeRequirementProofSchema = z.object({
+  requiredStakeAgt: UintStringSchema,
+  nonce: UintStringSchema,
+  deadline: UintStringSchema,
+  signature: SignatureSchema.optional(),
+});
+
+export const ArbitrationCaseProofSchema = z.object({
+  caseId: Hex32Schema,
+  taskId: Hex32Schema,
+  criteriaHash: Hex32Schema,
+  evidenceHash: Hex32Schema,
+  nonce: UintStringSchema,
+  deadline: UintStringSchema,
+  signature: SignatureSchema.optional(),
+});
+
+export const CollusionReportProofSchema = z.object({
+  juror: AddressSchema,
+  reporter: AddressSchema,
+  evidenceHash: Hex32Schema,
+  nonce: UintStringSchema,
+  deadline: UintStringSchema,
+  signature: SignatureSchema.optional(),
+});
+
+export const EmissionDayProofSchema = z.object({
+  epoch: UintStringSchema,
+  activeIndependentExecutors30d: z.number().int().min(0).max(10_000_000),
+  expectedEmissionAgt: UintStringSchema,
+  nonce: UintStringSchema,
+  deadline: UintStringSchema,
+  signature: SignatureSchema.optional(),
+});
+
+export const PROTOCOL_PROOF_TYPES = {
+  ExecutorDelivery: [
+    { name: "taskId", type: "bytes32" },
+    { name: "cidHash", type: "bytes32" },
+  ],
+  TesterAssignment: [
+    { name: "taskId", type: "bytes32" },
+    { name: "executor", type: "address" },
+    { name: "testersHash", type: "bytes32" },
+    { name: "seedCommitment", type: "bytes32" },
+    { name: "executorTier", type: "uint8" },
+    { name: "nonce", type: "uint256" },
+    { name: "deadline", type: "uint64" },
+  ],
+  TestReport: [
+    { name: "taskId", type: "bytes32" },
+    { name: "cidHash", type: "bytes32" },
+    { name: "executor", type: "address" },
+    { name: "conclusionsHash", type: "bytes32" },
+    { name: "approved", type: "bool" },
+  ],
+  AssignmentVoucher: [
+    { name: "taskId", type: "bytes32" },
+    { name: "executor", type: "address" },
+    { name: "issuedAt", type: "uint64" },
+    { name: "expiresAt", type: "uint64" },
+    { name: "nonce", type: "uint256" },
+  ],
+  PublisherProfile: [
+    { name: "publisher", type: "address" },
+    { name: "completedTasks", type: "uint64" },
+    { name: "reputation", type: "uint8" },
+    { name: "nonce", type: "uint256" },
+    { name: "deadline", type: "uint64" },
+  ],
+  ValidatorStakeRequirement: [
+    { name: "requiredStakeAgt", type: "uint256" },
+    { name: "nonce", type: "uint256" },
+    { name: "deadline", type: "uint64" },
+  ],
+  ArbitrationCase: [
+    { name: "caseId", type: "bytes32" },
+    { name: "taskId", type: "bytes32" },
+    { name: "criteriaHash", type: "bytes32" },
+    { name: "evidenceHash", type: "bytes32" },
+    { name: "nonce", type: "uint256" },
+    { name: "deadline", type: "uint64" },
+  ],
+  CollusionReport: [
+    { name: "juror", type: "address" },
+    { name: "reporter", type: "address" },
+    { name: "evidenceHash", type: "bytes32" },
+    { name: "nonce", type: "uint256" },
+    { name: "deadline", type: "uint64" },
+  ],
+  EmissionDay: [
+    { name: "epoch", type: "uint64" },
+    { name: "activeIndependentExecutors30d", type: "uint32" },
+    { name: "expectedEmissionAgt", type: "uint256" },
+    { name: "nonce", type: "uint256" },
+    { name: "deadline", type: "uint64" },
+  ],
+  Settlement: [
+    { name: "taskId", type: "bytes32" },
+    { name: "resultsHash", type: "bytes32" },
+    { name: "deductionAgt", type: "uint256" },
+    { name: "nonce", type: "uint256" },
+    { name: "deadline", type: "uint64" },
+  ],
+} as const;
+
+/**
+ * 01-RULES §5.1: median daily validator income (wei) × multiplier, clamped to
+ * validatorStakeAgt.min/dynamicMax (human AGT, converted to wei here). Returns wei.
+ */
+export function computeValidatorStakeRequirementAgt(
+  dailyIncomeWei: readonly bigint[],
+  limits: { minimumAgt: number; dynamicMaximumAgt: number; multiplierBps: number },
+): bigint {
+  const sorted = [...dailyIncomeWei]
+    .filter((value) => value >= 0n)
+    .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+  const median =
+    sorted.length === 0
+      ? 0n
+      : sorted.length % 2 === 1
+        ? (sorted[Math.floor(sorted.length / 2)] ?? 0n)
+        : ((sorted[sorted.length / 2 - 1] ?? 0n) + (sorted[sorted.length / 2] ?? 0n)) / 2n;
+  const computed = (median * BigInt(limits.multiplierBps)) / 10_000n;
+  const minimum = agtToWei(limits.minimumAgt);
+  const maximum = agtToWei(limits.dynamicMaximumAgt);
+  return computed < minimum ? minimum : computed > maximum ? maximum : computed;
+}
+
+export function assertProtocolProofBounds(
+  input:
+    | { kind: "PUBLISHER_PROFILE"; completedTasks: number; reputation: number }
+    | {
+        kind: "VALIDATOR_STAKE_REQUIREMENT";
+        requiredStakeAgt: bigint;
+        minimumAgt: number;
+        maximumAgt: number;
+      }
+    | {
+        kind: "ARBITRATION_CASE";
+        criterionCount: number;
+        excludedCount: number;
+        sourceCount: number;
+        weightBps: readonly number[];
+      }
+    | { kind: "EMISSION_DAY"; activeIndependentExecutors30d: number },
+): void {
+  if (input.kind === "PUBLISHER_PROFILE") {
+    if (
+      !Number.isInteger(input.completedTasks) ||
+      input.completedTasks < 0 ||
+      input.completedTasks > 0xffff_ffff ||
+      !Number.isInteger(input.reputation) ||
+      input.reputation < 0 ||
+      input.reputation > 2
+    )
+      throw new RangeError("PUBLISHER_PROFILE_OUT_OF_BOUNDS");
+    return;
+  }
+  if (input.kind === "VALIDATOR_STAKE_REQUIREMENT") {
+    const minimum = agtToWei(input.minimumAgt);
+    const maximum = agtToWei(input.maximumAgt);
+    if (input.requiredStakeAgt < minimum || input.requiredStakeAgt > maximum)
+      throw new RangeError("VALIDATOR_STAKE_REQUIREMENT_OUT_OF_BOUNDS");
+    return;
+  }
+  if (input.kind === "ARBITRATION_CASE") {
+    const weightTotal = input.weightBps.reduce((sum, value) => sum + value, 0);
+    if (
+      input.criterionCount < 1 ||
+      input.criterionCount > 64 ||
+      input.excludedCount > 256 ||
+      input.sourceCount > 256 ||
+      input.weightBps.length !== input.criterionCount ||
+      weightTotal !== 10_000
+    )
+      throw new RangeError("ARBITRATION_CASE_OUT_OF_BOUNDS");
+    return;
+  }
+  if (
+    !Number.isInteger(input.activeIndependentExecutors30d) ||
+    input.activeIndependentExecutors30d < 0 ||
+    input.activeIndependentExecutors30d > 10_000_000
+  )
+    throw new RangeError("EMISSION_DAY_OUT_OF_BOUNDS");
+}
+
+const BASE32 = "abcdefghijklmnopqrstuvwxyz234567";
+
+export function base32Lower(bytes: Uint8Array): string {
+  let result = "";
+  let buffer = 0;
+  let bits = 0;
+  for (const byte of bytes) {
+    buffer = (buffer << 8) | byte;
+    bits += 8;
+    while (bits >= 5) {
+      bits -= 5;
+      result += BASE32[(buffer >>> bits) & 31];
+    }
+  }
+  if (bits > 0) result += BASE32[(buffer << (5 - bits)) & 31];
+  return result;
+}
+
+/** CIDv1 for a raw block using sha2-256, matching Kubo block/put with format=raw. */
+export async function rawCidV1(content: Uint8Array): Promise<string> {
+  const copy = Uint8Array.from(content);
+  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", copy.buffer));
+  const cid = new Uint8Array(4 + digest.length);
+  cid.set([0x01, 0x55, 0x12, 0x20]);
+  cid.set(digest, 4);
+  return `b${base32Lower(cid)}`;
+}

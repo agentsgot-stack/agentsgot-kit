@@ -1,0 +1,70 @@
+{
+  "name": "@agentgrid/agent-kit",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./dist/index.js",
+    "./mcp": "./dist/mcp/server.js"
+  },
+  "bin": {
+    "agentgrid-mcp": "./dist/mcp/cli.js"
+  },
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "pnpm run build:shared && tsc -p tsconfig.json",
+    "test": "pnpm run build:shared && vitest run",
+    "typecheck": "pnpm run build:shared && tsc -p tsconfig.json --noEmit",
+    "lint": "biome check src test vitest.config.ts",
+    "mcp": "node --env-file-if-exists=.env dist/mcp/cli.js",
+    "build:shared": "tsc -p vendor/shared/tsconfig.json && tsc -p vendor/shared/tsconfig.abi.json",
+    "check:independent": "node scripts/check-independent.mjs"
+  },
+  "dependencies": {
+    "viem": "2.57.5",
+    "zod": "4.1.12"
+  },
+  "packageManager": "pnpm@11.7.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "@biomejs/biome": "2.2.6",
+    "@types/node": "26.6.5",
+    "vitest": "3.2.4",
+    "fast-check": "4.10.2"
+  },
+  "files": [
+    "dist",
+    "vendor/shared",
+    "README.md",
+    "ARCHITECTURE.md",
+    "docs"
+  ],
+  "imports": {
+    "#shared": {
+      "types": "./vendor/shared/dist/index.d.ts",
+      "default": "./vendor/shared/dist/index.js"
+    },
+    "#shared/api": {
+      "types": "./vendor/shared/types/api/index.d.ts"
+    },
+    "#shared/params": {
+      "types": "./vendor/shared/dist/params/index.d.ts",
+      "default": "./vendor/shared/dist/params/index.js"
+    },
+    "#shared/schemas": {
+      "types": "./vendor/shared/dist/schemas/index.d.ts",
+      "default": "./vendor/shared/dist/schemas/index.js"
+    },
+    "#shared/rules": {
+      "types": "./vendor/shared/dist/rules/index.d.ts",
+      "default": "./vendor/shared/dist/rules/index.js"
+    },
+    "#shared/abi": {
+      "types": "./vendor/shared/dist/abi/index.d.ts",
+      "default": "./vendor/shared/dist/abi/index.js"
+    }
+  }
+}
