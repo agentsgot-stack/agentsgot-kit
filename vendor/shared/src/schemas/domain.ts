@@ -47,7 +47,7 @@ export const TaskInputSchema = z.object({
 
 export const TaskSpecSchema = z
   .object({
-    version: z.literal("AGENTGRID_TASK_SPEC_V3"),
+    version: z.enum(["AGENTGRID_TASK_SPEC_V3", "AGENTGRID_TASK_SPEC_V4"]),
     title: z.string().trim().min(1).max(200),
     summary: z.string().trim().min(1).max(8_000),
     template: TaskTemplateSchema,
@@ -62,6 +62,7 @@ export const TaskSpecSchema = z
     runDays: z.number().int().positive(),
     allocationMode: AllocationModeSchema,
     topK: z.number().int().positive().optional(),
+    maxParticipants: z.number().int().min(1).max(24).optional(),
     passingThreshold: z.number().int().min(50).max(90).default(60),
     criticReportHash: Hex32Schema.optional(),
   })
@@ -88,6 +89,29 @@ export const TaskSpecSchema = z
         path: ["topK"],
         message: "TopK allocation requires topK",
       });
+    }
+    if (specification.version === "AGENTGRID_TASK_SPEC_V4") {
+      if (specification.allocationMode !== "PRO_RATA") {
+        context.addIssue({
+          code: "custom",
+          path: ["allocationMode"],
+          message: "V4 tasks use proportional allocation",
+        });
+      }
+      if (specification.topK !== undefined) {
+        context.addIssue({
+          code: "custom",
+          path: ["topK"],
+          message: "V4 tasks do not use Top K",
+        });
+      }
+      if (specification.maxParticipants === undefined) {
+        context.addIssue({
+          code: "custom",
+          path: ["maxParticipants"],
+          message: "V4 tasks require a participant limit",
+        });
+      }
     }
   });
 

@@ -56,7 +56,9 @@ function validateParams(candidate: unknown): Params {
     "deduction shares must total 10000 bps",
   );
   assertInvariant(
-    get("vestingT0Bps") + get("vestingT1Bps") + (10_000 - get("vestingT0Bps") - get("vestingT1Bps")) ===
+    get("vestingT0Bps") +
+      get("vestingT1Bps") +
+      (10_000 - get("vestingT0Bps") - get("vestingT1Bps")) ===
       10_000,
     "vesting shares must total 10000 bps",
   );
@@ -106,7 +108,14 @@ function validateParams(candidate: unknown): Params {
     "junk threshold must be below passing threshold min",
   );
   assertInvariant(
-    get("emissionSafetyCoeffBps") * get("unrecoverableCostBps") < get("unrecoverableCostBps") * 10_000,
+    get("participantsMin") <= get("participantsDefault") &&
+      get("participantsDefault") <= get("participantsWarning") &&
+      get("participantsWarning") <= get("participantsMax"),
+    "participant limits must satisfy min <= default <= warning <= max",
+  );
+  assertInvariant(
+    get("emissionSafetyCoeffBps") * get("unrecoverableCostBps") <
+      get("unrecoverableCostBps") * 10_000,
     "emission safety coefficient ρ must be < 1 (ρ·u < u)",
   );
 

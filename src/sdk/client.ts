@@ -1,3 +1,4 @@
+import { keccak256, toBytes } from "viem";
 import { PROTOCOL_PROOF_TYPES } from "#shared";
 import type {
   CommitTesterDrawSeedResponse,
@@ -20,7 +21,6 @@ import type {
   SignExecutorDeliveryResponse,
   VerifySiweResponse,
 } from "#shared/api";
-import { keccak256, toBytes } from "viem";
 import type { HttpPort, TransactionRequest, WalletPort } from "../ports.js";
 export type TaskSpecV2 = NonNullable<ListTasksResponse["items"][number]["specification"]>;
 export type TestCriterionResult = {
@@ -271,7 +271,7 @@ export class AgentGridClient {
       startTier: confirmed(spec.startTier),
       maxTier: confirmed(spec.maxTier),
       runDays: confirmed(spec.runDays),
-      allocationMode: confirmed(spec.allocationMode),
+      maxParticipants: confirmed(spec.maxParticipants ?? 9),
       passingThreshold: confirmed(spec.passingThreshold),
     };
     const patched = await this.request<{ version: number }>(

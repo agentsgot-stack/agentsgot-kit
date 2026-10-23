@@ -8,11 +8,7 @@ import {
   type TaskSpec,
   TaskSpecSchema,
 } from "./domain.js";
-import {
-  AllocationModeSchema,
-  TaskTemplateSchema,
-  TierSchema,
-} from "./enums.js";
+import { AllocationModeSchema, TaskTemplateSchema, TierSchema } from "./enums.js";
 
 export const DraftFieldSourceSchema = z.enum(["user", "ai", "rule"]);
 export const DraftFieldConfirmationSchema = z.enum(["unconfirmed", "confirmed", "suggested"]);
@@ -48,6 +44,7 @@ export const TaskDraftFieldsSchema = z.object({
   runDays: draftFieldSchema(z.number().int().positive()),
   allocationMode: draftFieldSchema(AllocationModeSchema),
   topK: draftFieldSchema(z.number().int().positive()),
+  maxParticipants: draftFieldSchema(z.number().int().min(1).max(24)),
   passingThreshold: draftFieldSchema(z.number().int().min(50).max(90)),
   minimumTier: draftFieldSchema(TierSchema),
   cost: draftFieldSchema(RuleCostSchema),
@@ -95,7 +92,7 @@ const editableFields = [
   "startTier",
   "maxTier",
   "runDays",
-  "allocationMode",
+  "maxParticipants",
   "passingThreshold",
 ] as const;
 
@@ -105,7 +102,7 @@ export function finalizeDraft(input: TaskDraft): TaskSpec {
     const field = draft.fields[name];
     return field.value === null || field.confirmation !== "confirmed";
   });
-  for (const name of ["minimumTier", "cost"] as const) {
+  for (const name of ["minimumTier", "cost", "allocationMode"] as const) {
     const field = draft.fields[name];
     if (field.value === null || field.source !== "rule") missing.push(name);
   }
@@ -123,7 +120,7 @@ export function finalizeDraft(input: TaskDraft): TaskSpec {
 
   const fields = draft.fields;
   return TaskSpecSchema.parse({
-    version: "AGENTGRID_TASK_SPEC_V3",
+    version: "AGENTGRID_TASK_SPEC_V4",
     title: fields.title.value,
     summary: fields.summary.value,
     template: fields.template.value,
@@ -137,7 +134,7 @@ export function finalizeDraft(input: TaskDraft): TaskSpec {
     maxTier: fields.maxTier.value,
     runDays: fields.runDays.value,
     allocationMode: fields.allocationMode.value,
-    topK: fields.topK.value ?? undefined,
+    maxParticipants: fields.maxParticipants.value,
     passingThreshold: fields.passingThreshold.value,
   });
 }

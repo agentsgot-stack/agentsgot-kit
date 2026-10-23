@@ -301,6 +301,11 @@ export const taskEscrowAbi = [
             "name": "passingThreshold",
             "type": "uint8",
             "internalType": "uint8"
+          },
+          {
+            "name": "maxParticipants",
+            "type": "uint16",
+            "internalType": "uint16"
           }
         ]
       }
@@ -1232,6 +1237,12 @@ export const taskEscrowAbi = [
         "type": "uint8",
         "indexed": false,
         "internalType": "enum ITaskEscrow.AllocationMode"
+      },
+      {
+        "name": "maxParticipants",
+        "type": "uint16",
+        "indexed": false,
+        "internalType": "uint16"
       }
     ],
     "anonymous": false

@@ -28,7 +28,8 @@ export class AgentGridMcpServer {
     this.tools = [
       {
         name: "list_tasks",
-        description: "List matching AgentGrid tasks.",
+        description:
+          "List matching AgentGrid tasks. Requires scope tasks:read. Delegated API keys with this scope may call on behalf of the key owner.",
         inputSchema: schema({
           cursor: { type: "string" },
           limit: { type: "integer" },
@@ -38,7 +39,8 @@ export class AgentGridMcpServer {
       },
       {
         name: "claim_task",
-        description: "Create an off-chain claim lease.",
+        description:
+          "Create an off-chain claim lease. Requires scope tasks:claim. A delegated agent uses the key owner's identity for the claim.",
         inputSchema: schema({ taskId: { type: "string" }, idempotencyKey: { type: "string" } }, [
           "taskId",
           "idempotencyKey",
@@ -47,7 +49,8 @@ export class AgentGridMcpServer {
       },
       {
         name: "submit_work",
-        description: "Upload work and return its CID and delivery signature status.",
+        description:
+          "Upload work and return its CID and delivery signature status. Requires scope work:submit. A delegated agent signs the ExecutorDelivery typed data with its own wallet; the backend records the signer_address.",
         inputSchema: schema(
           {
             claimId: { type: "string" },
@@ -78,7 +81,8 @@ export class AgentGridMcpServer {
       },
       {
         name: "claim_rewards",
-        description: "Return a caller-paid reward claim transaction without sending it.",
+        description:
+          "Return a caller-paid reward claim transaction without sending it. Requires scope rewards:claim.",
         inputSchema: schema({ scheduleIds: { type: "array", items: { type: "string" } } }, [
           "scheduleIds",
         ]),
@@ -86,7 +90,8 @@ export class AgentGridMcpServer {
       },
       {
         name: "publish_task",
-        description: "Build a TaskSpec V2 publish intent.",
+        description:
+          "Build a TaskSpec V2 publish intent. Requires scope tasks:publish.",
         inputSchema: schema(
           { specification: { type: "object" }, idempotencyKey: { type: "string" } },
           ["specification", "idempotencyKey"],
@@ -103,13 +108,14 @@ export class AgentGridMcpServer {
       {
         name: "accept_result",
         description:
-          "Return the publisher's caller-paid acceptance transaction for a posted result without sending it.",
+          "Return the publisher's caller-paid acceptance transaction for a posted result without sending it. Requires scope tasks:publish.",
         inputSchema: schema({ taskId: { type: "string" } }, ["taskId"]),
         run: (input) => this.client.getAcceptResult(String(input.taskId)),
       },
       {
         name: "list_actions",
-        description: "List caller-triggerable protocol transactions.",
+        description:
+          "List caller-triggerable protocol transactions. Requires scope tasks:read.",
         inputSchema: schema({ address: { type: "string" }, subjectId: { type: "string" } }),
         run: (input) =>
           this.client.listActions({

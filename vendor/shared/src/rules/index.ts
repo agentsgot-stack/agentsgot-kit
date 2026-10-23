@@ -78,6 +78,32 @@ export function tierSubmissionLimit(tier: Tier, params: Params): number {
   return tierBaseQuota(tier, params) * parameter(params, "submissionMultiplier");
 }
 
+export interface ParticipantLimits {
+  min: number;
+  default: number;
+  warning: number;
+  max: number;
+}
+
+export function participantLimits(params: Params): ParticipantLimits {
+  return {
+    min: parameter(params, "participantsMin"),
+    default: parameter(params, "participantsDefault"),
+    warning: parameter(params, "participantsWarning"),
+    max: parameter(params, "participantsMax"),
+  };
+}
+
+/** Resolves the publisher's cap independently of task tier. */
+export function resolveParticipantLimit(value: number | null | undefined, params: Params): number {
+  const limits = participantLimits(params);
+  const resolved = value ?? limits.default;
+  if (!Number.isInteger(resolved) || resolved < limits.min || resolved > limits.max) {
+    throw new RangeError(`maxParticipants must be an integer in [${limits.min}, ${limits.max}]`);
+  }
+  return resolved;
+}
+
 export function reviewerCount(tier: Tier, params: Params): number {
   if (tierRank[tier] >= 3) return parameter(params, "reviewerCount.T3");
   return parameter(params, `reviewerCount.${tier}` as keyof Params);
@@ -226,7 +252,7 @@ export function computeSubmissionScore(
   }[],
   passingThreshold: number,
   params: Params,
-): { total: number; passes: boolean; isJunk: boolean } {
+): { total: number; passes: boolean; isJunk: boolean; rewardEligible: boolean } {
   let weighted = 0;
   let allAPass = true;
   for (const cs of criterionScores) {
@@ -235,10 +261,12 @@ export function computeSubmissionScore(
   }
   const total = weighted / BPS;
   const junk = parameter(params, "junkThreshold");
+  const isJunk = total < junk;
   return {
     total,
     passes: allAPass && total >= passingThreshold,
-    isJunk: total < junk,
+    isJunk,
+    rewardEligible: allAPass && !isJunk,
   };
 }
 
@@ -299,11 +327,51 @@ export function allocateExecutorPool(
   let allocated = 0n;
   const results: AllocationResult[] = weights.map((w, i) => {
     const amount =
-      i === weights.length - 1 ? pool - allocated : BigInt(Math.floor(Number(pool) * w.weight));
+      i === weights.length - 1
+        ? pool - allocated
+        : (pool * BigInt(Math.round(w.weight * 1_000_000_000))) / 1_000_000_000n;
     allocated += amount;
     return { submissionIndex: w.submissionIndex, weight: w.weight, amount };
   });
   return results;
+}
+
+/**
+ * V4 executor allocation. Every valid, non-junk result participates and receives a
+ * score-proportional share; the final item absorbs integer division dust.
+ */
+export function allocateProRataExecutorPool(
+  pool: bigint,
+  scores: readonly { submissionIndex: number; score: number; rewardEligible: boolean }[],
+): AllocationResult[] {
+  nonnegative(pool, "pool");
+  const eligible = scores
+    .filter(({ rewardEligible }) => rewardEligible)
+    .sort(
+      (left, right) => right.score - left.score || left.submissionIndex - right.submissionIndex,
+    );
+  if (eligible.length === 0) return [];
+  const scaled = eligible.map((entry) => ({
+    ...entry,
+    units: BigInt(Math.max(1, Math.round(entry.score * 1_000_000))),
+  }));
+  const participantCount = BigInt(scaled.length);
+  if (pool < participantCount) return [];
+  const distributable = pool - participantCount;
+  const totalUnits = scaled.reduce((sum, entry) => sum + entry.units, 0n);
+  let distributed = 0n;
+  return scaled.map((entry, index) => {
+    const proportional =
+      index === scaled.length - 1
+        ? distributable - distributed
+        : (distributable * entry.units) / totalUnits;
+    distributed += proportional;
+    return {
+      submissionIndex: entry.submissionIndex,
+      weight: Number(entry.units) / Number(totalUnits),
+      amount: 1n + proportional,
+    };
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -661,7 +729,7 @@ export function checkDraft(draft: TaskDraft, params: Params): RuleCheckResult[] 
     "startTier",
     "maxTier",
     "runDays",
-    "allocationMode",
+    "maxParticipants",
     "passingThreshold",
   ] as const;
   const missing = required.filter(
@@ -705,7 +773,7 @@ export function checkDraft(draft: TaskDraft, params: Params): RuleCheckResult[] 
     }),
   );
 
-  const ruleFieldsValid = (["minimumTier", "cost"] as const).every(
+  const ruleFieldsValid = (["minimumTier", "cost", "allocationMode"] as const).every(
     (name) => draft.fields[name].source === "rule" && draft.fields[name].value !== null,
   );
   results.push({
@@ -714,7 +782,7 @@ export function checkDraft(draft: TaskDraft, params: Params): RuleCheckResult[] 
     message: ruleFieldsValid
       ? "Derived fields are present and rule-sourced"
       : "Derived fields must be present and rule-sourced",
-    fields: ["minimumTier", "cost"],
+    fields: ["minimumTier", "cost", "allocationMode"],
   });
 
   const weights = criteria?.reduce((sum, criterion) => sum + criterion.weightBps, 0) ?? 0;
@@ -823,20 +891,28 @@ export function checkDraft(draft: TaskDraft, params: Params): RuleCheckResult[] 
       fields: ["cost"],
     });
 
-    if (draft.fields.allocationMode.value === AllocationMode.TopK) {
-      const topKVal = draft.fields.topK.value;
-      const N = tierBaseQuota(maxTierVal, params);
-      const topKOk = topKVal !== null && topKVal >= 1 && topKVal <= N;
-      results.push({
-        id: "topK.range",
-        level: topKOk ? "ok" : "block",
-        message: topKOk
-          ? `TopK = ${topKVal} within [1, ${N}]`
-          : `TopK must be between 1 and base quota ${N}`,
-        fields: ["topK"],
-        params: { maximum: String(N) },
-      });
-    }
+    const limits = participantLimits(params);
+    const participantLimit = draft.fields.maxParticipants.value;
+    const participantLimitOk =
+      participantLimit !== null &&
+      Number.isInteger(participantLimit) &&
+      participantLimit >= limits.min &&
+      participantLimit <= limits.max;
+    results.push({
+      id: "participants.range",
+      level: participantLimitOk ? (participantLimit > limits.warning ? "warn" : "ok") : "block",
+      message: participantLimitOk
+        ? participantLimit > limits.warning
+          ? `Participant cap ${participantLimit} may increase testing cost and latency`
+          : `Participant cap ${participantLimit} is supported`
+        : `Participant cap must be between ${limits.min} and ${limits.max}`,
+      fields: ["maxParticipants"],
+      params: {
+        default: String(limits.default),
+        warning: String(limits.warning),
+        maximum: String(limits.max),
+      },
+    });
   }
 
   return results;

@@ -29,6 +29,11 @@
   "submissionMultiplier": { "min": 2, "max": 5 },
   "tierRangeOffset": { "min": 1, "max": 3 },
 
+  "participantsDefault": { "fixed": true },
+  "participantsMin": { "fixed": true },
+  "participantsWarning": { "fixed": true },
+  "participantsMax": { "fixed": true },
+
   "deductionExecBps": { "min": 5000, "max": 8000 },
   "deductionTestBps": { "min": 1000, "max": 2000 },
   "deductionRevBps": { "min": 500, "max": 1500 },

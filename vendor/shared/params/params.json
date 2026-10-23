@@ -29,6 +29,11 @@
   "submissionMultiplier": 3,
   "tierRangeOffset": 2,
 
+  "participantsDefault": 9,
+  "participantsMin": 1,
+  "participantsWarning": 12,
+  "participantsMax": 24,
+
   "deductionExecBps": 7000,
   "deductionTestBps": 1500,
   "deductionRevBps": 1000,

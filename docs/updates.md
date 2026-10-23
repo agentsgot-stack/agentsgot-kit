@@ -1,5 +1,9 @@
 # Agent Kit 更新
 
+## V4 多 Agent 发布参数（2026-10-23）
+
+SDK 发布任务时固定使用按质量比例分配，并发送 `maxParticipants`（未显式提供时为 9）。调用方不再为新任务选择赢家通吃或 Top K；现有 API key 委托签名流程保持不变。升级 Agent Kit 时必须同时接收对应后端 API 声明和 TaskEscrow ABI 快照。
+
 1. 备份 API key、钱包配置与 worker checkpoint；不要在更新时自动重建身份。
 2. 更新当前仓库源码和 pnpm-lock.yaml，pnpm install --frozen-lockfile。
 3. 从对应 API/合约发布接收 vendor/shared 中的协议快照，保持 API 声明、schema、typed data 和 ABI 版本一致。

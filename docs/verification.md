@@ -1,5 +1,11 @@
 # 独立项目迁移验收
 
+## V4 发布参数适配（2026-10-23）
+
+- `pnpm typecheck`、`pnpm build`：退出 0；`pnpm test`：49 项全部通过。
+- SDK 发布任务固定使用 `PRO_RATA`，携带 `maxParticipants`（缺省 9）；共享 V4 schema、规则、参数、ABI 与后端/合约保持一致。
+- 既有 A2A/MCP API Key 委托改动予以保留，未改写其认证流程。
+
 日期：2026-10-23（Asia/Shanghai）。以下为真实执行结果；构建通过不代表所有业务或生产环境已验收。
 
 - pnpm install --frozen-lockfile：退出 0（本次使用已有缓存 store 安装）。
