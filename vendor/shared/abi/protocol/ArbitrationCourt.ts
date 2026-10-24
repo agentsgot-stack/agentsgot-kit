@@ -307,6 +307,19 @@ export const arbitrationCourtAbi = [
   },
   {
     "type": "function",
+    "name": "maxDisputeValue",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "onFallbackRuling",
     "inputs": [
       {
@@ -505,6 +518,24 @@ export const arbitrationCourtAbi = [
       }
     ],
     "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "resolveStalledCase",
+    "inputs": [
+      {
+        "name": "caseId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "executorWins",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
@@ -784,6 +815,25 @@ export const arbitrationCourtAbi = [
       },
       {
         "name": "appealDeadline",
+        "type": "uint64",
+        "indexed": false,
+        "internalType": "uint64"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "CaseAwaitingPool",
+    "inputs": [
+      {
+        "name": "caseId",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "since",
         "type": "uint64",
         "indexed": false,
         "internalType": "uint64"
@@ -1142,6 +1192,25 @@ export const arbitrationCourtAbi = [
   },
   {
     "type": "event",
+    "name": "StalledCaseResolved",
+    "inputs": [
+      {
+        "name": "caseId",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "executorWins",
+        "type": "bool",
+        "indexed": false,
+        "internalType": "bool"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "Upgraded",
     "inputs": [
       {
@@ -1244,6 +1313,17 @@ export const arbitrationCourtAbi = [
   {
     "type": "error",
     "name": "CaseNotFound",
+    "inputs": [
+      {
+        "name": "caseId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "CaseNotStalled",
     "inputs": [
       {
         "name": "caseId",

@@ -1339,6 +1339,22 @@
   },
   {
     "type": "error",
+    "name": "ArbitrationCapacityInsufficient",
+    "inputs": [
+      {
+        "name": "disputeValue",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "maximum",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "CourtUnavailable",
     "inputs": []
   },

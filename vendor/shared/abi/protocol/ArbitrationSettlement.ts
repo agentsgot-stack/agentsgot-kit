@@ -41,19 +41,63 @@ export const arbitrationSettlementAbi = [
         "name": "protocolProof_",
         "type": "address",
         "internalType": "contract IProtocolProof"
+      },
+      {
+        "name": "platformTreasury_",
+        "type": "address",
+        "internalType": "contract IPlatformTreasury"
       }
     ],
     "stateMutability": "nonpayable"
   },
   {
     "type": "function",
-    "name": "BURN_ADDRESS",
+    "name": "PENALTY_FINAL_MINORITY",
     "inputs": [],
     "outputs": [
       {
         "name": "",
-        "type": "address",
-        "internalType": "address"
+        "type": "uint8",
+        "internalType": "uint8"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "PENALTY_MISSED_COMMIT",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint8",
+        "internalType": "uint8"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "PENALTY_MISSED_REVEAL",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint8",
+        "internalType": "uint8"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "PENALTY_OVERTURNED",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint8",
+        "internalType": "uint8"
       }
     ],
     "stateMutability": "view"
@@ -167,71 +211,6 @@ export const arbitrationSettlementAbi = [
   },
   {
     "type": "function",
-    "name": "executeCase",
-    "inputs": [
-      {
-        "name": "args",
-        "type": "tuple",
-        "internalType": "struct IArbitrationSettlement.ExecutionArgs",
-        "components": [
-          {
-            "name": "caseId",
-            "type": "bytes32",
-            "internalType": "bytes32"
-          },
-          {
-            "name": "currentRoundKey",
-            "type": "bytes32",
-            "internalType": "bytes32"
-          },
-          {
-            "name": "firstRoundKey",
-            "type": "bytes32",
-            "internalType": "bytes32"
-          },
-          {
-            "name": "awardBps",
-            "type": "uint16",
-            "internalType": "uint16"
-          },
-          {
-            "name": "appealed",
-            "type": "bool",
-            "internalType": "bool"
-          },
-          {
-            "name": "overturned",
-            "type": "bool",
-            "internalType": "bool"
-          },
-          {
-            "name": "victim",
-            "type": "address",
-            "internalType": "address"
-          }
-        ]
-      },
-      {
-        "name": "currentPanel",
-        "type": "address[]",
-        "internalType": "address[]"
-      },
-      {
-        "name": "revealed",
-        "type": "bool[]",
-        "internalType": "bool[]"
-      },
-      {
-        "name": "majority",
-        "type": "bool[]",
-        "internalType": "bool[]"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
     "name": "executorDebt",
     "inputs": [
       {
@@ -305,6 +284,19 @@ export const arbitrationSettlementAbi = [
     ],
     "outputs": [],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "platformTreasury",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract IPlatformTreasury"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -491,11 +483,6 @@ export const arbitrationSettlementAbi = [
             "name": "finalRound",
             "type": "bool",
             "internalType": "bool"
-          },
-          {
-            "name": "victim",
-            "type": "address",
-            "internalType": "address"
           }
         ]
       },
@@ -544,89 +531,6 @@ export const arbitrationSettlementAbi = [
       }
     ],
     "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "settleCurrentRound",
-    "inputs": [
-      {
-        "name": "panel",
-        "type": "address[]",
-        "internalType": "address[]"
-      },
-      {
-        "name": "revealed",
-        "type": "bool[]",
-        "internalType": "bool[]"
-      },
-      {
-        "name": "majority",
-        "type": "bool[]",
-        "internalType": "bool[]"
-      },
-      {
-        "name": "roundKey",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      },
-      {
-        "name": "finalRound",
-        "type": "bool",
-        "internalType": "bool"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "settleFirstRound",
-    "inputs": [
-      {
-        "name": "args",
-        "type": "tuple",
-        "internalType": "struct IArbitrationSettlement.FirstRoundArgs",
-        "components": [
-          {
-            "name": "firstRoundKey",
-            "type": "bytes32",
-            "internalType": "bytes32"
-          },
-          {
-            "name": "victim",
-            "type": "address",
-            "internalType": "address"
-          },
-          {
-            "name": "overturned",
-            "type": "bool",
-            "internalType": "bool"
-          }
-        ]
-      },
-      {
-        "name": "firstMajority",
-        "type": "address[]",
-        "internalType": "address[]"
-      },
-      {
-        "name": "finalPanel",
-        "type": "address[]",
-        "internalType": "address[]"
-      },
-      {
-        "name": "revealed",
-        "type": "bool[]",
-        "internalType": "bool[]"
-      },
-      {
-        "name": "majority",
-        "type": "bool[]",
-        "internalType": "bool[]"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
@@ -800,6 +704,80 @@ export const arbitrationSettlementAbi = [
   },
   {
     "type": "event",
+    "name": "JurorPenalized",
+    "inputs": [
+      {
+        "name": "caseId",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "juror",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "reason",
+        "type": "uint8",
+        "indexed": true,
+        "internalType": "uint8"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "OverturnPenaltyDistributed",
+    "inputs": [
+      {
+        "name": "caseId",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "total",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "challengerAmount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "platformAmount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "righteousAmount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "righteousCount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "PanelSharePaid",
     "inputs": [
       {
@@ -915,11 +893,6 @@ export const arbitrationSettlementAbi = [
         "internalType": "bytes32"
       }
     ]
-  },
-  {
-    "type": "error",
-    "name": "LengthMismatch",
-    "inputs": []
   },
   {
     "type": "error",

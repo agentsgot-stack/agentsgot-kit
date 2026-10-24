@@ -44,8 +44,9 @@ export function makeDraft(): TaskDraft {
       startTier: field(Tier.T1),
       maxTier: field(Tier.T1),
       runDays: field(3),
-      allocationMode: field(AllocationMode.WinnerTakesAll),
+      allocationMode: field(AllocationMode.ProRata, "rule"),
       topK: field(null),
+      maxParticipants: field(9),
       passingThreshold: field(60),
       minimumTier: field(Tier.T1, "rule"),
       cost: field(

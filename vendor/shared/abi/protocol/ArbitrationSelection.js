@@ -846,7 +846,7 @@ export const arbitrationSelectionAbi = [
         "internalType": "address"
       },
       {
-        "name": "alignedTestsCheckpoint",
+        "name": "disqualifiedUntil",
         "type": "uint64",
         "indexed": false,
         "internalType": "uint64"

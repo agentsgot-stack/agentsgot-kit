@@ -56,9 +56,7 @@ function validateParams(candidate: unknown): Params {
     "deduction shares must total 10000 bps",
   );
   assertInvariant(
-    get("vestingT0Bps") +
-      get("vestingT1Bps") +
-      (10_000 - get("vestingT0Bps") - get("vestingT1Bps")) ===
+    get("vestingT0Bps") + get("vestingT1Bps") + (10_000 - get("vestingT0Bps") - get("vestingT1Bps")) ===
       10_000,
     "vesting shares must total 10000 bps",
   );
@@ -70,16 +68,23 @@ function validateParams(candidate: unknown): Params {
     "trade tax shares must total 10000 bps",
   );
   assertInvariant(
-    get("caseFeeMajorityShareBps") + get("caseFeeWinnerShareBps") + get("caseFeeBurnShareBps") ===
+    get("caseFeeMajorityShareBps") + get("caseFeeWinnerShareBps") + get("caseFeePlatformShareBps") ===
       10_000,
     "case fee shares must total 10000 bps",
   );
   assertInvariant(
-    get("overturnFinalMajorityShareBps") +
-      get("overturnVictimShareBps") +
-      get("overturnBurnShareBps") ===
-      10_000,
+    get("overturnPlatformShareBps") + get("overturnRighteousShareBps") === 10_000,
     "overturn shares must total 10000 bps",
+  );
+  assertInvariant(
+    get("testerMinStakeAgt") <= get("arbitratorMinStakeAgt") &&
+      get("arbitratorMinStakeAgt") <= get("validatorStakeAgt.voluntaryMax"),
+    "role thresholds must satisfy tester <= arbitrator <= voluntary maximum",
+  );
+  assertInvariant(
+    get("testerWeightCapAgt") >= get("testerMinStakeAgt") &&
+      get("arbitratorWeightCapAgt") >= get("arbitratorMinStakeAgt"),
+    "weight caps must not be below their role thresholds",
   );
   assertInvariant(
     get("collusionReporterRewardBps") + get("collusionArbPoolShareBps") === 10_000,
@@ -114,8 +119,7 @@ function validateParams(candidate: unknown): Params {
     "participant limits must satisfy min <= default <= warning <= max",
   );
   assertInvariant(
-    get("emissionSafetyCoeffBps") * get("unrecoverableCostBps") <
-      get("unrecoverableCostBps") * 10_000,
+    get("emissionSafetyCoeffBps") * get("unrecoverableCostBps") < get("unrecoverableCostBps") * 10_000,
     "emission safety coefficient ρ must be < 1 (ρ·u < u)",
   );
 

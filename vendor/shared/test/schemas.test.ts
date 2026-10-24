@@ -86,7 +86,7 @@ describe("domain schemas", () => {
   });
 
   it("finalizes a fully confirmed draft", () => {
-    expect(finalizeDraft(makeDraft()).version).toBe("AGENTGRID_TASK_SPEC_V3");
+    expect(finalizeDraft(makeDraft()).version).toBe("AGENTGRID_TASK_SPEC_V4");
   });
 
   it("refuses an unconfirmed field", () => {

@@ -113,7 +113,7 @@
 | `computeReserve` | maxTier, runDays, params | `bigint` | F_max × D |
 | `computeDeduction` | lockedTier, billedSeconds, params | `bigint` | F_t × s / 86400 |
 | `computeSegmentedDeduction` | segments[], params | `bigint` | 分段计费 |
-| `splitDeduction` | total, params | `DeductionSplit` | 70/15/10/5 |
+| `splitDeduction` | total, params | `DeductionSplit` | 65/15/10/10，平台为余数 |
 | `computeAssessmentFee` | acceptedIndex, currentTier, lockedTier, params | `bigint` | 5% × F_cur × 2^⌊(k-1)/N⌋ |
 | `computeSubmissionScore` | criterionScores[], threshold, params | score, passes, isJunk | 逐条汇总 |
 | `allocateExecutorPool` | pool, scores[], mode, topK? | AllocationResult[] | 三种分配模式 |
@@ -125,7 +125,12 @@
 | `computeCurrentTier` | startTier, maxTier, publishedAt, now, step | `Tier` | 当前档位 |
 | `computeEarliestSubmitSeconds` | runDays, params | seconds | 最早提交时间 |
 | `checkPublisherStake` | actualStake, reserves, params | required, ok | 发布者质押校验，`required = agtToWei(publisherBaseStakeAgt) + β × reserves` |
-| `computeValidatorStakeRequirement` | median daily income (wei), params | `bigint` | `clamp(3 × median, S_min, S_dynMax)`，wei |
+| `validatorRoleMinimum` | role, params | `bigint` | 测试者 `testerMinStakeAgt`、仲裁者 `arbitratorMinStakeAgt`，wei |
+| `validatorDrawWeight` | stake, role, params | `bigint` | `min(stake, 角色权重上限)`，线性 |
+| `computeTesterMissReportSlash` | reward, stake, params | `bigint` | `min(倍数 × 应得报酬, 上限比例 × 质押)` |
+| `computeDisputeBound` | reserve, params | `bigint` | `reserve × deductionExecBps`，发布拦截用 |
+| `computeMaxDisputeValue` | pool, params | `bigint` | 与 `CourtRules.maxDisputeValue` 一致 |
+| `splitOverturnPenalty` | confiscated, caseFee, finalMajorityCount, params | challenger, platform, righteous | 申诉方 `min(倍数 × R, Z)`，剩余 30/70 |
 | `computeCaseLock` | disputeValue, stake, params | `bigint` | 01-RULES §5.1 |
 | `computeCaseFee` | disputeValue, params | `bigint` | 01-RULES §7.3 |
 | `arbitrationPanel` | eligibleArbitrators, round, params | panelSize, majority | 仲裁面板 |
@@ -271,7 +276,7 @@ struct EIP712Domain {
 | 证明 | 结构体 | 用途 |
 |---|---|---|
 | PublisherProfile | `{ publisher, completedTasks, nonce, deadline }` | 发布任务前由后端签发 |
-| ValidatorStakeRequirement | `ValidatorStakeRequirement(uint256 requiredStakeAgt,uint256 nonce,uint64 deadline)`；`requiredStakeAgt` 为 wei | 验证者质押要求更新 |
+| TesterTimeout | `TesterTimeout(bytes32 taskId,address tester,uint256 nonce,uint64 deadline)` | 测试者错过报告窗口；后端 `POST /tasks/{id}/tester-timeout-proofs` 签发，`TesterAssignment.slashTimedOutTester` 消费 |
 | SubmissionReceipt | `{ taskId, submissionIndex, executor, cidHash, nonce, deadline }` | 提交回执 |
 | ResultProof | `{ taskId, resultRoot, nonce, deadline }` | 结果上链签名 |
 | ReviewFeePermit | `{ taskId, executor, amount, nonce, deadline }` | 评测费 permit 签名 |
@@ -442,6 +447,7 @@ NO_SUBMISSION → CANCELLED (自动退款)
 | 2026-10-21 | v3 全面重写：档位日费制、多执行者竞争、复核阶段、逐条评分、半衰期发行 |
 | 2026-10-22 | 协议改为纯 AGT / wei：删除价格源；`ValidatorStakeRequirement.requiredStakeAgt`（wei）；新增 `taskDailyFeeWei`、`disputeAmounts`、`quoteCaseFee`、`appealBondOf`；发布者要求额去掉完成任务数爬坡 |
 | 2026-10-23 | `ArbitrationSelection` 新增治理白名单 `setArbitratorWhitelist(address[], bool)`、`whitelistedArbitrator`、事件 `ArbitratorWhitelistUpdated`；protocol 新增 `whitelist-arbitrators:{local,testnet,mainnet}` 操作 |
+| 2026-10-24 | 质押罚没规格落地：扣费 65/15/10/10，protocol 内销毁全部改流 `PlatformTreasury`（`ArbitrationPool.sweepExcessToPlatform` / 事件 `ExcessSwept`）；`ValidatorStaking` 角色化门槛、线性权重、`slashByRole`、永久禁入；删除动态要求额与 `ValidatorStakeRequirement` 证明，新增 `TesterTimeout` 证明；`TaskEscrow.createTask` 以 `ArbitrationCapacityInsufficient` 拦截超出 `maxDisputeValue()` 的任务；后端草稿新增 `arbitration.capacity` 检查，`/staking/positions` 删除 `burnTotalAgt` |
 
 测试网已有 ERC20 接入：protocol 自身 testnet/.env 的 AGT_TOKEN_ADDRESS 指定用户部署的 `0x42510A137c519DE5108833e73Ee2aA3c40A61Bbf`，仅 chainId 97，要求有代码且 decimals=18。此模式不读 token.json；protocol.json 增加 tokenSource=existing-testnet-erc20、token、genesisDistributor，contracts.testnetIncentiveFunding 保存独立测试网注资适配器地址。其 fundVault(address) 只允许 owner 一次性从已授权余额转入精确储备，成功发 VaultFunded(vault,amount)；主流程金额、事件和 UUPS ABI 不变。数量来自 shared/params，用户手动领水，脚本不猜测或调用领水接口。未配置该地址时保留原清单交接；主网禁止此模式。
 

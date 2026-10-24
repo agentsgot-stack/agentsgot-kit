@@ -18,26 +18,32 @@ import {
   computeCurrentTier,
   computeDailyEmission,
   computeDeduction,
+  computeDisputeBound,
   computeEarliestSubmitSeconds,
   computeEscalationStep,
+  computeMaxDisputeValue,
   computeMinimumTier,
   computeRejectBond,
   computeReserve,
   computeTaskDailyEmission,
+  computeTesterMissReportSlash,
   computeTierRangeMax,
-  computeValidatorStakeRequired,
   defaultParams,
   formatWeiAsAgt,
   parseAgtToWei,
+  qualifiedValidatorRoles,
   snapshotDailyFees,
   splitCaseFee,
   splitDeduction,
+  splitOverturnPenalty,
   TaskTemplate,
   Tier,
   testerPairDecay,
   tierBaseQuota,
   tierDailyFee,
   tierSubmissionLimit,
+  validatorDrawWeight,
+  validatorRoleMinimum,
   vestingSchedule,
 } from "../src/index.js";
 import { criterionA, makeDraft } from "./fixtures.js";
@@ -117,12 +123,12 @@ describe("reserve and deduction", () => {
     expect(computeDeduction(Tier.T2, 43200n, defaultParams)).toBe(1000n * AGT);
   });
 
-  it("splits deduction 70/15/10/5", () => {
+  it("splits deduction 65/15/10/10", () => {
     const split = splitDeduction(10_000n, defaultParams);
-    expect(split.executor).toBe(7_000n);
+    expect(split.executor).toBe(6_500n);
     expect(split.tester).toBe(1_500n);
     expect(split.reviewer).toBe(1_000n);
-    expect(split.platform).toBe(500n);
+    expect(split.platform).toBe(1_000n);
     expect(split.executor + split.tester + split.reviewer + split.platform).toBe(split.total);
   });
 });
@@ -248,10 +254,32 @@ describe("escalation and timing", () => {
 });
 
 describe("staking", () => {
-  it("clamps validator stake requirement in wei", () => {
-    expect(computeValidatorStakeRequired(0n, defaultParams)).toBe(agtToWei(10));
-    expect(computeValidatorStakeRequired(agtToWei(50), defaultParams)).toBe(agtToWei(150));
-    expect(computeValidatorStakeRequired(agtToWei(100), defaultParams)).toBe(agtToWei(200));
+  it("uses fixed role thresholds", () => {
+    expect(validatorRoleMinimum("TESTER", defaultParams)).toBe(agtToWei(20_000));
+    expect(validatorRoleMinimum("ARBITRATOR", defaultParams)).toBe(agtToWei(1_000_000));
+    expect(qualifiedValidatorRoles(agtToWei(19_999), defaultParams)).toEqual([]);
+    expect(qualifiedValidatorRoles(agtToWei(20_000), defaultParams)).toEqual(["TESTER"]);
+    expect(qualifiedValidatorRoles(agtToWei(1_000_000), defaultParams)).toEqual([
+      "TESTER",
+      "ARBITRATOR",
+    ]);
+  });
+
+  it("caps linear draw weight per role", () => {
+    expect(validatorDrawWeight(agtToWei(150_000), "TESTER", defaultParams)).toBe(agtToWei(150_000));
+    expect(validatorDrawWeight(agtToWei(500_000), "TESTER", defaultParams)).toBe(agtToWei(200_000));
+    expect(validatorDrawWeight(agtToWei(3_000_000), "ARBITRATOR", defaultParams)).toBe(
+      agtToWei(3_000_000),
+    );
+  });
+
+  it("caps the tester missed-report slash by reward multiple and stake share", () => {
+    const multiple = BigInt(defaultParams.testerMissReportSlashMultiple);
+    const byReward = computeTesterMissReportSlash(agtToWei(10), agtToWei(1_000_000), defaultParams);
+    expect(byReward).toBe(agtToWei(10) * multiple);
+    const stake = agtToWei(20_000);
+    const byStake = computeTesterMissReportSlash(agtToWei(1_000_000), stake, defaultParams);
+    expect(byStake).toBe((stake * BigInt(defaultParams.testerSlashStakeCapBps)) / 10_000n);
   });
 
   it("checks publisher stake as base wei plus rounded-up exposure", () => {
@@ -287,8 +315,8 @@ describe("AGT units", () => {
     expect(computeCaseFee(agtToWei(100), defaultParams)).toBe(agtToWei(6));
     expect(computeCaseFee(agtToWei(1_000), defaultParams)).toBe(agtToWei(50));
     expect(computeAppealBond(agtToWei(6), defaultParams)).toBe(agtToWei(12));
-    expect(computeCaseLock(agtToWei(10), agtToWei(100), defaultParams)).toBe(agtToWei(2));
-    expect(computeCaseLock(agtToWei(10), agtToWei(5), defaultParams)).toBe(agtToWei(1));
+    expect(computeCaseLock(agtToWei(10), agtToWei(1_000), defaultParams)).toBe(agtToWei(50));
+    expect(computeCaseLock(agtToWei(10), agtToWei(100), defaultParams)).toBe(agtToWei(10));
   });
 
   it("uses a task's daily fee snapshot over current parameters", () => {
@@ -299,8 +327,8 @@ describe("AGT units", () => {
 
 describe("arbitration", () => {
   it.each([
-    [13, ArbitrationRound.First, false, 0],
-    [14, ArbitrationRound.First, true, 5],
+    [17, ArbitrationRound.First, false, 0],
+    [18, ArbitrationRound.First, true, 5],
     [39, ArbitrationRound.Final, true, 9],
     [40, ArbitrationRound.First, true, 11],
     [40, ArbitrationRound.Final, true, 21],
@@ -311,8 +339,36 @@ describe("arbitration", () => {
     });
   });
 
-  it("splits case fee 70/20/10", () => {
-    expect(splitCaseFee(100n, defaultParams)).toEqual({ majority: 70n, winner: 20n, burn: 10n });
+  it("splits case fee 70/20/10 with the remainder to the platform", () => {
+    expect(splitCaseFee(100n, defaultParams)).toEqual({ majority: 70n, winner: 20n, platform: 10n });
+  });
+
+  it("splits an overturn penalty: challenger capped by Z, rest 30% platform / 70% righteous", () => {
+    const caseFee = agtToWei(6);
+    const perSeat = (caseFee * 7_000n) / 10_000n / 9n;
+    const challenger = perSeat * 10n;
+    const split = splitOverturnPenalty(agtToWei(25), caseFee, 9, defaultParams);
+    expect(split.challenger).toBe(challenger);
+    expect(split.platform).toBe(((agtToWei(25) - challenger) * 3_000n) / 10_000n);
+    expect(split.challenger + split.platform + split.righteous).toBe(agtToWei(25));
+    expect(splitOverturnPenalty(1n, caseFee, 9, defaultParams)).toEqual({
+      challenger: 1n,
+      platform: 0n,
+      righteous: 0n,
+    });
+  });
+
+  it("bounds publishable disputes by arbitration capacity", () => {
+    expect(computeDisputeBound(agtToWei(1_000), defaultParams)).toBe(agtToWei(650));
+    expect(computeMaxDisputeValue({ eligibleArbitrators: 17, fullScale: false }, defaultParams)).toBe(
+      agtToWei(12_000),
+    );
+    expect(computeMaxDisputeValue({ eligibleArbitrators: 18, fullScale: false }, defaultParams)).toBe(
+      agtToWei(1_500_000),
+    );
+    expect(computeMaxDisputeValue({ eligibleArbitrators: 40, fullScale: true }, defaultParams)).toBe(
+      agtToWei(3_300_000),
+    );
   });
 
   it("returns tester pair decay rates", () => {

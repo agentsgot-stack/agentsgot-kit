@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { agtToWei } from "./units.js";
 
 const Hex32Schema = z.string().regex(/^0x[0-9a-fA-F]{64}$/u);
 const AddressSchema = z.string().regex(/^0x[0-9a-fA-F]{40}$/u);
@@ -57,8 +56,9 @@ export const PublisherProfileProofSchema = z.object({
   signature: SignatureSchema.optional(),
 });
 
-export const ValidatorStakeRequirementProofSchema = z.object({
-  requiredStakeAgt: UintStringSchema,
+export const TesterTimeoutProofSchema = z.object({
+  taskId: Hex32Schema,
+  tester: AddressSchema,
   nonce: UintStringSchema,
   deadline: UintStringSchema,
   signature: SignatureSchema.optional(),
@@ -127,8 +127,9 @@ export const PROTOCOL_PROOF_TYPES = {
     { name: "nonce", type: "uint256" },
     { name: "deadline", type: "uint64" },
   ],
-  ValidatorStakeRequirement: [
-    { name: "requiredStakeAgt", type: "uint256" },
+  TesterTimeout: [
+    { name: "taskId", type: "bytes32" },
+    { name: "tester", type: "address" },
     { name: "nonce", type: "uint256" },
     { name: "deadline", type: "uint64" },
   ],
@@ -163,38 +164,10 @@ export const PROTOCOL_PROOF_TYPES = {
   ],
 } as const;
 
-/**
- * 01-RULES §5.1: median daily validator income (wei) × multiplier, clamped to
- * validatorStakeAgt.min/dynamicMax (human AGT, converted to wei here). Returns wei.
- */
-export function computeValidatorStakeRequirementAgt(
-  dailyIncomeWei: readonly bigint[],
-  limits: { minimumAgt: number; dynamicMaximumAgt: number; multiplierBps: number },
-): bigint {
-  const sorted = [...dailyIncomeWei]
-    .filter((value) => value >= 0n)
-    .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
-  const median =
-    sorted.length === 0
-      ? 0n
-      : sorted.length % 2 === 1
-        ? (sorted[Math.floor(sorted.length / 2)] ?? 0n)
-        : ((sorted[sorted.length / 2 - 1] ?? 0n) + (sorted[sorted.length / 2] ?? 0n)) / 2n;
-  const computed = (median * BigInt(limits.multiplierBps)) / 10_000n;
-  const minimum = agtToWei(limits.minimumAgt);
-  const maximum = agtToWei(limits.dynamicMaximumAgt);
-  return computed < minimum ? minimum : computed > maximum ? maximum : computed;
-}
-
 export function assertProtocolProofBounds(
   input:
     | { kind: "PUBLISHER_PROFILE"; completedTasks: number; reputation: number }
-    | {
-        kind: "VALIDATOR_STAKE_REQUIREMENT";
-        requiredStakeAgt: bigint;
-        minimumAgt: number;
-        maximumAgt: number;
-      }
+
     | {
         kind: "ARBITRATION_CASE";
         criterionCount: number;
@@ -216,13 +189,7 @@ export function assertProtocolProofBounds(
       throw new RangeError("PUBLISHER_PROFILE_OUT_OF_BOUNDS");
     return;
   }
-  if (input.kind === "VALIDATOR_STAKE_REQUIREMENT") {
-    const minimum = agtToWei(input.minimumAgt);
-    const maximum = agtToWei(input.maximumAgt);
-    if (input.requiredStakeAgt < minimum || input.requiredStakeAgt > maximum)
-      throw new RangeError("VALIDATOR_STAKE_REQUIREMENT_OUT_OF_BOUNDS");
-    return;
-  }
+
   if (input.kind === "ARBITRATION_CASE") {
     const weightTotal = input.weightBps.reduce((sum, value) => sum + value, 0);
     if (

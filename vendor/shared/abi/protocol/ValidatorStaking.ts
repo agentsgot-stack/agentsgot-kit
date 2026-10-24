@@ -22,19 +22,6 @@ export const validatorStakingAbi = [
   },
   {
     "type": "function",
-    "name": "BURN_ADDRESS",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "COURT_ROLE",
     "inputs": [],
     "outputs": [
@@ -62,6 +49,19 @@ export const validatorStakingAbi = [
   {
     "type": "function",
     "name": "GOVERNANCE_ROLE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "TESTER_ROLE",
     "inputs": [],
     "outputs": [
       {
@@ -113,6 +113,25 @@ export const validatorStakingAbi = [
         "name": "",
         "type": "uint256",
         "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "banned",
+    "inputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
       }
     ],
     "stateMutability": "view"
@@ -296,6 +315,49 @@ export const validatorStakingAbi = [
   },
   {
     "type": "function",
+    "name": "isBanned",
+    "inputs": [
+      {
+        "name": "validator",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "isCaseActive",
+    "inputs": [
+      {
+        "name": "validator",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "caseId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "isEligible",
     "inputs": [
       {
@@ -376,6 +438,49 @@ export const validatorStakingAbi = [
         "name": "validator",
         "type": "address",
         "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "meetsMinimum",
+    "inputs": [
+      {
+        "name": "validator",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "role",
+        "type": "uint8",
+        "internalType": "enum IValidatorStaking.Role"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "minimumStake",
+    "inputs": [
+      {
+        "name": "role",
+        "type": "uint8",
+        "internalType": "enum IValidatorStaking.Role"
       }
     ],
     "outputs": [
@@ -641,6 +746,45 @@ export const validatorStakingAbi = [
   },
   {
     "type": "function",
+    "name": "slashByRole",
+    "inputs": [
+      {
+        "name": "validator",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "role",
+        "type": "uint8",
+        "internalType": "enum IValidatorStaking.Role"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "recipients",
+        "type": "address[]",
+        "internalType": "address[]"
+      },
+      {
+        "name": "sharesBps",
+        "type": "uint16[]",
+        "internalType": "uint16[]"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "slashed",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "sqrtWeight",
     "inputs": [
       {
@@ -764,28 +908,28 @@ export const validatorStakingAbi = [
     "name": "updateRequiredStake",
     "inputs": [
       {
-        "name": "newRequiredAgt",
+        "name": "",
         "type": "uint256",
         "internalType": "uint256"
       },
       {
-        "name": "nonce",
+        "name": "",
         "type": "uint256",
         "internalType": "uint256"
       },
       {
-        "name": "deadline",
+        "name": "",
         "type": "uint64",
         "internalType": "uint64"
       },
       {
-        "name": "signature",
+        "name": "",
         "type": "bytes",
         "internalType": "bytes"
       }
     ],
     "outputs": [],
-    "stateMutability": "nonpayable"
+    "stateMutability": "pure"
   },
   {
     "type": "function",
@@ -804,6 +948,30 @@ export const validatorStakingAbi = [
     ],
     "outputs": [],
     "stateMutability": "payable"
+  },
+  {
+    "type": "function",
+    "name": "weightOf",
+    "inputs": [
+      {
+        "name": "validator",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "cap",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "event",
@@ -908,31 +1076,6 @@ export const validatorStakingAbi = [
   },
   {
     "type": "event",
-    "name": "RequiredStakeUpdated",
-    "inputs": [
-      {
-        "name": "previous",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      },
-      {
-        "name": "current",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      },
-      {
-        "name": "updatedAt",
-        "type": "uint64",
-        "indexed": false,
-        "internalType": "uint64"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
     "name": "RoleAdminChanged",
     "inputs": [
       {
@@ -1002,6 +1145,31 @@ export const validatorStakingAbi = [
         "type": "address",
         "indexed": true,
         "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "RoleSlashed",
+    "inputs": [
+      {
+        "name": "validator",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "role",
+        "type": "uint8",
+        "indexed": true,
+        "internalType": "enum IValidatorStaking.Role"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
       }
     ],
     "anonymous": false
@@ -1081,6 +1249,19 @@ export const validatorStakingAbi = [
     "inputs": [
       {
         "name": "implementation",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "ValidatorBanned",
+    "inputs": [
+      {
+        "name": "validator",
         "type": "address",
         "indexed": true,
         "internalType": "address"
@@ -1170,38 +1351,6 @@ export const validatorStakingAbi = [
         "name": "account",
         "type": "address",
         "internalType": "address"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "AdjustmentExceeded",
-    "inputs": [
-      {
-        "name": "previous",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "next",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "maximumDelta",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "AdjustmentTooSoon",
-    "inputs": [
-      {
-        "name": "nextAllowedAt",
-        "type": "uint256",
-        "internalType": "uint256"
       }
     ]
   },
@@ -1371,29 +1520,24 @@ export const validatorStakingAbi = [
   },
   {
     "type": "error",
+    "name": "PermanentlyBanned",
+    "inputs": [
+      {
+        "name": "validator",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "ReentrancyGuardReentrantCall",
     "inputs": []
   },
   {
     "type": "error",
-    "name": "RequirementOutOfBounds",
-    "inputs": [
-      {
-        "name": "supplied",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "minimum",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "maximum",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ]
+    "name": "RequirementDeprecated",
+    "inputs": []
   },
   {
     "type": "error",

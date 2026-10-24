@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   assertProtocolProofBounds,
   CidV1Schema,
-  computeValidatorStakeRequirementAgt,
   PROTOCOL_PROOF_TYPES,
   rawCidV1,
   TesterAssignmentSchema,
@@ -28,7 +27,7 @@ describe("protocol proof primitives", () => {
       "TestReport",
       "AssignmentVoucher",
       "PublisherProfile",
-      "ValidatorStakeRequirement",
+      "TesterTimeout",
       "ArbitrationCase",
       "CollusionReport",
       "EmissionDay",
@@ -36,16 +35,13 @@ describe("protocol proof primitives", () => {
     ]);
   });
 
-  it("clamps the validator requirement before signing", () => {
-    const limits = { minimumAgt: 10, dynamicMaximumAgt: 200, multiplierBps: 30_000 };
-    expect(computeValidatorStakeRequirementAgt([], limits)).toBe(10n * 10n ** 18n);
-    expect(computeValidatorStakeRequirementAgt([50n * 10n ** 18n], limits)).toBe(150n * 10n ** 18n);
-    expect(computeValidatorStakeRequirementAgt([1_000n * 10n ** 18n], limits)).toBe(
-      200n * 10n ** 18n,
-    );
-    expect(computeValidatorStakeRequirementAgt([2n * 10n ** 17n * 30n], limits)).toBe(
-      18n * 10n ** 18n,
-    );
+  it("matches the TesterTimeout typehash field order", () => {
+    expect(PROTOCOL_PROOF_TYPES.TesterTimeout.map(({ name, type }) => `${type} ${name}`)).toEqual([
+      "bytes32 taskId",
+      "address tester",
+      "uint256 nonce",
+      "uint64 deadline",
+    ]);
   });
 
   it("rejects protocol facts outside contract hard bounds", () => {

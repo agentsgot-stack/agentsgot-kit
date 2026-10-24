@@ -347,9 +347,7 @@ export function allocateProRataExecutorPool(
   nonnegative(pool, "pool");
   const eligible = scores
     .filter(({ rewardEligible }) => rewardEligible)
-    .sort(
-      (left, right) => right.score - left.score || left.submissionIndex - right.submissionIndex,
-    );
+    .sort((left, right) => right.score - left.score || left.submissionIndex - right.submissionIndex);
   if (eligible.length === 0) return [];
   const scaled = eligible.map((entry) => ({
     ...entry,
@@ -598,16 +596,73 @@ export function checkPublisherStake(
 }
 
 // ---------------------------------------------------------------------------
-// Validator stake (§5.1)
+// Validator stake (03-STAKING-PENALTY-SPEC §3–§4)
 // ---------------------------------------------------------------------------
 
-/** Median daily income in wei → requirement in wei, clamped to validatorStakeAgt.min/dynamicMax. */
-export function computeValidatorStakeRequired(medianDailyIncome: bigint, params: Params): bigint {
-  nonnegative(medianDailyIncome, "medianDailyIncome");
-  const multiplied = bpsDown(medianDailyIncome, parameter(params, "validatorIncomeMultiplierBps"));
-  const minimum = agtToWei(parameter(params, "validatorStakeAgt.min"));
-  const maximum = agtToWei(parameter(params, "validatorStakeAgt.dynamicMax"));
-  return multiplied < minimum ? minimum : multiplied > maximum ? maximum : multiplied;
+export type ValidatorRole = "TESTER" | "ARBITRATOR";
+
+/** Fixed role threshold in wei; matches ValidatorStaking.minimumStake(role). */
+export function validatorRoleMinimum(role: ValidatorRole, params: Params): bigint {
+  return agtToWei(
+    parameter(params, role === "TESTER" ? "testerMinStakeAgt" : "arbitratorMinStakeAgt"),
+  );
+}
+
+/** Roles the stake currently qualifies for; matches ValidatorStaking.meetsMinimum (ignoring exit/ban). */
+export function qualifiedValidatorRoles(stake: bigint, params: Params): ValidatorRole[] {
+  nonnegative(stake, "stake");
+  if (stake === 0n) return [];
+  const roles: ValidatorRole[] = [];
+  if (stake >= validatorRoleMinimum("TESTER", params)) roles.push("TESTER");
+  if (stake >= validatorRoleMinimum("ARBITRATOR", params)) roles.push("ARBITRATOR");
+  return roles;
+}
+
+/** Linear draw weight before response/activity factors: min(stake, role cap). */
+export function validatorDrawWeight(stake: bigint, role: ValidatorRole, params: Params): bigint {
+  nonnegative(stake, "stake");
+  const cap = agtToWei(
+    parameter(params, role === "TESTER" ? "testerWeightCapAgt" : "arbitratorWeightCapAgt"),
+  );
+  return stake < cap ? stake : cap;
+}
+
+/** §7.6 missed report: min(multiple × reward, stakeCapBps × stake), all wei. */
+export function computeTesterMissReportSlash(
+  testerReward: bigint,
+  testerStake: bigint,
+  params: Params,
+): bigint {
+  nonnegative(testerReward, "testerReward");
+  nonnegative(testerStake, "testerStake");
+  const byReward = testerReward * BigInt(parameter(params, "testerMissReportSlashMultiple"));
+  const byStake = bpsDown(testerStake, parameter(params, "testerSlashStakeCapBps"));
+  return byReward < byStake ? byReward : byStake;
+}
+
+// ---------------------------------------------------------------------------
+// Arbitration capacity (03-STAKING-PENALTY-SPEC §5)
+// ---------------------------------------------------------------------------
+
+/** Largest dispute a task can produce: the executor pool share of its reserve (wei). */
+export function computeDisputeBound(reserve: bigint, params: Params): bigint {
+  nonnegative(reserve, "reserve");
+  return bpsDown(reserve, parameter(params, "deductionExecBps"));
+}
+
+/** Matches CourtRules.maxDisputeValue: fallback ceiling below the pool minimum, else threshold × mode multiplier. */
+export function computeMaxDisputeValue(
+  pool: { eligibleArbitrators: number; fullScale: boolean },
+  params: Params,
+): bigint {
+  if (pool.eligibleArbitrators < parameter(params, "arbMinimumPoolSize")) {
+    return agtToWei(parameter(params, "arbFallbackMaxDisputeValueAgt"));
+  }
+  const multiplier = parameter(
+    params,
+    pool.fullScale ? "arbExposureMultiplierBps.Full" : "arbExposureMultiplierBps.Degraded",
+  );
+  return bpsDown(validatorRoleMinimum("ARBITRATOR", params), multiplier);
 }
 
 // ---------------------------------------------------------------------------
@@ -681,14 +736,39 @@ export function computeCaseLock(
   return desired < capped ? desired : capped;
 }
 
+/** The remainder after majority and winner shares goes to the platform treasury (nothing is burned). */
 export function splitCaseFee(
   caseFee: bigint,
   params: Params,
-): { majority: bigint; winner: bigint; burn: bigint } {
+): { majority: bigint; winner: bigint; platform: bigint } {
   nonnegative(caseFee, "caseFee");
   const majority = bpsDown(caseFee, parameter(params, "caseFeeMajorityShareBps"));
   const winner = bpsDown(caseFee, parameter(params, "caseFeeWinnerShareBps"));
-  return { majority, winner, burn: caseFee - majority - winner };
+  return { majority, winner, platform: caseFee - majority - winner };
+}
+
+/**
+ * §7.3 overturn: the first-round majority's confiscated locks `Z` pay the challenger
+ * min(challengerRewardMultiple × R, Z) with R = caseFee × majority share ÷ final majority count;
+ * the rest splits platform / righteous jurors. Matches ArbitrationSettlement._slashOverturned.
+ */
+export function splitOverturnPenalty(
+  confiscated: bigint,
+  caseFee: bigint,
+  finalMajorityCount: number,
+  params: Params,
+): { challenger: bigint; platform: bigint; righteous: bigint } {
+  nonnegative(confiscated, "confiscated");
+  nonnegative(caseFee, "caseFee");
+  if (!Number.isInteger(finalMajorityCount) || finalMajorityCount < 1)
+    throw new RangeError("finalMajorityCount must be positive");
+  const perSeat =
+    bpsDown(caseFee, parameter(params, "caseFeeMajorityShareBps")) / BigInt(finalMajorityCount);
+  const multiple = perSeat * BigInt(parameter(params, "challengerRewardMultiple"));
+  const challenger = multiple < confiscated ? multiple : confiscated;
+  const rest = confiscated - challenger;
+  const platform = bpsDown(rest, parameter(params, "overturnPlatformShareBps"));
+  return { challenger, platform, righteous: rest - platform };
 }
 
 export function testerPairDecay(encounterCount: number, params: Params): number {
@@ -900,7 +980,11 @@ export function checkDraft(draft: TaskDraft, params: Params): RuleCheckResult[] 
       participantLimit <= limits.max;
     results.push({
       id: "participants.range",
-      level: participantLimitOk ? (participantLimit > limits.warning ? "warn" : "ok") : "block",
+      level: participantLimitOk
+        ? participantLimit > limits.warning
+          ? "warn"
+          : "ok"
+        : "block",
       message: participantLimitOk
         ? participantLimit > limits.warning
           ? `Participant cap ${participantLimit} may increase testing cost and latency`

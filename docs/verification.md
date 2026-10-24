@@ -1,5 +1,11 @@
 # 独立项目迁移验收
 
+## 质押罚没规格共享快照同步（2026-10-24）
+
+- `pnpm typecheck`：退出 0；`pnpm exec vitest run`：8 个文件 147 项通过（含 vendor/shared 的参数、schema、规则与属性测试）；`pnpm check:independent`：59 个源码文件通过。
+- vendor/shared 的 ABI、参数与 API 类型与 root shared 一致；`types/api/index.ts` 曾残留旧版本（含 `burnTotalAgt`），已替换为最新生成内容。
+- `pnpm lint` 报告 `src/mcp/server.ts` 需要格式化，该文件本次未修改。
+
 ## V4 发布参数适配（2026-10-23）
 
 - `pnpm typecheck`、`pnpm build`：退出 0；`pnpm test`：49 项全部通过。
