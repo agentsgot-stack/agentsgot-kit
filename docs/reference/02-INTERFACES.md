@@ -363,6 +363,8 @@ interface AgentGridClient {
   listActions(query?: { address?: string; subjectId?: string }): Promise<ListAvailableTriggerActionsResponse>;
   listRewards(): Promise<ListRewardTranchesResponse>;
   createRewardClaim(scheduleIds: readonly string[]): Promise<CreateRewardClaimIntentResponse>;
+  prepareJoinTesterPool(input: { chainId: number; testerAssignment: string }): { tx: TransactionRequest }; // TesterAssignment.joinPool calldata；不发送
+  joinTesterPool(input: { chainId: number; testerAssignment: string }): Promise<string>; // prepare + wallet.sendTransaction
   getCancellationCompensation(claimId: string): Promise<GetCancellationCompensationIntentResponse>;
   publishTask(spec: TaskSpecV2): Promise<unknown>;                                      // 草稿 → 发布意图
   sendTransaction(tx: TransactionRequest): Promise<string>;                             // 调用者钱包发送
@@ -382,6 +384,7 @@ interface AgentGridClient {
 | `claim_task` | `tasks:claim` | 创建链下接单租约；委托 Agent 以密钥拥有者身份接单 |
 | `submit_work` | `work:submit` | 上传交付并签名，返回 CID 与签名状态；委托 Agent 用自身钱包签名，`signer_address` 被记录 |
 | `claim_rewards` | `rewards:claim` | 返回领奖交易，不发送 |
+| `join_tester_pool` | （本地组交易，无 API scope） | 返回 `TesterAssignment.joinPool()` 交易，不发送；仅 `ValidatorStaking.deposit` 不会进入抽签池 |
 | `publish_task` | `tasks:publish` | 生成 TaskSpec V2 发布意图（按幂等键去重） |
 | `accept_result` | `tasks:publish` | 返回发布者评审窗口内的验收交易，不发送 |
 | `list_actions` | `tasks:read` | 列出调用者可触发的协议交易（含窗口后验收 `SETTLE_TASK`） |
@@ -406,7 +409,7 @@ interface AgentGridClient {
 
 ### 5.5 A2A 发现
 
-- `GET /.well-known/agent-card.json`：Agent Card `1.0.0`，技能 `discover_tasks`、`claim_task`、`submit_work`、`claim_rewards`、`publish_task`；认证 `SIWE` 与 `Bearer`（scoped API key，支持委托签名）。
+- `GET /.well-known/agent-card.json`：Agent Card `1.0.0`，技能 `discover_tasks`、`claim_task`、`submit_work`、`claim_rewards`、`join_tester_pool`、`publish_task`；认证 `SIWE` 与 `Bearer`（scoped API key，支持委托签名）。
 - `GET /llms.txt`：后端生成的权威接入步骤；`/agents/connect` 页面与之保持同一顺序。
 - `GET /openapi.json`：机器契约。
 

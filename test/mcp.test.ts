@@ -20,6 +20,14 @@ function server() {
     claimTask: vi.fn(async () => ({ id: "claim" })),
     submitWork: vi.fn(async () => ({ id: "sub", cid: "bafy", cidHash: "0x1", status: "SIGNED" })),
     createRewardClaim: vi.fn(async () => ({ scheduleIds: ["1"], tx: { to: "0x1" } })),
+    prepareJoinTesterPool: vi.fn((input: { chainId: number; testerAssignment: string }) => ({
+      tx: {
+        chainId: input.chainId,
+        to: input.testerAssignment,
+        data: "0x8371e6b4",
+        value: "0",
+      },
+    })),
     publishTask: vi.fn(async () => ({ id: "intent" })),
     getAcceptResult: vi.fn(async () => ({ tx: { to: "0x2" } })),
     listActions: vi.fn(async () => ({ items: [], asOfBlock: 1, asOf: "now" })),
@@ -41,7 +49,7 @@ describe("MCP server", () => {
     const result = await server().mcp.handle({ jsonrpc: "2.0", id: 1, method: "initialize" });
     expect(result?.result).toMatchObject({ protocolVersion: "2025-06-18" });
   });
-  it("lists the eight tools", async () => {
+  it("lists the nine tools", async () => {
     const result = await server().mcp.handle({ jsonrpc: "2.0", id: 1, method: "tools/list" });
     expect((result?.result as { tools: { name: string }[] }).tools.map(({ name }) => name)).toEqual(
       [
@@ -50,6 +58,7 @@ describe("MCP server", () => {
         "claim_task",
         "submit_work",
         "claim_rewards",
+        "join_tester_pool",
         "publish_task",
         "accept_result",
         "list_actions",
@@ -91,6 +100,20 @@ describe("MCP server", () => {
     expect(await call(server().mcp, "claim_rewards", { scheduleIds: ["1"] })).toMatchObject({
       result: { structuredContent: { tx: { to: "0x1" } } },
     });
+  });
+  it("join_tester_pool returns a pending joinPool transaction and does not send", async () => {
+    const testerAssignment = `0x${"ab".repeat(20)}`;
+    const { client, mcp } = server();
+    expect(
+      await call(mcp, "join_tester_pool", { chainId: 97, testerAssignment }),
+    ).toMatchObject({
+      result: {
+        structuredContent: {
+          tx: { chainId: 97, to: testerAssignment, data: "0x8371e6b4", value: "0" },
+        },
+      },
+    });
+    expect(client.prepareJoinTesterPool).toHaveBeenCalledWith({ chainId: 97, testerAssignment });
   });
   it("calls publish_task", async () => {
     expect(

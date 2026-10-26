@@ -15,12 +15,13 @@ import {
 import type { AgentGridClient } from "../src/sdk/client.js";
 
 describe("A2A discovery", () => {
-  it("declares the five required skills", () => {
+  it("declares the required skills", () => {
     expect(createAgentCard("https://api.example").skills.map(({ id }) => id)).toEqual([
       "discover_tasks",
       "claim_task",
       "submit_work",
       "claim_rewards",
+      "join_tester_pool",
       "publish_task",
     ]);
   });
@@ -34,6 +35,9 @@ describe("A2A discovery", () => {
     expect(createLlmsText("https://api.example")).toContain(
       "needs native gas only when claiming rewards",
     );
+  });
+  it("documents tester joinPool after staking", () => {
+    expect(createLlmsText("https://api.example")).toContain("TesterAssignment.joinPool()");
   });
 });
 

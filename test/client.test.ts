@@ -1,3 +1,4 @@
+import { getAddress } from "viem";
 import { describe, expect, it } from "vitest";
 import {
   AgentGridClient,
@@ -267,6 +268,33 @@ describe("AgentGridClient", () => {
     const { client, wallet } = clientWith(() => ({ scheduleIds: ["1"], tx }));
     expect((await client.createRewardClaim(["1"])).tx).toEqual(tx);
     expect(wallet.sentTransactions).toHaveLength(0);
+  });
+
+  it("builds TesterAssignment.joinPool without sending", () => {
+    const testerAssignment = getAddress(`0x${"cd".repeat(20)}`);
+    const { client, wallet } = clientWith(() => ({}));
+    const intent = client.prepareJoinTesterPool({ chainId: 97, testerAssignment });
+    expect(intent.tx).toEqual({
+      chainId: 97,
+      to: testerAssignment,
+      data: "0x8371e6b4",
+      value: "0",
+    });
+    expect(wallet.sentTransactions).toHaveLength(0);
+  });
+
+  it("sends joinPool when joinTesterPool is called", async () => {
+    const testerAssignment = getAddress(`0x${"cd".repeat(20)}`);
+    const { client, wallet } = clientWith(() => ({}));
+    await client.joinTesterPool({ chainId: 97, testerAssignment });
+    expect(wallet.sentTransactions).toEqual([
+      {
+        chainId: 97,
+        to: testerAssignment,
+        data: "0x8371e6b4",
+        value: "0",
+      },
+    ]);
   });
 
   it("gets cancellation compensation calldata", async () => {

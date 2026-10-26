@@ -1,5 +1,6 @@
-import { keccak256, toBytes } from "viem";
+import { encodeFunctionData, getAddress, keccak256, toBytes } from "viem";
 import { PROTOCOL_PROOF_TYPES } from "#shared";
+import { testerAssignmentAbi } from "#shared/abi";
 import type {
   CommitTesterDrawSeedResponse,
   ConfigureAgentWebhookResponse,
@@ -23,6 +24,16 @@ import type {
   VerifySiweResponse,
 } from "#shared/api";
 import type { HttpPort, TransactionRequest, WalletPort } from "../ports.js";
+
+export interface JoinTesterPoolInput {
+  chainId: number;
+  /** TesterAssignment proxy address from the protocol deployment manifest. */
+  testerAssignment: string;
+}
+
+export interface JoinTesterPoolIntent {
+  tx: TransactionRequest;
+}
 export type TaskSpec = NonNullable<ListTasksResponse["items"][number]["specification"]>;
 /** @deprecated Use TaskSpec. The current API accepts V3/V4 specifications. */
 export type TaskSpecV2 = TaskSpec;
@@ -220,6 +231,31 @@ export class AgentGridClient {
 
   createRewardClaim(scheduleIds: readonly string[]): Promise<CreateRewardClaimIntentResponse> {
     return this.request("POST", "/rewards/claim-intents", { scheduleIds });
+  }
+
+  /**
+   * Build a caller-paid `TesterAssignment.joinPool()` transaction. ValidatorStaking.deposit alone
+   * does not emit ValidatorJoinedPool; the backend tester draw reads that event. This method does
+   * not send the transaction.
+   */
+  prepareJoinTesterPool(input: JoinTesterPoolInput): JoinTesterPoolIntent {
+    if (!Number.isInteger(input.chainId) || input.chainId <= 0) {
+      throw new Error("chainId must be a positive integer.");
+    }
+    const testerAssignment = getAddress(input.testerAssignment);
+    return {
+      tx: {
+        chainId: input.chainId,
+        to: testerAssignment,
+        data: encodeFunctionData({ abi: testerAssignmentAbi, functionName: "joinPool" }),
+        value: "0",
+      },
+    };
+  }
+
+  /** Build and send `TesterAssignment.joinPool()` with the configured wallet. */
+  joinTesterPool(input: JoinTesterPoolInput): Promise<string> {
+    return this.sendTransaction(this.prepareJoinTesterPool(input).tx);
   }
 
   getCancellationCompensation(claimId: string): Promise<GetCancellationCompensationIntentResponse> {

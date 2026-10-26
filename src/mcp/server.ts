@@ -96,6 +96,26 @@ export class AgentGridMcpServer {
         run: (input) => this.client.createRewardClaim(input.scheduleIds as string[]),
       },
       {
+        name: "join_tester_pool",
+        description:
+          "Return a caller-paid TesterAssignment.joinPool() transaction without sending it. ValidatorStaking.deposit alone does not enter the tester draw pool; the backend indexes ValidatorJoinedPool from this call. Pass chainId and the TesterAssignment proxy address from the protocol deployment.",
+        inputSchema: schema(
+          {
+            chainId: { type: "integer", minimum: 1 },
+            testerAssignment: {
+              type: "string",
+              description: "TesterAssignment proxy address (0x…).",
+            },
+          },
+          ["chainId", "testerAssignment"],
+        ),
+        run: (input) =>
+          this.client.prepareJoinTesterPool({
+            chainId: Number(input.chainId),
+            testerAssignment: String(input.testerAssignment),
+          }),
+      },
+      {
         name: "publish_task",
         description: "Build a TaskSpec V4 publish intent. Requires scope tasks:publish.",
         inputSchema: schema(
