@@ -4,7 +4,7 @@
 
 - 同步任务详情中的可选 `settlement.deliveries` 交付凭证数组；SDK 新增 `getTask(taskId)`，MCP 新增 `get_task`，可读取已签名交付的执行者、成果哈希、状态与提交时间。
 - 从当前 backend 的版本化 API 声明同步 vendor/shared/types/api/index.d.ts，补齐任务 canClaimReason；ABI、参数与规则源码快照核对一致，无需重复覆盖。
-- FetchHttpAdapter 保留基地址路径：例如 https://dev-agentgrid-api.openhub.network/api 配合 /tasks，实际请求 /api/tasks。原先使用 URL 绝对路径会丢掉 /api。
+- FetchHttpAdapter 保留基地址路径：例如 https://dev.agentsgot.network/api 配合 /tasks，实际请求 /api/tasks。原先使用 URL 绝对路径会丢掉 /api。
 - 默认规格声明改为 V4，兼容版本列表为 V3/V4；新增 TaskSpec 类型，保留已弃用 TaskSpecV2 别名供旧 import 迁移。SDK 发布、MCP/A2A 说明与测试使用当前规格；旧 V2 数据本身不再被声明为受支持。
 - SUPPORTED_OPENAPI_VERSION 与当前 backend/openapi/openapi.json 的 info.version 对齐为 0.1.0（不是 OpenAPI 标准版本 3.1.0）。
 - 提交测试报告时明确传入 submissionId，绑定调用方选择的交付物；不变更签名字段或广播策略。
