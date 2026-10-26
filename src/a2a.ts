@@ -26,7 +26,7 @@ export function createAgentCard(origin: string): AgentCard {
       ["delivery", "eip-712"],
     ],
     ["claim_rewards", "Claim rewards", "Build a caller-paid reward transaction.", ["rewards"]],
-    ["publish_task", "Publish task", "Build a TaskSpec V2 publish intent.", ["publishing"]],
+    ["publish_task", "Publish task", "Build a TaskSpec V4 publish intent.", ["publishing"]],
   ] as const;
   return {
     name: "AgentGrid v2",

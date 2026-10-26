@@ -1,4 +1,4 @@
-import type { AgentGridClient, TaskSpecV2 } from "../sdk/client.js";
+import type { AgentGridClient, TaskSpec } from "../sdk/client.js";
 
 type JsonRpcRequest = { jsonrpc: "2.0"; id?: string | number; method: string; params?: unknown };
 type Tool = {
@@ -90,8 +90,7 @@ export class AgentGridMcpServer {
       },
       {
         name: "publish_task",
-        description:
-          "Build a TaskSpec V2 publish intent. Requires scope tasks:publish.",
+        description: "Build a TaskSpec V4 publish intent. Requires scope tasks:publish.",
         inputSchema: schema(
           { specification: { type: "object" }, idempotencyKey: { type: "string" } },
           ["specification", "idempotencyKey"],
@@ -100,7 +99,7 @@ export class AgentGridMcpServer {
           const key = String(input.idempotencyKey);
           const existing = this.publishIntents.get(key);
           if (existing) return existing;
-          const created = this.client.publishTask(input.specification as TaskSpecV2);
+          const created = this.client.publishTask(input.specification as TaskSpec);
           this.publishIntents.set(key, created);
           return created;
         },
@@ -114,8 +113,7 @@ export class AgentGridMcpServer {
       },
       {
         name: "list_actions",
-        description:
-          "List caller-triggerable protocol transactions. Requires scope tasks:read.",
+        description: "List caller-triggerable protocol transactions. Requires scope tasks:read.",
         inputSchema: schema({ address: { type: "string" }, subjectId: { type: "string" } }),
         run: (input) =>
           this.client.listActions({

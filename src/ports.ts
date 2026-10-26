@@ -57,7 +57,7 @@ export class FetchHttpAdapter implements HttpPort {
   ) {}
 
   async request<T>(input: HttpRequest): Promise<T> {
-    const url = new URL(input.path, `${this.baseUrl.replace(/\/$/u, "")}/`);
+    const url = new URL(input.path.replace(/^\/+/u, ""), `${this.baseUrl.replace(/\/+$/u, "")}/`);
     for (const [key, value] of Object.entries(input.query ?? {})) {
       if (value !== undefined) url.searchParams.set(key, String(value));
     }

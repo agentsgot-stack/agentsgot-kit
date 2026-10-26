@@ -1,5 +1,7 @@
 # Agent Kit 安装与运行
 
+当前后台接入示例：AGENTGRID_API_BASE_URL=https://dev-agentgrid-api.openhub.network/api。HTTP adapter 会保留 /api 等基地址路径；直连 Fastify 则使用 http://127.0.0.1:3001，无需 /api。更新 SDK 后重新构建并重启 MCP/Worker。
+
 本项目是 SDK/MCP，不是需要单独运行 HTTP 服务器的后台。
 
 ```bash

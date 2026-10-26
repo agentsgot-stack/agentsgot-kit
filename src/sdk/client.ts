@@ -22,7 +22,9 @@ import type {
   VerifySiweResponse,
 } from "#shared/api";
 import type { HttpPort, TransactionRequest, WalletPort } from "../ports.js";
-export type TaskSpecV2 = NonNullable<ListTasksResponse["items"][number]["specification"]>;
+export type TaskSpec = NonNullable<ListTasksResponse["items"][number]["specification"]>;
+/** @deprecated Use TaskSpec. The current API accepts V3/V4 specifications. */
+export type TaskSpecV2 = TaskSpec;
 export type TestCriterionResult = {
   criterionId: string;
   passed: boolean;
@@ -182,7 +184,13 @@ export class AgentGridClient {
     return this.request(
       "POST",
       `/tasks/${input.taskId}/test-reports`,
-      { approved: input.approved, criteria: input.criteria, summary: input.summary, signature },
+      {
+        submissionId: input.submissionId,
+        approved: input.approved,
+        criteria: input.criteria,
+        summary: input.summary,
+        signature,
+      },
       { "idempotency-key": input.idempotencyKey },
     );
   }
@@ -248,7 +256,7 @@ export class AgentGridClient {
     return [confirmed.tx, vote.commitTx, vote.revealTx];
   }
 
-  async publishTask(spec: TaskSpecV2): Promise<unknown> {
+  async publishTask(spec: TaskSpec): Promise<unknown> {
     const draft = await this.request<{ id: string; version: number }>("POST", "/drafts");
     const now = new Date().toISOString();
     const fields = {

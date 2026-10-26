@@ -7,6 +7,8 @@ import {
   MockWalletAdapter,
   PACKAGE_NAME,
   SDK_VERSION,
+  SUPPORTED_OPENAPI_VERSION,
+  SUPPORTED_TASK_SPEC_VERSION,
 } from "../src/index.js";
 
 const taskId = `0x${"aa".repeat(32)}`;
@@ -34,6 +36,8 @@ describe("AgentGridClient", () => {
   it("exports package and semantic versions", () => {
     expect(PACKAGE_NAME).toBe("@agentgrid/agent-kit");
     expect(SDK_VERSION).toBe("1.0.0");
+    expect(SUPPORTED_OPENAPI_VERSION).toBe("0.1.0");
+    expect(SUPPORTED_TASK_SPEC_VERSION).toBe("AGENTGRID_TASK_SPEC_V4");
   });
 
   it("performs nonce, SIWE signing, and verification", async () => {
@@ -160,7 +164,7 @@ describe("AgentGridClient", () => {
   });
 
   it("canonicalizes and signs TestReport with shared typed-data fields", async () => {
-    const { client, wallet } = clientWith((request) => {
+    const { client, http, wallet } = clientWith((request) => {
       if (request.path.startsWith("/submissions/"))
         return {
           id: "sub",
@@ -203,6 +207,7 @@ describe("AgentGridClient", () => {
     });
     expect(wallet.signedTypedData[0]?.primaryType).toBe("TestReport");
     expect(wallet.signedTypedData[0]?.message.executor).toBe(wallet.address);
+    expect(http.requests.at(-1)?.body).toMatchObject({ submissionId: "sub" });
   });
 
   it("gets final result calldata without sending it", async () => {
@@ -269,7 +274,7 @@ describe("AgentGridClient", () => {
       ++call === 1 ? { id: "draft", version: 0 } : call === 2 ? { version: 1 } : { id: "intent" },
     );
     await client.publishTask({
-      version: "AGENTGRID_TASK_SPEC_V2",
+      version: "AGENTGRID_TASK_SPEC_V4",
       title: "t",
       summary: "s",
       template: "CUSTOM",
@@ -278,19 +283,21 @@ describe("AgentGridClient", () => {
       constraints: [],
       inputs: [],
       criteria: [{ id: "c", description: "c", grade: "A", weightBps: 10000 }],
-      executionMode: "SOLO",
       estimatedHours: 1,
-      rewardAgt: "1",
-      deadlineAt: "later",
-      maintenanceDays: 7,
-      difficulty: "L1",
-      channel: "FAST",
+      startTier: "T1",
+      maxTier: "T2",
+      runDays: 5,
+      allocationMode: "PRO_RATA",
+      passingThreshold: 80,
     });
     expect(http.requests.map(({ path }) => path)).toEqual([
       "/drafts",
       "/drafts/draft",
       "/drafts/draft/publish-intent",
     ]);
+    expect(http.requests[1]?.body).toMatchObject({
+      fields: { maxParticipants: { value: 9, confirmation: "confirmed" } },
+    });
   });
 
   it("prepares confirmation, commit, and reveal arbitration transactions", async () => {
@@ -302,6 +309,20 @@ describe("AgentGridClient", () => {
 });
 
 describe("HTTP adapters", () => {
+  it.each([
+    ["https://example.com", "https://example.com/tasks?limit=2"],
+    ["https://example.com/api", "https://example.com/api/tasks?limit=2"],
+    ["https://example.com/api/", "https://example.com/api/tasks?limit=2"],
+  ])("preserves the API base path for %s", async (baseUrl, expected) => {
+    let requested = "";
+    const adapter = new FetchHttpAdapter(baseUrl, async (input) => {
+      requested = String(input);
+      return new Response("{}", { headers: { "content-type": "application/json" } });
+    });
+    await adapter.request({ method: "GET", path: "/tasks", query: { limit: 2 } });
+    expect(requested).toBe(expected);
+  });
+
   it("records in-memory requests", async () => {
     const adapter = new InMemoryHttpAdapter(() => ({ ok: true }));
     await adapter.request({ method: "GET", path: "/x" });

@@ -16,8 +16,10 @@ pnpm build
 - [架构与当前业务边界](architecture.md)
 - [配置与部署](deployment.md)
 - [更新、回滚与跨仓库交接](updates.md)
-- reference/01-RULES.md 与 reference/02-INTERFACES.md 是拆分时的协议参考快照，不是另一份部署指南；实际运行行为以本仓库源码、配置和对应发布版本为准。
+- reference/01-RULES.md、reference/02-INTERFACES.md 和 reference/03-STAKING-PENALTY-SPEC.md 为当前协议规则、接口与质押规格；部署状态以本轮 verification.md 为准。
 
 - [本次验收结果与已知问题](verification.md)
 
 独立边界检查：`pnpm check:independent`。
+
+当前发布基线：2026-10-24。旧合约清单已废弃；新链上发布及联动步骤见 updates.md，尚未广播或更新服务器。
