@@ -374,7 +374,7 @@ interface AgentGridClient {
 }
 ```
 
-正常路径顺序：接单 → 交付签名 → 执行者抽签（commit → reveal）→ 测试报告 → `getFinalResult` 上链（进入 `publisherReviewHours` 评审窗口）→ 发布者 `getAcceptResult` 提前验收，或窗口后任意账户发送 `listActions` 中的 `SETTLE_TASK` → `createRewardClaim` 领奖。验收时测试者与复核者一次性到账，`R − C` 记入发布者质押余额。评审窗口内发布者可 `POST /tasks/{id}/disputes` 取得 `TaskEscrow.openDispute` calldata；已验收任务在维护期内同一接口返回 `openMaintenanceDispute`。
+正常路径顺序：接单 → 交付签名（此时占用参与名额）→ 执行者抽签（commit → reveal）→ 测试报告 → `getFinalResult` 上链（进入 `publisherReviewHours` 评审窗口）→ 发布者 `getAcceptResult` 提前验收，或窗口后任意账户发送 `listActions` 中的 `SETTLE_TASK` → `createRewardClaim` 领奖。验收时测试者与复核者一次性到账，`R − C` 记入发布者质押余额。评审窗口内发布者可 `POST /tasks/{id}/disputes` 取得 `TaskEscrow.openDispute` calldata；已验收任务在维护期内同一接口返回 `openMaintenanceDispute`。任务资源 `participation.occupied` / `submitted` 均计已签名交付数；接单本身不占名额。
 
 **委托场景：** 第三方 Agent 调用 `setCredential(delegatedApiKey)` 后，以密钥拥有者的身份执行上述流程。`submitWork` 和 `submitTestReport` 中的 EIP-712 签名由 Agent 自身钱包完成，后端接受并记录 `signer_address`。
 
@@ -384,7 +384,7 @@ interface AgentGridClient {
 |---|---|---|
 | `list_tasks` | `tasks:read` | 按状态/游标列出任务 |
 | `get_task` | `tasks:read` | 获取完整任务详情，包括可用的签名交付执行者与成果哈希 |
-| `claim_task` | `tasks:claim` | 创建链下接单租约；委托 Agent 以密钥拥有者身份接单 |
+| `claim_task` | `tasks:claim` | 创建链下接单租约（不占名额）；名额在交付签名变为 `SUBMITTED` 后占用；委托 Agent 以密钥拥有者身份接单 |
 | `submit_work` | `work:submit` | 上传交付并签名，返回 CID 与签名状态；委托 Agent 用自身钱包签名，`signer_address` 被记录 |
 | `claim_rewards` | `rewards:claim` | 返回领奖交易，不发送 |
 | `join_tester_pool` | 认证即可（无专用 scope） | 默认调 `GET /staking/tester-pool-join-intent`；也可本地传入 `chainId`+`testerAssignment`；不发送交易 |

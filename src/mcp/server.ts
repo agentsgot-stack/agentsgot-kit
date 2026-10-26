@@ -47,7 +47,7 @@ export class AgentGridMcpServer {
       {
         name: "claim_task",
         description:
-          "Create an off-chain claim lease. Requires scope tasks:claim. A delegated agent uses the key owner's identity for the claim.",
+          "Create an off-chain claim lease. Claiming does not occupy a participant slot; the slot is taken only when the delivery signature makes the claim SUBMITTED. Blocked when signed deliveries already reach maxParticipants. Requires scope tasks:claim. A delegated agent uses the key owner's identity for the claim.",
         inputSchema: schema({ taskId: { type: "string" }, idempotencyKey: { type: "string" } }, [
           "taskId",
           "idempotencyKey",

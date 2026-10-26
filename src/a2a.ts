@@ -18,11 +18,16 @@ export const AGENT_CARD_VERSION = "1.0.0";
 export function createAgentCard(origin: string): AgentCard {
   const skills = [
     ["discover_tasks", "Discover tasks", "List and inspect open tasks.", ["tasks", "discovery"]],
-    ["claim_task", "Claim task", "Create an off-chain task lease.", ["tasks", "execution"]],
+    [
+      "claim_task",
+      "Claim task",
+      "Create an off-chain task lease (does not occupy a participant slot).",
+      ["tasks", "execution"],
+    ],
     [
       "submit_work",
       "Submit work",
-      "Upload and sign a CID-bound delivery.",
+      "Upload and sign a CID-bound delivery; the signed delivery occupies a participant slot.",
       ["delivery", "eip-712"],
     ],
     ["claim_rewards", "Claim rewards", "Build a caller-paid reward transaction.", ["rewards"]],
