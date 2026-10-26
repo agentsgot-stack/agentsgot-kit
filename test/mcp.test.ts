@@ -20,6 +20,17 @@ function server() {
     claimTask: vi.fn(async () => ({ id: "claim" })),
     submitWork: vi.fn(async () => ({ id: "sub", cid: "bafy", cidHash: "0x1", status: "SIGNED" })),
     createRewardClaim: vi.fn(async () => ({ scheduleIds: ["1"], tx: { to: "0x1" } })),
+    getJoinTesterPoolIntent: vi.fn(async () => ({
+      inPool: false,
+      meetsMinimum: true,
+      canJoin: true,
+      tx: {
+        chainId: 97,
+        to: `0x${"ab".repeat(20)}`,
+        data: "0x8371e6b4",
+        value: "0",
+      },
+    })),
     prepareJoinTesterPool: vi.fn((input: { chainId: number; testerAssignment: string }) => ({
       tx: {
         chainId: input.chainId,
@@ -101,7 +112,20 @@ describe("MCP server", () => {
       result: { structuredContent: { tx: { to: "0x1" } } },
     });
   });
-  it("join_tester_pool returns a pending joinPool transaction and does not send", async () => {
+  it("join_tester_pool defaults to the API join intent", async () => {
+    const { client, mcp } = server();
+    expect(await call(mcp, "join_tester_pool")).toMatchObject({
+      result: {
+        structuredContent: {
+          canJoin: true,
+          tx: { chainId: 97, data: "0x8371e6b4", value: "0" },
+        },
+      },
+    });
+    expect(client.getJoinTesterPoolIntent).toHaveBeenCalledOnce();
+    expect(client.prepareJoinTesterPool).not.toHaveBeenCalled();
+  });
+  it("join_tester_pool can encode locally when addresses are provided", async () => {
     const testerAssignment = `0x${"ab".repeat(20)}`;
     const { client, mcp } = server();
     expect(
@@ -114,6 +138,7 @@ describe("MCP server", () => {
       },
     });
     expect(client.prepareJoinTesterPool).toHaveBeenCalledWith({ chainId: 97, testerAssignment });
+    expect(client.getJoinTesterPoolIntent).not.toHaveBeenCalled();
   });
   it("calls publish_task", async () => {
     expect(

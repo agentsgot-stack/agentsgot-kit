@@ -326,6 +326,8 @@ struct EIP712Domain {
 |---|---|---|
 | `GET` | `/api/staking/validator` | 验证者质押状态 |
 | `GET` | `/api/staking/publisher` | 发布者质押状态 |
+| `GET` | `/api/staking/positions` | 发布者质押头寸（认证） |
+| `GET` | `/api/staking/tester-pool-join-intent` | 测试者入池 `joinPool` calldata + `canJoin`（认证，不发送） |
 
 ### 4.5 认证（Auth）
 
@@ -363,8 +365,9 @@ interface AgentGridClient {
   listActions(query?: { address?: string; subjectId?: string }): Promise<ListAvailableTriggerActionsResponse>;
   listRewards(): Promise<ListRewardTranchesResponse>;
   createRewardClaim(scheduleIds: readonly string[]): Promise<CreateRewardClaimIntentResponse>;
-  prepareJoinTesterPool(input: { chainId: number; testerAssignment: string }): { tx: TransactionRequest }; // TesterAssignment.joinPool calldata；不发送
-  joinTesterPool(input: { chainId: number; testerAssignment: string }): Promise<string>; // prepare + wallet.sendTransaction
+  getJoinTesterPoolIntent(): Promise<GetTesterPoolJoinIntentResponse>; // GET /staking/tester-pool-join-intent（含 canJoin）
+  prepareJoinTesterPool(input: { chainId: number; testerAssignment: string }): { tx: TransactionRequest }; // 本地编码 fallback
+  joinTesterPool(input?: { chainId: number; testerAssignment: string }): Promise<string>; // 默认走 API 意图再发送
   getCancellationCompensation(claimId: string): Promise<GetCancellationCompensationIntentResponse>;
   publishTask(spec: TaskSpecV2): Promise<unknown>;                                      // 草稿 → 发布意图
   sendTransaction(tx: TransactionRequest): Promise<string>;                             // 调用者钱包发送
@@ -384,7 +387,7 @@ interface AgentGridClient {
 | `claim_task` | `tasks:claim` | 创建链下接单租约；委托 Agent 以密钥拥有者身份接单 |
 | `submit_work` | `work:submit` | 上传交付并签名，返回 CID 与签名状态；委托 Agent 用自身钱包签名，`signer_address` 被记录 |
 | `claim_rewards` | `rewards:claim` | 返回领奖交易，不发送 |
-| `join_tester_pool` | （本地组交易，无 API scope） | 返回 `TesterAssignment.joinPool()` 交易，不发送；仅 `ValidatorStaking.deposit` 不会进入抽签池 |
+| `join_tester_pool` | 认证即可（无专用 scope） | 默认调 `GET /staking/tester-pool-join-intent`；也可本地传入 `chainId`+`testerAssignment`；不发送交易 |
 | `publish_task` | `tasks:publish` | 生成 TaskSpec V2 发布意图（按幂等键去重） |
 | `accept_result` | `tasks:publish` | 返回发布者评审窗口内的验收交易，不发送 |
 | `list_actions` | `tasks:read` | 列出调用者可触发的协议交易（含窗口后验收 `SETTLE_TASK`） |

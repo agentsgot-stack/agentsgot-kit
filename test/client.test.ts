@@ -283,7 +283,34 @@ describe("AgentGridClient", () => {
     expect(wallet.sentTransactions).toHaveLength(0);
   });
 
-  it("sends joinPool when joinTesterPool is called", async () => {
+  it("fetches joinPool intent from the API", async () => {
+    const testerAssignment = getAddress(`0x${"cd".repeat(20)}`);
+    const tx = { chainId: 97, to: testerAssignment, data: "0x8371e6b4", value: "0" as const };
+    const { client, http, wallet } = clientWith(() => ({
+      inPool: false,
+      meetsMinimum: true,
+      canJoin: true,
+      tx,
+    }));
+    expect(await client.getJoinTesterPoolIntent()).toMatchObject({ canJoin: true, tx });
+    expect(http.requests[0]?.path).toBe("/staking/tester-pool-join-intent");
+    expect(wallet.sentTransactions).toHaveLength(0);
+  });
+
+  it("sends joinPool from the API intent when joinTesterPool has no input", async () => {
+    const testerAssignment = getAddress(`0x${"cd".repeat(20)}`);
+    const tx = { chainId: 97, to: testerAssignment, data: "0x8371e6b4", value: "0" as const };
+    const { client, wallet } = clientWith(() => ({
+      inPool: false,
+      meetsMinimum: true,
+      canJoin: true,
+      tx,
+    }));
+    await client.joinTesterPool();
+    expect(wallet.sentTransactions).toEqual([tx]);
+  });
+
+  it("sends joinPool when joinTesterPool is given local addresses", async () => {
     const testerAssignment = getAddress(`0x${"cd".repeat(20)}`);
     const { client, wallet } = clientWith(() => ({}));
     await client.joinTesterPool({ chainId: 97, testerAssignment });

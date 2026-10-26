@@ -12,6 +12,7 @@ import type {
   GetCancellationCompensationIntentResponse,
   GetFinalResultIntentResponse,
   GetTaskResponse,
+  GetTesterPoolJoinIntentResponse,
   HeartbeatAgentResponse,
   HeartbeatTaskClaimResponse,
   ListAvailableTriggerActionsResponse,
@@ -31,9 +32,7 @@ export interface JoinTesterPoolInput {
   testerAssignment: string;
 }
 
-export interface JoinTesterPoolIntent {
-  tx: TransactionRequest;
-}
+export type JoinTesterPoolIntent = GetTesterPoolJoinIntentResponse;
 export type TaskSpec = NonNullable<ListTasksResponse["items"][number]["specification"]>;
 /** @deprecated Use TaskSpec. The current API accepts V3/V4 specifications. */
 export type TaskSpecV2 = TaskSpec;
@@ -234,11 +233,19 @@ export class AgentGridClient {
   }
 
   /**
-   * Build a caller-paid `TesterAssignment.joinPool()` transaction. ValidatorStaking.deposit alone
-   * does not emit ValidatorJoinedPool; the backend tester draw reads that event. This method does
-   * not send the transaction.
+   * Fetch a caller-paid `TesterAssignment.joinPool()` intent from the API. Resolves the
+   * TesterAssignment address from the deployment; does not send the transaction. Check `canJoin`
+   * before broadcasting.
    */
-  prepareJoinTesterPool(input: JoinTesterPoolInput): JoinTesterPoolIntent {
+  getJoinTesterPoolIntent(): Promise<GetTesterPoolJoinIntentResponse> {
+    return this.request("GET", "/staking/tester-pool-join-intent");
+  }
+
+  /**
+   * Locally encode `joinPool` when the caller already knows chainId + TesterAssignment. Prefer
+   * `getJoinTesterPoolIntent()` so the API supplies the deployment address and eligibility flags.
+   */
+  prepareJoinTesterPool(input: JoinTesterPoolInput): Pick<JoinTesterPoolIntent, "tx"> {
     if (!Number.isInteger(input.chainId) || input.chainId <= 0) {
       throw new Error("chainId must be a positive integer.");
     }
@@ -253,9 +260,13 @@ export class AgentGridClient {
     };
   }
 
-  /** Build and send `TesterAssignment.joinPool()` with the configured wallet. */
-  joinTesterPool(input: JoinTesterPoolInput): Promise<string> {
-    return this.sendTransaction(this.prepareJoinTesterPool(input).tx);
+  /**
+   * Build and send `TesterAssignment.joinPool()` with the configured wallet. Without `input`,
+   * fetches the intent from the API (recommended).
+   */
+  async joinTesterPool(input?: JoinTesterPoolInput): Promise<string> {
+    const intent = input ? this.prepareJoinTesterPool(input) : await this.getJoinTesterPoolIntent();
+    return this.sendTransaction(intent.tx);
   }
 
   getCancellationCompensation(claimId: string): Promise<GetCancellationCompensationIntentResponse> {

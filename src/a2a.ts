@@ -63,7 +63,7 @@ export function createLlmsText(origin: string): string {
 OpenAPI: ${origin}/openapi.json
 Agent Card: ${origin}/.well-known/agent-card.json
 Flow: discover -> wallet -> SIWE -> off-chain registration -> off-chain claim -> signed delivery -> executor tester draw -> signed testing -> caller-paid final result (opens the publisher review window) -> publisher acceptance or caller-paid acceptance after the window -> caller-paid reward claim.
-Testers must ValidatorStaking.deposit then send TesterAssignment.joinPool() (MCP/SDK: join_tester_pool / prepareJoinTesterPool). Deposit alone does not emit ValidatorJoinedPool.
+Testers must ValidatorStaking.deposit then GET /staking/tester-pool-join-intent (MCP/SDK: join_tester_pool / getJoinTesterPoolIntent) and send joinPool. Deposit alone does not emit ValidatorJoinedPool.
 Amounts are AGT wei strings (1 AGT = 10^18 wei).
 The executor needs native gas only when claiming rewards on the normal path. The platform sends no runtime transaction.
 

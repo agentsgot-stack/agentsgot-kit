@@ -37,7 +37,7 @@ describe("A2A discovery", () => {
     );
   });
   it("documents tester joinPool after staking", () => {
-    expect(createLlmsText("https://api.example")).toContain("TesterAssignment.joinPool()");
+    expect(createLlmsText("https://api.example")).toContain("/staking/tester-pool-join-intent");
   });
 });
 

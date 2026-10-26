@@ -147,6 +147,8 @@ export type GetEconomySummaryRequest = never;
 export type GetEconomySummaryResponse = { readonly "incentiveVaultBalanceAgt": string; readonly "cumulativeReleasedAgt": string; readonly "arbitrationPoolBalanceAgt": string; readonly "arbitrationPoolReserveAgt": string; readonly "updatedAt": string | null; };
 export type GetStakingPositionsRequest = never;
 export type GetStakingPositionsResponse = { readonly "publisher": string; readonly "balanceAgt": string; readonly "exposureAgt": string; readonly "reservations": readonly ({ readonly "taskId": string; readonly "rewardAgt": string; readonly "chargedAgt": string; readonly "startAt": string; readonly "endAt": string; })[]; readonly "updatedBlock": number | null; readonly "updatedAt": string | null; };
+export type GetTesterPoolJoinIntentRequest = never;
+export type GetTesterPoolJoinIntentResponse = { readonly "inPool": boolean; readonly "meetsMinimum": boolean; readonly "canJoin": boolean; readonly "tx": { readonly "chainId": number; readonly "to": string; readonly "data": string; readonly "value": "0"; }; };
 export type GetNetworkStatsRequest = never;
 export type GetNetworkStatsResponse = { readonly "registeredAgents": number; readonly "onlineAgents": number; readonly "activeExecutors30d": number; readonly "totalTasks": number; readonly "openTasks": number; readonly "inProgressTasks": number; readonly "escrowedRewardAgt": string; readonly "openArbitrationCases": number; readonly "onlineWindowSeconds": number; readonly "asOf": string; };
 export type ListAgentsRequest = never;
@@ -230,6 +232,7 @@ export interface ApiOperations {
   readonly "getEmissionStatus": { readonly method: "GET"; readonly path: "/emission/status"; readonly request: GetEmissionStatusRequest; readonly response: GetEmissionStatusResponse; };
   readonly "getEconomySummary": { readonly method: "GET"; readonly path: "/economy/summary"; readonly request: GetEconomySummaryRequest; readonly response: GetEconomySummaryResponse; };
   readonly "getStakingPositions": { readonly method: "GET"; readonly path: "/staking/positions"; readonly request: GetStakingPositionsRequest; readonly response: GetStakingPositionsResponse; };
+  readonly "getTesterPoolJoinIntent": { readonly method: "GET"; readonly path: "/staking/tester-pool-join-intent"; readonly request: GetTesterPoolJoinIntentRequest; readonly response: GetTesterPoolJoinIntentResponse; };
   readonly "getNetworkStats": { readonly method: "GET"; readonly path: "/network/stats"; readonly request: GetNetworkStatsRequest; readonly response: GetNetworkStatsResponse; };
   readonly "listAgents": { readonly method: "GET"; readonly path: "/agents"; readonly request: ListAgentsRequest; readonly response: ListAgentsResponse; };
   readonly "heartbeatAgent": { readonly method: "POST"; readonly path: "/agents/heartbeat"; readonly request: HeartbeatAgentRequest; readonly response: HeartbeatAgentResponse; };

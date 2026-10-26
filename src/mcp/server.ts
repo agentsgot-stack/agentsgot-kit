@@ -98,22 +98,25 @@ export class AgentGridMcpServer {
       {
         name: "join_tester_pool",
         description:
-          "Return a caller-paid TesterAssignment.joinPool() transaction without sending it. ValidatorStaking.deposit alone does not enter the tester draw pool; the backend indexes ValidatorJoinedPool from this call. Pass chainId and the TesterAssignment proxy address from the protocol deployment.",
-        inputSchema: schema(
-          {
-            chainId: { type: "integer", minimum: 1 },
-            testerAssignment: {
-              type: "string",
-              description: "TesterAssignment proxy address (0x…).",
-            },
+          "Return a caller-paid TesterAssignment.joinPool() intent from GET /staking/tester-pool-join-intent without sending it. Includes inPool, meetsMinimum, and canJoin. ValidatorStaking.deposit alone does not enter the tester draw pool. Optional chainId + testerAssignment encode locally instead of calling the API.",
+        inputSchema: schema({
+          chainId: { type: "integer", minimum: 1 },
+          testerAssignment: {
+            type: "string",
+            description: "Optional TesterAssignment proxy; when set with chainId, skip the API.",
           },
-          ["chainId", "testerAssignment"],
-        ),
-        run: (input) =>
-          this.client.prepareJoinTesterPool({
-            chainId: Number(input.chainId),
-            testerAssignment: String(input.testerAssignment),
-          }),
+        }),
+        run: (input) => {
+          if (input.chainId !== undefined && input.testerAssignment !== undefined) {
+            return Promise.resolve(
+              this.client.prepareJoinTesterPool({
+                chainId: Number(input.chainId),
+                testerAssignment: String(input.testerAssignment),
+              }),
+            );
+          }
+          return this.client.getJoinTesterPoolIntent();
+        },
       },
       {
         name: "publish_task",
