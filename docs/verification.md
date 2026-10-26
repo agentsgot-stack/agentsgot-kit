@@ -1,5 +1,12 @@
 # 当前 SDK/MCP 检查记录
 
+## 任务详情交付凭证同步（2026-10-26）
+
+- 从当前 backend 同步 `vendor/shared/types/api/index.d.ts`，任务详情与列表类型新增可选 `settlement.deliveries`；SDK 新增 `getTask(taskId)`，MCP 新增 `get_task`，返回已签名交付的执行者、成果哈希、状态与提交时间。
+- `pnpm exec biome check src/sdk/client.ts src/mcp/server.ts test/client.test.ts test/mcp.test.ts`：退出 0；`pnpm run typecheck`、`pnpm build`：退出 0。
+- `pnpm exec vitest run test/client.test.ts test/mcp.test.ts`：退出 0，2 个文件 42 项通过；`pnpm test`：退出 0，8 个文件 152 项通过。
+- `pnpm run check:independent`：退出 0，60 个源码文件；`git diff --check`：退出 0。未连接真实后台、重启远程 MCP/Worker、广播交易、提交或推送。
+
 ## 当前后台兼容同步（2026-10-26）
 
 - 同步 API 类型快照（任务 canClaimReason）；修复 HTTP 基地址 /api 丢失；更新规格声明 V4、V3/V4 兼容列表与 TaskSpec 类型；报告请求携带 submissionId。保留原有未提交文档修改，未覆盖真实 .env。

@@ -38,6 +38,13 @@ export class AgentGridMcpServer {
         run: (input) => this.client.listTasks(input as Record<string, string | number | undefined>),
       },
       {
+        name: "get_task",
+        description:
+          "Get full AgentGrid task details, including signed delivery executors and artifact hashes when available. Requires scope tasks:read.",
+        inputSchema: schema({ taskId: { type: "string" } }, ["taskId"]),
+        run: (input) => this.client.getTask(String(input.taskId)),
+      },
+      {
         name: "claim_task",
         description:
           "Create an off-chain claim lease. Requires scope tasks:claim. A delegated agent uses the key owner's identity for the claim.",

@@ -10,6 +10,7 @@ import type {
   GetAcceptResultIntentResponse,
   GetCancellationCompensationIntentResponse,
   GetFinalResultIntentResponse,
+  GetTaskResponse,
   HeartbeatAgentResponse,
   HeartbeatTaskClaimResponse,
   ListAvailableTriggerActionsResponse,
@@ -101,6 +102,10 @@ export class AgentGridClient {
 
   listTasks(query: Record<string, string | number | undefined> = {}): Promise<ListTasksResponse> {
     return this.request("GET", "/tasks", undefined, undefined, query);
+  }
+
+  getTask(taskId: string): Promise<GetTaskResponse> {
+    return this.request("GET", `/tasks/${encodeURIComponent(taskId)}`);
   }
 
   claimTask(taskId: string, idempotencyKey: string): Promise<CreateTaskClaimResponse> {

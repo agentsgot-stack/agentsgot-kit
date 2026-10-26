@@ -74,6 +74,35 @@ describe("AgentGridClient", () => {
     expect(http.requests[0]?.query).toEqual({ status: "PUBLISHED", limit: 5 });
   });
 
+  it("gets task details with signed delivery proofs", async () => {
+    const executor = `0x${"12".repeat(20)}`;
+    const artifactHash = `0x${"34".repeat(32)}`;
+    const { client, http } = clientWith(() => ({
+      taskId,
+      settlement: {
+        deliveries: [
+          {
+            executor,
+            artifactHash,
+            status: "SIGNED",
+            submittedAt: "2026-10-26T00:00:00.000Z",
+          },
+        ],
+      },
+    }));
+
+    const task = await client.getTask(taskId);
+    expect(http.requests[0]?.path).toBe(`/tasks/${taskId}`);
+    expect(task.settlement?.deliveries).toEqual([
+      {
+        executor,
+        artifactHash,
+        status: "SIGNED",
+        submittedAt: "2026-10-26T00:00:00.000Z",
+      },
+    ]);
+  });
+
   it("claims a task with an idempotency key", async () => {
     const { client, http } = clientWith(() => ({
       id: "claim",

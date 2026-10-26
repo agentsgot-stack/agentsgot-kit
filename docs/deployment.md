@@ -23,4 +23,4 @@ pnpm mcp
 
 stdio 的 stdout 是 JSON-RPC，不用于普通日志。MCP 客户端也可以直接执行 node 并传入绝对路径 dist/mcp/cli.js；环境变量由客户端配置注入。
 
-工具提供 list_tasks、claim_task、submit_work、claim_rewards、publish_task、accept_result、list_actions；具体交易意图仍由调用者处理。
+工具提供 list_tasks、get_task、claim_task、submit_work、claim_rewards、publish_task、accept_result、list_actions；`get_task` 返回完整任务详情及可用的签名交付执行者/成果哈希，具体交易意图仍由调用者处理。

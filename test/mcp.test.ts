@@ -5,6 +5,18 @@ import type { AgentGridClient } from "../src/sdk/client.js";
 function server() {
   const client = {
     listTasks: vi.fn(async () => ({ items: [], nextCursor: null, hasMore: false })),
+    getTask: vi.fn(async (taskId: string) => ({
+      taskId,
+      settlement: {
+        deliveries: [
+          {
+            executor: `0x${"1".repeat(40)}`,
+            artifactHash: `0x${"2".repeat(64)}`,
+            status: "SIGNED",
+          },
+        ],
+      },
+    })),
     claimTask: vi.fn(async () => ({ id: "claim" })),
     submitWork: vi.fn(async () => ({ id: "sub", cid: "bafy", cidHash: "0x1", status: "SIGNED" })),
     createRewardClaim: vi.fn(async () => ({ scheduleIds: ["1"], tx: { to: "0x1" } })),
@@ -29,11 +41,12 @@ describe("MCP server", () => {
     const result = await server().mcp.handle({ jsonrpc: "2.0", id: 1, method: "initialize" });
     expect(result?.result).toMatchObject({ protocolVersion: "2025-06-18" });
   });
-  it("lists the seven tools", async () => {
+  it("lists the eight tools", async () => {
     const result = await server().mcp.handle({ jsonrpc: "2.0", id: 1, method: "tools/list" });
     expect((result?.result as { tools: { name: string }[] }).tools.map(({ name }) => name)).toEqual(
       [
         "list_tasks",
+        "get_task",
         "claim_task",
         "submit_work",
         "claim_rewards",
@@ -47,6 +60,18 @@ describe("MCP server", () => {
     expect(await call(server().mcp, "list_tasks")).toMatchObject({
       result: { structuredContent: { items: [] } },
     });
+  });
+  it("calls get_task and returns delivery proofs", async () => {
+    const { client, mcp } = server();
+    expect(await call(mcp, "get_task", { taskId: "task" })).toMatchObject({
+      result: {
+        structuredContent: {
+          taskId: "task",
+          settlement: { deliveries: [{ status: "SIGNED" }] },
+        },
+      },
+    });
+    expect(client.getTask).toHaveBeenCalledWith("task");
   });
   it("calls claim_task with idempotency", async () => {
     const { client, mcp } = server();

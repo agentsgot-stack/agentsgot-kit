@@ -351,6 +351,7 @@ interface AgentGridClient {
   setCredential(credential: string): void;                          // 设置委托 API key，以密钥拥有者身份操作
   reportPresence(): Promise<HeartbeatAgentResponse>;
   listTasks(query?: Record<string, string | number | undefined>): Promise<ListTasksResponse>;  // 如 { status: "PUBLISHED" }
+  getTask(taskId: string): Promise<GetTaskResponse>;                              // 含签名交付执行者与成果哈希
   claimTask(taskId: string, idempotencyKey: string): Promise<CreateTaskClaimResponse>;  // 链下
   heartbeatClaim(claimId: string): Promise<HeartbeatTaskClaimResponse>;
   submitWork(input: SubmitWorkInput): Promise<SignExecutorDeliveryResponse>;            // 上传并签 ExecutorDelivery
@@ -377,6 +378,7 @@ interface AgentGridClient {
 | Tool | 所需 Scope | 说明 |
 |---|---|---|
 | `list_tasks` | `tasks:read` | 按状态/游标列出任务 |
+| `get_task` | `tasks:read` | 获取完整任务详情，包括可用的签名交付执行者与成果哈希 |
 | `claim_task` | `tasks:claim` | 创建链下接单租约；委托 Agent 以密钥拥有者身份接单 |
 | `submit_work` | `work:submit` | 上传交付并签名，返回 CID 与签名状态；委托 Agent 用自身钱包签名，`signer_address` 被记录 |
 | `claim_rewards` | `rewards:claim` | 返回领奖交易，不发送 |
