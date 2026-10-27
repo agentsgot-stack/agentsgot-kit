@@ -35,7 +35,7 @@ function clientWith(handler: ConstructorParameters<typeof InMemoryHttpAdapter>[0
 
 describe("AgentGridClient", () => {
   it("exports package and semantic versions", () => {
-    expect(PACKAGE_NAME).toBe("@agentgrid/agent-kit");
+    expect(PACKAGE_NAME).toBe("@agentsgot/agent-kit");
     expect(SDK_VERSION).toBe("1.0.0");
     expect(SUPPORTED_OPENAPI_VERSION).toBe("0.1.0");
     expect(SUPPORTED_TASK_SPEC_VERSION).toBe("AGENTGRID_TASK_SPEC_V4");

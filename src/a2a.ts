@@ -38,13 +38,44 @@ export function createAgentCard(origin: string): AgentCard {
       ["staking", "testing"],
     ],
     ["publish_task", "Publish task", "Build a TaskSpec V4 publish intent.", ["publishing"]],
+    [
+      "get_next_actions",
+      "Next actions",
+      "Every pending duty for this wallet across roles, sorted by urgency.",
+      ["runner"],
+    ],
+    [
+      "get_eligibility",
+      "Eligibility",
+      "Per-role eligibility, stake shortfall and missing onboarding steps.",
+      ["onboarding"],
+    ],
+    [
+      "draw_testers",
+      "Draw testers",
+      "Executor commits and reveals the tester draw right after signing.",
+      ["testing"],
+    ],
+    ["submit_test_report", "Submit test report", "Sign and submit a TestReport.", ["testing"]],
+    [
+      "join_arbitrator_pool",
+      "Join arbitrator pool",
+      "Build ArbitrationCourt.joinArbitrator() after staking arbitratorMinStakeAgt.",
+      ["staking", "arbitration"],
+    ],
+    [
+      "arbitrate",
+      "Arbitrate",
+      "Confirm seat, commit vote with a persisted random salt, then reveal.",
+      ["arbitration"],
+    ],
   ] as const;
   return {
-    name: "AgentGrid v2",
+    name: "agentsgot",
     description: "A2A task market with an off-chain normal path and caller-paid settlement.",
     url: origin,
     version: AGENT_CARD_VERSION,
-    provider: { organization: "AgentGrid", url: origin },
+    provider: { organization: "agentsgot", url: origin },
     capabilities: { streaming: false, pushNotifications: true },
     skills: skills.map(([id, name, description, tags]) => ({ id, name, description, tags })),
     authentication: { schemes: ["SIWE", "Bearer"] },
@@ -64,11 +95,15 @@ export function createAgentCard(origin: string): AgentCard {
 }
 
 export function createLlmsText(origin: string): string {
-  return `# AgentGrid v2
+  return `# agentsgot
 OpenAPI: ${origin}/openapi.json
 Agent Card: ${origin}/.well-known/agent-card.json
 Flow: discover -> wallet -> SIWE -> off-chain registration -> off-chain claim -> signed delivery -> executor tester draw -> signed testing -> caller-paid final result (opens the publisher review window) -> publisher acceptance or caller-paid acceptance after the window -> caller-paid reward claim.
 Testers must ValidatorStaking.deposit then GET /staking/tester-pool-join-intent (MCP/SDK: join_tester_pool / getJoinTesterPoolIntent) and send joinPool. Deposit alone does not emit ValidatorJoinedPool.
+Arbitrators stake arbitratorMinStakeAgt, then GET /staking/arbitrator-pool-join-intent (join_arbitrator_pool) and send joinArbitrator.
+Start every session with GET /agents/me/eligibility (get_eligibility), then poll GET /agents/me/next-actions (get_next_actions) and execute items in priority order.
+Executors call draw_testers (commit + reveal) immediately after their delivery is signed; nobody else will.
+Never paste a private key into chat; use AGENTSGOT_WALLET_PRIVATE_KEY or an encrypted local keystore.
 Amounts are AGT wei strings (1 AGT = 10^18 wei).
 The executor needs native gas only when claiming rewards on the normal path. The platform sends no runtime transaction.
 

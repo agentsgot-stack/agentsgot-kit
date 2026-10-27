@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { defaultParams } from "#shared/params";
 import { AgentGridMcpServer, serveStdio } from "../src/mcp/server.js";
 import type { AgentGridClient } from "../src/sdk/client.js";
 
@@ -60,7 +61,7 @@ describe("MCP server", () => {
     const result = await server().mcp.handle({ jsonrpc: "2.0", id: 1, method: "initialize" });
     expect(result?.result).toMatchObject({ protocolVersion: "2025-06-18" });
   });
-  it("lists the nine tools", async () => {
+  it("lists the role-complete tool set", async () => {
     const result = await server().mcp.handle({ jsonrpc: "2.0", id: 1, method: "tools/list" });
     expect((result?.result as { tools: { name: string }[] }).tools.map(({ name }) => name)).toEqual(
       [
@@ -72,9 +73,62 @@ describe("MCP server", () => {
         "join_tester_pool",
         "publish_task",
         "accept_result",
+        "get_next_actions",
+        "get_eligibility",
+        "heartbeat",
+        "heartbeat_claim",
+        "draw_testers",
+        "get_submission",
+        "submit_test_report",
+        "get_final_result",
+        "review_task",
+        "join_arbitrator_pool",
+        "list_arbitrator_cases",
+        "get_dispute",
+        "confirm_arbitration_seat",
+        "arbitration_vote_intent",
+        "send_transaction",
+        "sign_delivery",
+        "get_submission_file",
+        "list_rewards",
+        "submit_fallback_report",
+        "get_role_guide",
         "list_actions",
       ],
     );
+  });
+  it("ships instructions with params-driven thresholds and role prompts", async () => {
+    const init = await server().mcp.handle({ jsonrpc: "2.0", id: 1, method: "initialize" });
+    const instructions = (init?.result as { instructions: string }).instructions;
+    expect(instructions).toContain(`${defaultParams.testerMinStakeAgt} AGT`);
+    expect(instructions).toContain(`${defaultParams.arbitratorMinStakeAgt} AGT`);
+    expect(instructions).toContain("Never paste a private key");
+    const list = await server().mcp.handle({ jsonrpc: "2.0", id: 2, method: "prompts/list" });
+    expect((list?.result as { prompts: { name: string }[] }).prompts.map((p) => p.name)).toEqual([
+      "role_executor",
+      "role_tester",
+      "role_arbitrator",
+      "role_publisher",
+    ]);
+    const prompt = await server().mcp.handle({
+      jsonrpc: "2.0",
+      id: 3,
+      method: "prompts/get",
+      params: { name: "role_executor" },
+    });
+    expect(JSON.stringify(prompt?.result)).toContain("tester-draws/commit");
+  });
+  it("draw_testers commits then reveals, tolerating a pending reveal", async () => {
+    const { client, mcp } = server();
+    Object.assign(client, {
+      commitTesterDraw: vi.fn(async () => ({ taskId: "t", signature: null })),
+      revealTesterDraw: vi.fn(async () => {
+        throw new Error("seed block not mined");
+      }),
+    });
+    expect(await call(mcp, "draw_testers", { taskId: "t" })).toMatchObject({
+      result: { structuredContent: { revealPending: true } },
+    });
   });
   it("calls list_tasks", async () => {
     expect(await call(server().mcp, "list_tasks")).toMatchObject({
@@ -128,9 +182,7 @@ describe("MCP server", () => {
   it("join_tester_pool can encode locally when addresses are provided", async () => {
     const testerAssignment = `0x${"ab".repeat(20)}`;
     const { client, mcp } = server();
-    expect(
-      await call(mcp, "join_tester_pool", { chainId: 97, testerAssignment }),
-    ).toMatchObject({
+    expect(await call(mcp, "join_tester_pool", { chainId: 97, testerAssignment })).toMatchObject({
       result: {
         structuredContent: {
           tx: { chainId: 97, to: testerAssignment, data: "0x8371e6b4", value: "0" },

@@ -1,14 +1,28 @@
 {
-  "name": "@agentgrid/agent-kit",
-  "version": "0.0.0",
-  "private": true,
+  "name": "@agentsgot/agent-kit",
+  "version": "1.0.0",
+  "description": "agentsgot SDK, MCP server, role skills and the agentsgot CLI for executor, tester, arbitrator and publisher agents.",
+  "license": "MIT",
   "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "agentsgot",
+    "mcp",
+    "agent-skills",
+    "a2a",
+    "bnb-chain"
+  ],
   "exports": {
     ".": "./dist/index.js",
-    "./mcp": "./dist/mcp/server.js"
+    "./mcp": "./dist/mcp/server.js",
+    "./skills/*": "./skills/dist/*",
+    "./package.json": "./package.json"
   },
   "bin": {
-    "agentgrid-mcp": "./dist/mcp/cli.js"
+    "agentsgot": "./dist/cli/index.js",
+    "agentsgot-mcp": "./dist/mcp/cli.js"
   },
   "types": "./dist/index.d.ts",
   "scripts": {
@@ -16,9 +30,13 @@
     "test": "pnpm run build:shared && vitest run",
     "typecheck": "pnpm run build:shared && tsc -p tsconfig.json --noEmit",
     "lint": "biome check src test vitest.config.ts",
-    "mcp": "node --env-file-if-exists=.env dist/mcp/cli.js",
+    "mcp": "node --env-file-if-exists=.env dist/cli/index.js mcp",
     "build:shared": "tsc -p vendor/shared/tsconfig.json && tsc -p vendor/shared/tsconfig.abi.json",
-    "check:independent": "node scripts/check-independent.mjs"
+    "check:independent": "node scripts/check-independent.mjs",
+    "build:skills": "pnpm run build && node scripts/build-skills.mjs",
+    "check:skills": "pnpm run build && node scripts/build-skills.mjs --check",
+    "prepublishOnly": "pnpm run check:skills && pnpm test",
+    "cli": "node --env-file-if-exists=.env dist/cli/index.js"
   },
   "dependencies": {
     "viem": "2.57.5",
@@ -38,6 +56,7 @@
   "files": [
     "dist",
     "vendor/shared",
+    "skills/dist",
     "README.md",
     "ARCHITECTURE.md",
     "docs"

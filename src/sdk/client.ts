@@ -4,21 +4,31 @@ import { testerAssignmentAbi } from "#shared/abi";
 import type {
   CommitTesterDrawSeedResponse,
   ConfigureAgentWebhookResponse,
+  ConfirmArbitrationSeatResponse,
+  CreateArbitrationVoteIntentResponse,
+  CreateFallbackReportIntentResponse,
   CreateRewardClaimIntentResponse,
   CreateSignedTestReportResponse,
   CreateTaskClaimResponse,
+  CreateTaskReviewResponse,
   CreateTaskSubmissionResponse,
   GetAcceptResultIntentResponse,
+  GetAgentEligibilityResponse,
+  GetAgentNextActionsResponse,
+  GetArbitratorPoolJoinIntentResponse,
   GetCancellationCompensationIntentResponse,
+  GetDisputeResponse,
   GetFinalResultIntentResponse,
   GetTaskResponse,
   GetTesterPoolJoinIntentResponse,
   HeartbeatAgentResponse,
   HeartbeatTaskClaimResponse,
+  ListArbitratorCasesResponse,
   ListAvailableTriggerActionsResponse,
   ListNotificationsResponse,
   ListRewardTranchesResponse,
   ListTasksResponse,
+  ListTaskTestReportsResponse,
   RegisterAgentOffchainResponse,
   RevealTesterDrawResponse,
   SignExecutorDeliveryResponse,
@@ -64,6 +74,23 @@ function canonicalTestReport(input: {
       .sort((left, right) => left.criterionId.localeCompare(right.criterionId, "en")),
     summary: input.summary.normalize("NFC").trim(),
   });
+}
+
+export interface ArbitrationVote {
+  satisfied: boolean;
+  reason: string;
+}
+
+/** Cryptographically random bytes32 hex; never derive salts from case data. */
+export function randomSalt(): `0x${string}` {
+  const bytes = new Uint8Array(32);
+  globalThis.crypto.getRandomValues(bytes);
+  return `0x${Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("")}`;
+}
+
+/** Stable per-delivery idempotency key so retries never double-submit a report. */
+export function testReportIdempotencyKey(taskId: string, submissionId: string): string {
+  return `test-report:${taskId}:${submissionId}`;
 }
 
 function confirmed(value: unknown) {
@@ -153,6 +180,23 @@ export class AgentGridClient {
     return this.request("POST", `/submissions/${stored.id}/signature`, { signature });
   }
 
+  /** Sign an already-uploaded (STORED) delivery; used to resume after a crash between steps. */
+  async signDelivery(submissionId: string): Promise<SignExecutorDeliveryResponse> {
+    const stored = await this.getSubmission(submissionId);
+    const typed = stored.executorTypedData;
+    const signature = await this.options.wallet.signTypedData({
+      domain: typed.domain,
+      types: typed.types as Record<string, readonly { name: string; type: string }[]>,
+      primaryType: typed.primaryType,
+      message: typed.message,
+    });
+    return this.request("POST", `/submissions/${submissionId}/signature`, { signature });
+  }
+
+  get walletAddress(): string {
+    return this.options.wallet.address;
+  }
+
   commitTesterDraw(taskId: string): Promise<CommitTesterDrawSeedResponse> {
     return this.request("POST", `/tasks/${taskId}/tester-draws/commit`);
   }
@@ -168,7 +212,8 @@ export class AgentGridClient {
     approved: boolean;
     criteria: readonly TestCriterionResult[];
     summary: string;
-    idempotencyKey: string;
+    /** Defaults to `test-report:{taskId}:{submissionId}`. */
+    idempotencyKey?: string;
   }): Promise<CreateSignedTestReportResponse> {
     const submission = await this.request<CreateTaskSubmissionResponse>(
       "GET",
@@ -206,7 +251,10 @@ export class AgentGridClient {
         summary: input.summary,
         signature,
       },
-      { "idempotency-key": input.idempotencyKey },
+      {
+        "idempotency-key":
+          input.idempotencyKey ?? testReportIdempotencyKey(input.taskId, input.submissionId),
+      },
     );
   }
 
@@ -269,6 +317,15 @@ export class AgentGridClient {
     return this.sendTransaction(intent.tx);
   }
 
+  /** Fetch the joinArbitrator intent and send it; throws when not eligible yet. */
+  async joinArbitratorPool(): Promise<string> {
+    const intent = await this.getJoinArbitratorPoolIntent();
+    if (intent.inPool) throw new Error("Already in the arbitrator pool.");
+    if (!intent.canJoin)
+      throw new Error("Stake does not meet arbitratorMinStakeAgt yet; see getEligibility().");
+    return this.sendTransaction(intent.tx);
+  }
+
   getCancellationCompensation(claimId: string): Promise<GetCancellationCompensationIntentResponse> {
     return this.request("GET", `/claims/${claimId}/cancellation-intent`);
   }
@@ -291,21 +348,82 @@ export class AgentGridClient {
     return this.request("PUT", `/agents/${agentId}/webhook`, { url, enabled });
   }
 
-  listArbitratorCases(): Promise<{ items: readonly Record<string, unknown>[] }> {
+  listArbitratorCases(): Promise<ListArbitratorCasesResponse> {
     return this.request("GET", "/arbitrator/cases");
   }
 
+  getDispute(caseId: string): Promise<GetDisputeResponse> {
+    return this.request("GET", `/disputes/${caseId}`);
+  }
+
+  /** Off-chain build of the caller-paid seat confirmation. Send within arbAcceptWindowHours. */
+  confirmArbitrationSeat(caseId: string): Promise<ConfirmArbitrationSeatResponse> {
+    return this.request("POST", `/disputes/${caseId}/confirm`);
+  }
+
+  /**
+   * Build commit + reveal transactions for one vote per criterion. Without `salt` a fresh random
+   * 32-byte salt is generated: persist the returned `salt` locally — the reveal must reuse it.
+   */
+  createArbitrationVoteIntent(
+    caseId: string,
+    votes: readonly ArbitrationVote[],
+    salt: string = randomSalt(),
+  ): Promise<CreateArbitrationVoteIntentResponse> {
+    return this.request("POST", `/disputes/${caseId}/vote-intent`, { salt, votes });
+  }
+
+  createFallbackReportIntent(
+    caseId: string,
+    input: { approved: boolean; criteria: readonly TestCriterionResult[]; summary: string },
+  ): Promise<CreateFallbackReportIntentResponse> {
+    return this.request("POST", `/disputes/${caseId}/fallback-report-intent`, input);
+  }
+
+  /**
+   * @deprecated Use confirmArbitrationSeat + createArbitrationVoteIntent and persist the salt.
+   * Kept for compatibility; now uses a random salt instead of a derivable one.
+   */
   async prepareArbitrationVote(caseId: string, reason: string): Promise<TransactionRequest[]> {
-    const confirmed = await this.request<{ tx: TransactionRequest }>(
-      "POST",
-      `/disputes/${caseId}/confirm`,
-    );
-    const vote = await this.request<{ commitTx: TransactionRequest; revealTx: TransactionRequest }>(
-      "POST",
-      `/disputes/${caseId}/vote-intent`,
-      { salt: keccak256(toBytes(`${caseId}:${reason}`)), votes: [{ satisfied: true, reason }] },
-    );
+    const confirmed = await this.confirmArbitrationSeat(caseId);
+    const vote = await this.createArbitrationVoteIntent(caseId, [{ satisfied: true, reason }]);
     return [confirmed.tx, vote.commitTx, vote.revealTx];
+  }
+
+  /** Every pending duty for this wallet across roles, sorted by urgency (priority 0 first). */
+  getNextActions(): Promise<GetAgentNextActionsResponse> {
+    return this.request("GET", "/agents/me/next-actions");
+  }
+
+  /** Per-role eligibility, stake shortfall (wei) and missing onboarding steps. */
+  getEligibility(): Promise<GetAgentEligibilityResponse> {
+    return this.request("GET", "/agents/me/eligibility");
+  }
+
+  /** Caller-paid ArbitrationCourt.joinArbitrator() intent; check canJoin before sending. */
+  getJoinArbitratorPoolIntent(): Promise<GetArbitratorPoolJoinIntentResponse> {
+    return this.request("GET", "/staking/arbitrator-pool-join-intent");
+  }
+
+  getSubmission(submissionId: string): Promise<CreateTaskSubmissionResponse> {
+    return this.request("GET", `/submissions/${submissionId}`);
+  }
+
+  /** Raw file bytes of a delivery; only the executor, drawn testers and case jurors may read. */
+  getSubmissionFile(submissionId: string, index: number): Promise<unknown> {
+    return this.request("GET", `/submissions/${submissionId}/files/${index}`);
+  }
+
+  listTestReports(taskId: string): Promise<ListTaskTestReportsResponse> {
+    return this.request("GET", `/tasks/${taskId}/test-reports`);
+  }
+
+  /** Publisher review: accept, or reject with a reason and the failed criteria ids. */
+  reviewTask(
+    taskId: string,
+    input: { accept: boolean; reason?: string; criteria?: readonly string[] },
+  ): Promise<CreateTaskReviewResponse> {
+    return this.request("POST", `/tasks/${taskId}/reviews`, input);
   }
 
   async publishTask(spec: TaskSpec): Promise<unknown> {

@@ -23,6 +23,12 @@ describe("A2A discovery", () => {
       "claim_rewards",
       "join_tester_pool",
       "publish_task",
+      "get_next_actions",
+      "get_eligibility",
+      "draw_testers",
+      "submit_test_report",
+      "join_arbitrator_pool",
+      "arbitrate",
     ]);
   });
   it("declares SIWE and Bearer authentication", () => {

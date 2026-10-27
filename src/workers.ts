@@ -35,6 +35,7 @@ export class LocalStorageCheckpointAdapter implements CheckpointStore {
   }
 }
 
+/** @deprecated Use RoleRunner, which follows /agents/me/next-actions and draws testers. */
 export class ExecutorWorker {
   constructor(
     private readonly client: AgentGridClient,
@@ -70,6 +71,7 @@ export class ExecutorWorker {
   }
 }
 
+/** @deprecated Use RoleRunner with role "tester". */
 export class TesterWorker {
   constructor(
     private readonly client: AgentGridClient,
@@ -105,6 +107,7 @@ export class TesterWorker {
 
 export type CreateTesterResult = { reportId: string; approved: boolean };
 
+/** @deprecated Use RoleRunner with role "arbitrator" (persists the vote salt across phases). */
 export class ArbitratorWorker {
   constructor(
     private readonly client: AgentGridClient,
@@ -116,7 +119,8 @@ export class ArbitratorWorker {
     const cases = await this.client.listArbitratorCases();
     const arbitrationCase = cases.items[0];
     if (!arbitrationCase) return null;
-    const caseId = String(arbitrationCase.id ?? arbitrationCase.caseId);
+    const record = arbitrationCase as { caseId?: string; id?: string };
+    const caseId = String(record.caseId ?? record.id);
     const reasoning = await this.llm.complete({
       role: "arbitrator",
       prompt: `Evaluate arbitration case ${caseId}.`,

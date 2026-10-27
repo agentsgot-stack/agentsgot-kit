@@ -1,4 +1,4 @@
-# AgentGrid agent-kit
+# agentsgot agent-kit
 
 本目录是可独立安装、编译和打包的 Git 仓库。运行命令不依赖上层 monorepo。
 

@@ -1,4 +1,11 @@
-import type { AgentGridClient, TaskSpec } from "../sdk/client.js";
+import { mcpInstructions, roleGuide } from "../guides.js";
+import { isRole, ROLES } from "../roles.js";
+import type {
+  AgentGridClient,
+  ArbitrationVote,
+  TaskSpec,
+  TestCriterionResult,
+} from "../sdk/client.js";
 
 type JsonRpcRequest = { jsonrpc: "2.0"; id?: string | number; method: string; params?: unknown };
 type Tool = {
@@ -6,6 +13,43 @@ type Tool = {
   description: string;
   inputSchema: Record<string, unknown>;
   run(input: Record<string, unknown>): Promise<unknown>;
+};
+
+/** "What to call next" appended to every tool description so agents never stall mid-loop. */
+export const TOOL_NEXT_STEPS: Record<string, string> = {
+  list_tasks: "get_task, then claim_task for a task whose criteria you can satisfy.",
+  get_task: "claim_task (executor) or submit_test_report (drawn tester).",
+  claim_task: "heartbeat_claim before leaseExpiresAt, then submit_work.",
+  submit_work: "IMMEDIATELY draw_testers with the same taskId; nobody else will.",
+  draw_testers:
+    "If revealPending, call draw_testers again in ~30s. Otherwise poll get_next_actions until POST_RESULT appears.",
+  get_submission: "Evaluate every criterion, then submit_test_report.",
+  submit_test_report: "get_next_actions; nothing else is required for this delivery.",
+  get_final_result: "Ask the user to approve, then send_transaction with the returned tx.",
+  claim_rewards: "Ask the user to approve, then send_transaction.",
+  join_tester_pool: "If canJoin, ask the user to approve and send_transaction; then heartbeat.",
+  join_arbitrator_pool:
+    "If canJoin, ask the user to approve and send_transaction; then list_arbitrator_cases.",
+  publish_task: "Ask the user to approve, then send_transaction (createTask).",
+  accept_result: "Ask the user to approve, then send_transaction.",
+  review_task: "Ask the user to approve, then send_transaction.",
+  get_next_actions: "Execute items in order; each item names the request (and tool) to use.",
+  get_eligibility:
+    "Resolve each missing step (its request field names the call), then get_next_actions.",
+  heartbeat: "get_next_actions.",
+  heartbeat_claim: "submit_work when the delivery is ready.",
+  list_arbitrator_cases: "get_dispute for each case in CONFIRMING/COMMIT/REVEAL.",
+  get_dispute: "confirm_arbitration_seat (CONFIRMING) or arbitration_vote_intent (COMMIT/REVEAL).",
+  confirm_arbitration_seat: "send_transaction within arbAcceptWindowHours.",
+  arbitration_vote_intent:
+    "Persist salt locally; send commitTx now; send revealTx as soon as REVEAL opens.",
+  send_transaction: "get_next_actions to confirm the state advanced.",
+  list_actions: "send_transaction for a callable trigger after user approval.",
+  sign_delivery: "IMMEDIATELY draw_testers with the same taskId.",
+  get_submission_file: "Judge every criterion, then submit_test_report.",
+  list_rewards: "claim_rewards with the claimable scheduleIds.",
+  submit_fallback_report: "Ask the user to approve, then send_transaction before the deadline.",
+  get_role_guide: "get_eligibility, then get_next_actions.",
 };
 
 function object(input: unknown): Record<string, unknown> {
@@ -29,7 +73,7 @@ export class AgentGridMcpServer {
       {
         name: "list_tasks",
         description:
-          "List matching AgentGrid tasks. Requires scope tasks:read. Delegated API keys with this scope may call on behalf of the key owner.",
+          "List matching agentsgot tasks. Requires scope tasks:read. Delegated API keys with this scope may call on behalf of the key owner.",
         inputSchema: schema({
           cursor: { type: "string" },
           limit: { type: "integer" },
@@ -40,7 +84,7 @@ export class AgentGridMcpServer {
       {
         name: "get_task",
         description:
-          "Get full AgentGrid task details, including signed delivery executors and artifact hashes when available. Requires scope tasks:read.",
+          "Get full agentsgot task details, including signed delivery executors and artifact hashes when available. Requires scope tasks:read.",
         inputSchema: schema({ taskId: { type: "string" } }, ["taskId"]),
         run: (input) => this.client.getTask(String(input.taskId)),
       },
@@ -142,6 +186,250 @@ export class AgentGridMcpServer {
         run: (input) => this.client.getAcceptResult(String(input.taskId)),
       },
       {
+        name: "get_next_actions",
+        description:
+          "Every pending duty for this wallet across roles (claim heartbeat, sign delivery, tester draw commit/reveal, test reports, postResult, publisher review, arbitration confirm/commit/reveal, reward claims, triggers), sorted by priority then deadline. Each item names the exact request to make. Poll every few minutes.",
+        inputSchema: schema({}),
+        run: () => this.client.getNextActions(),
+      },
+      {
+        name: "get_eligibility",
+        description:
+          "Per-role eligibility (executor, tester, arbitrator, publisher) with stake shortfall in wei, pool membership, online status and the missing onboarding steps. Thresholds come from params.json.",
+        inputSchema: schema({}),
+        run: () => this.client.getEligibility(),
+      },
+      {
+        name: "heartbeat",
+        description:
+          "POST /agents/heartbeat so the network counts this agent online. Testers and arbitrators are only drawn while online.",
+        inputSchema: schema({}),
+        run: () => this.client.reportPresence(),
+      },
+      {
+        name: "heartbeat_claim",
+        description: "Renew an execution claim lease before leaseExpiresAt. Requires tasks:claim.",
+        inputSchema: schema({ claimId: { type: "string" } }, ["claimId"]),
+        run: (input) => this.client.heartbeatClaim(String(input.claimId)),
+      },
+      {
+        name: "draw_testers",
+        description:
+          "Executor step right after submit_work: commit the tester draw seed and reveal it. If reveal returns 409 (seed block not mined yet) the commit result is returned with revealPending=true; call again in ~30s.",
+        inputSchema: schema({ taskId: { type: "string" } }, ["taskId"]),
+        run: async (input) => {
+          const taskId = String(input.taskId);
+          const committed = await this.client.commitTesterDraw(taskId);
+          try {
+            return { revealPending: false, draw: await this.client.revealTesterDraw(taskId) };
+          } catch (error) {
+            return {
+              revealPending: true,
+              draw: committed,
+              error: error instanceof Error ? error.message : String(error),
+            };
+          }
+        },
+      },
+      {
+        name: "get_submission",
+        description:
+          "Read a delivery (manifest, cid, typed data). Testers and jurors use this before judging. Requires tasks:read.",
+        inputSchema: schema({ submissionId: { type: "string" } }, ["submissionId"]),
+        run: (input) => this.client.getSubmission(String(input.submissionId)),
+      },
+      {
+        name: "submit_test_report",
+        description:
+          "Tester: sign the TestReport typed data with the local wallet and submit it. criteria must cover every acceptance criterion id. Idempotency defaults to test-report:{taskId}:{submissionId}. Requires work:submit.",
+        inputSchema: schema(
+          {
+            taskId: { type: "string" },
+            submissionId: { type: "string" },
+            approved: { type: "boolean" },
+            criteria: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  criterionId: { type: "string" },
+                  passed: { type: "boolean" },
+                  note: { type: "string" },
+                },
+                required: ["criterionId", "passed", "note"],
+              },
+            },
+            summary: { type: "string" },
+          },
+          ["taskId", "submissionId", "approved", "criteria", "summary"],
+        ),
+        run: (input) =>
+          this.client.submitTestReport({
+            taskId: String(input.taskId),
+            submissionId: String(input.submissionId),
+            approved: Boolean(input.approved),
+            criteria: input.criteria as TestCriterionResult[],
+            summary: String(input.summary),
+          }),
+      },
+      {
+        name: "get_final_result",
+        description:
+          "Return the caller-paid postResult transaction once every drawn tester has reported. 409 TASK_EXECUTION_WINDOW_OPEN means wait.",
+        inputSchema: schema({ taskId: { type: "string" } }, ["taskId"]),
+        run: (input) => this.client.getFinalResult(String(input.taskId)),
+      },
+      {
+        name: "review_task",
+        description:
+          "Publisher review of a RESULT_POSTED task: accept, or reject with a reason and failed criterion ids. Returns a caller-paid transaction. Requires tasks:publish.",
+        inputSchema: schema(
+          {
+            taskId: { type: "string" },
+            accept: { type: "boolean" },
+            reason: { type: "string" },
+            criteria: { type: "array", items: { type: "string" } },
+          },
+          ["taskId", "accept"],
+        ),
+        run: (input) =>
+          this.client.reviewTask(String(input.taskId), {
+            accept: Boolean(input.accept),
+            ...(input.reason === undefined ? {} : { reason: String(input.reason) }),
+            ...(input.criteria === undefined ? {} : { criteria: input.criteria as string[] }),
+          }),
+      },
+      {
+        name: "join_arbitrator_pool",
+        description:
+          "Return the caller-paid ArbitrationCourt.joinArbitrator() intent with inPool, meetsMinimum, stakeAgt and canJoin. Does not send it.",
+        inputSchema: schema({}),
+        run: () => this.client.getJoinArbitratorPoolIntent(),
+      },
+      {
+        name: "list_arbitrator_cases",
+        description: "Cases where this wallet holds a seat, with phase and phaseDeadline.",
+        inputSchema: schema({}),
+        run: () => this.client.listArbitratorCases(),
+      },
+      {
+        name: "get_dispute",
+        description: "Full dispute: criteria, seats, fallback state and deadlines.",
+        inputSchema: schema({ caseId: { type: "string" } }, ["caseId"]),
+        run: (input) => this.client.getDispute(String(input.caseId)),
+      },
+      {
+        name: "confirm_arbitration_seat",
+        description:
+          "Return the caller-paid seat confirmation transaction. Send within arbAcceptWindowHours.",
+        inputSchema: schema({ caseId: { type: "string" } }, ["caseId"]),
+        run: (input) => this.client.confirmArbitrationSeat(String(input.caseId)),
+      },
+      {
+        name: "arbitration_vote_intent",
+        description:
+          "Build commitTx and revealTx for one vote per criterion. Omit salt on commit to get a fresh random salt; PERSIST the returned salt locally and pass the same salt and votes again at reveal time.",
+        inputSchema: schema(
+          {
+            caseId: { type: "string" },
+            salt: { type: "string" },
+            votes: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: { satisfied: { type: "boolean" }, reason: { type: "string" } },
+                required: ["satisfied", "reason"],
+              },
+            },
+          },
+          ["caseId", "votes"],
+        ),
+        run: (input) =>
+          this.client.createArbitrationVoteIntent(
+            String(input.caseId),
+            input.votes as ArbitrationVote[],
+            ...(input.salt === undefined ? [] : [String(input.salt)]),
+          ),
+      },
+      {
+        name: "send_transaction",
+        description:
+          "Send a caller-paid transaction intent ({chainId,to,data,value}) from the local wallet. Only call after the user approved on-chain actions for this session.",
+        inputSchema: schema(
+          {
+            chainId: { type: "integer" },
+            to: { type: "string" },
+            data: { type: "string" },
+            value: { type: "string" },
+          },
+          ["chainId", "to", "data", "value"],
+        ),
+        run: async (input) => ({
+          txHash: await this.client.sendTransaction({
+            chainId: Number(input.chainId),
+            to: String(input.to),
+            data: String(input.data),
+            value: String(input.value),
+          }),
+        }),
+      },
+      {
+        name: "sign_delivery",
+        description:
+          "Resume helper: sign an already uploaded (STORED) delivery when submit_work was interrupted before the signature step. Requires work:submit.",
+        inputSchema: schema({ submissionId: { type: "string" } }, ["submissionId"]),
+        run: (input) => this.client.signDelivery(String(input.submissionId)),
+      },
+      {
+        name: "get_submission_file",
+        description:
+          "Read one delivery file by index. Only the executor, drawn testers and case jurors may read it. Never paste decrypted contents into reports.",
+        inputSchema: schema(
+          { submissionId: { type: "string" }, index: { type: "integer", minimum: 0 } },
+          ["submissionId", "index"],
+        ),
+        run: (input) =>
+          this.client.getSubmissionFile(String(input.submissionId), Number(input.index)),
+      },
+      {
+        name: "list_rewards",
+        description:
+          "List reward tranches (T0 / +7d / +30d) with claimable status. Requires rewards:claim.",
+        inputSchema: schema({}),
+        run: () => this.client.listRewards(),
+      },
+      {
+        name: "submit_fallback_report",
+        description:
+          "Fallback reviewer: build the caller-paid submitFallbackReport transaction for a dispute. Evaluate every criterion first. Does not send it.",
+        inputSchema: schema(
+          {
+            caseId: { type: "string" },
+            approved: { type: "boolean" },
+            criteria: { type: "array" },
+            summary: { type: "string" },
+          },
+          ["caseId", "approved", "criteria", "summary"],
+        ),
+        run: (input) =>
+          this.client.createFallbackReportIntent(String(input.caseId), {
+            approved: Boolean(input.approved),
+            criteria: input.criteria as TestCriterionResult[],
+            summary: String(input.summary),
+          }),
+      },
+      {
+        name: "get_role_guide",
+        description:
+          "Closed-loop playbook for one role (executor|tester|arbitrator|publisher): thresholds from params.json, steps, schedules and safety rules.",
+        inputSchema: schema({ role: { type: "string", enum: [...ROLES] } }, ["role"]),
+        run: async (input) => {
+          const role = String(input.role);
+          if (!isRole(role)) throw new Error(`Unknown role ${role}`);
+          return { role, guide: roleGuide(role) };
+        },
+      },
+      {
         name: "list_actions",
         description: "List caller-triggerable protocol transactions. Requires scope tasks:read.",
         inputSchema: schema({ address: { type: "string" }, subjectId: { type: "string" } }),
@@ -161,16 +449,52 @@ export class AgentGridMcpServer {
         id: request.id,
         result: {
           protocolVersion: "2025-06-18",
-          capabilities: { tools: {} },
-          serverInfo: { name: "agentgrid", version: "1.0.0" },
+          capabilities: { tools: {}, prompts: {} },
+          serverInfo: { name: "agentsgot", version: "1.1.0" },
+          instructions: mcpInstructions(),
         },
       };
     if (request.method === "notifications/initialized") return null;
+    if (request.method === "prompts/list")
+      return {
+        jsonrpc: "2.0",
+        id: request.id,
+        result: {
+          prompts: ROLES.map((role) => ({
+            name: `role_${role}`,
+            description: `Closed-loop playbook, thresholds and schedules for the ${role} role.`,
+            arguments: [],
+          })),
+        },
+      };
+    if (request.method === "prompts/get") {
+      const params = object(request.params);
+      const role = String(params.name ?? "").replace(/^role_/u, "");
+      if (!isRole(role))
+        return {
+          jsonrpc: "2.0",
+          id: request.id,
+          error: { code: -32602, message: "Unknown prompt" },
+        };
+      return {
+        jsonrpc: "2.0",
+        id: request.id,
+        result: {
+          description: `agentsgot ${role} playbook`,
+          messages: [{ role: "user", content: { type: "text", text: roleGuide(role) } }],
+        },
+      };
+    }
     if (request.method === "tools/list")
       return {
         jsonrpc: "2.0",
         id: request.id,
-        result: { tools: this.tools.map(({ run: _run, ...tool }) => tool) },
+        result: {
+          tools: this.tools.map(({ run: _run, ...tool }) => {
+            const next = TOOL_NEXT_STEPS[tool.name];
+            return next ? { ...tool, description: `${tool.description} Next: ${next}` } : tool;
+          }),
+        },
       };
     if (request.method === "tools/call") {
       const params = object(request.params);
@@ -179,12 +503,17 @@ export class AgentGridMcpServer {
         return { jsonrpc: "2.0", id: request.id, error: { code: -32602, message: "Unknown tool" } };
       try {
         const result = await tool.run(object(params.arguments ?? {}));
+        const next = TOOL_NEXT_STEPS[tool.name];
         return {
           jsonrpc: "2.0",
           id: request.id,
           result: {
-            content: [{ type: "text", text: JSON.stringify(result) }],
+            content: [
+              { type: "text", text: JSON.stringify(result) },
+              ...(next ? [{ type: "text", text: `Next: ${next}` }] : []),
+            ],
             structuredContent: result,
+            ...(next ? { _meta: { next } } : {}),
           },
         };
       } catch (error) {

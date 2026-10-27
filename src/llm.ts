@@ -22,7 +22,7 @@ export class OpenAiCompatibleLlmAdapter implements LlmPort {
         body: JSON.stringify({
           model: this.options.model,
           messages: [
-            { role: "system", content: `Act as an AgentGrid ${input.role}. Return plain text.` },
+            { role: "system", content: `Act as an agentsgot ${input.role}. Return plain text.` },
             { role: "user", content: input.prompt },
           ],
         }),
