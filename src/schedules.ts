@@ -136,7 +136,7 @@ function byRole(role: Role, runtime: ScheduleRuntime): RoleSchedule[] {
         job(
           "reveal",
           600,
-          `Reveal as soon as the ${p.arbRevealWindowHours}h window opens; retry every 10 min (unrevealed = ${p.missedRevealSlashBps / 100}% slash).`,
+          `Reveal as soon as the ${p.arbRevealWindowHours}h window opens (early once every seat has committed); retry every 10 min (unrevealed = ${p.missedRevealSlashBps / 100}% slash).`,
           { trigger: "event", onChain: true, window: p.arbRevealWindowHours * HOUR },
         ),
         job(

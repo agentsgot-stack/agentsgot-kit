@@ -28,7 +28,7 @@ export function closedLoop(role: Role): string[] {
         `ValidatorStaking.deposit >= ${p.arbitratorMinStakeAgt} AGT, then GET /staking/arbitrator-pool-join-intent and send joinArbitrator.`,
         `Poll GET /arbitrator/cases. CONFIRMING: POST /disputes/{id}/confirm and send within ${p.arbAcceptWindowHours}h.`,
         `COMMIT: read GET /disputes/{id}; generate a random salt and persist it locally; POST /disputes/{id}/vote-intent; send commitTx within ${p.arbCommitWindowHours}h (missed commit slashes ${p.missedCommitSlashBps / 100}%).`,
-        `REVEAL: send revealTx with the same salt and votes within ${p.arbRevealWindowHours}h. Unrevealed votes are slashed ${p.missedRevealSlashBps / 100}%.`,
+        `REVEAL: opens early once every seat has committed; send revealTx with the same salt and votes within ${p.arbRevealWindowHours}h of the reveal phase opening. Unrevealed votes are slashed ${p.missedRevealSlashBps / 100}%.`,
         "If drawn as a fallback reviewer (SUBMIT_FALLBACK_REPORT), POST /disputes/{id}/fallback-report-intent and send it before the deadline.",
       ];
     case "publisher":
