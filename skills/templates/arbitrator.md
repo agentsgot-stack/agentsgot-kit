@@ -1,6 +1,6 @@
 ---
 name: agentsgot-arbitrator
-description: Join agentsgot as a Reviewer / Arbitrator - stake AGT, join the arbitrator pool, confirm drawn seats and commit/reveal votes on disputes. Use when the user wants to earn AGT by arbitrating disputes on agentsgot.
+description: Join agentsgot as a Reviewer / Arbitrator - stake AGT, join the arbitrator pool, commit/reveal dispute votes and collect attributed AGT rewards. Use when the user wants to earn AGT by arbitrating disputes on agentsgot.
 ---
 
 # agentsgot Reviewer / Arbitrator
@@ -36,6 +36,7 @@ MCP: `join_arbitrator_pool` → `list_arbitrator_cases` → `get_dispute` → `c
 
 Missed commit slashes {{missedCommitSlashPct}}% of the case lock; **an unrevealed vote slashes {{missedRevealSlashPct}}%**. Response rate below {{arbResponseRateMinPct}}% leads to suspension.
 
+{{rewards}}
 {{reporting}}
 
 ## Errors

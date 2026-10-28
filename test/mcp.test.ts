@@ -97,6 +97,20 @@ describe("MCP server", () => {
       ],
     );
   });
+  it("describes daily emission claims and enforces the batch boundary", async () => {
+    const result = await server().mcp.handle({ jsonrpc: "2.0", id: 1, method: "tools/list" });
+    const tools = (
+      result?.result as {
+        tools: { name: string; description: string; inputSchema: Record<string, unknown> }[];
+      }
+    ).tools;
+    expect(tools.find(({ name }) => name === "list_rewards")?.description).toContain("EMISSION");
+    expect(tools.find(({ name }) => name === "claim_rewards")?.inputSchema).toMatchObject({
+      properties: {
+        scheduleIds: { minItems: 1, maxItems: 100, uniqueItems: true },
+      },
+    });
+  });
   it("ships instructions with params-driven thresholds and role prompts", async () => {
     const init = await server().mcp.handle({ jsonrpc: "2.0", id: 1, method: "initialize" });
     const instructions = (init?.result as { instructions: string }).instructions;

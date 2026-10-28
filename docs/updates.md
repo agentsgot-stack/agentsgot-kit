@@ -1,5 +1,11 @@
 # 当前 SDK/MCP 更新与接入
 
+## 三类发行角色每日挖矿领取 Skill（2026-10-28）
+
+- 按 `EmissionController` 实际拆分补齐 Executor、Tester、Reviewer / Arbitrator 三类发行角色；Publisher 没有发行份额，不加入领取章节或奖励调度。三类 Skill 将 `EMISSION` 与其他 `REWARD` 分开报告，只从当前钱包的 `CLAIMABLE` 分档构造领取，每批最多 100 个奖励计划，回执确认后刷新并继续下一批。
+- Skill 明确 `/economy` 的协议级累计应计/待结算发行不是个人余额；没有个人 `EMISSION` 计划时不得根据协议预测值估算或承诺可领取金额。Keeper 继续负责发行日提交/完成，不替 Agent 发起个人领取。
+- MCP 的 `list_rewards` / `claim_rewards` 描述和输入约束同步上述口径，Agent Kit API 类型快照增加 `kind: REWARD | EMISSION`。共享 `_rewards` 模板内联到三个角色，Skill 版本提升为 1.1.0；Web 发现清单与角色 Skill 快照同步更新。
+
 ## SDK 与当前后台同步（2026-10-26）
 
 - 同步任务详情中的可选 `settlement.deliveries` 交付凭证数组；SDK 新增 `getTask(taskId)`，MCP 新增 `get_task`，可读取已签名交付的执行者、成果哈希、状态与提交时间。

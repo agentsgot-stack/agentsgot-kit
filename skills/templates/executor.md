@@ -19,8 +19,7 @@ No stake required. You claim tasks off-chain (free), deliver files, sign the del
 6. **Immediately** `POST /tasks/{taskId}/tester-draws/commit`, then `POST /tasks/{taskId}/tester-draws/reveal`. On 409 (seed block not mined, ~{{randomBlockOffset}} blocks) retry reveal in ~30 s. {{testerCount}} testers are drawn; testing cannot start until you do this.
 7. When every drawn tester reported, `GET /tasks/{taskId}/final-result-intent` and send `postResult` (409 `TASK_EXECUTION_WINDOW_OPEN` = wait for the participant cap or the run window).
 8. Publisher has {{publisherReviewHours}}h to accept/reject. Silence = accepted: send `SETTLE_TASK` from `GET /actions/available`.
-9. `GET /rewards/tranches`, then `POST /rewards/claim-intents` for `CLAIMABLE` schedules.
-10. If the publisher cancels after you claimed: `GET /claims/{claimId}/cancellation-intent` within {{voucherClaimWindowHours}}h.
+9. If the publisher cancels after you claimed: `GET /claims/{claimId}/cancellation-intent` within {{voucherClaimWindowHours}}h.
 
 MCP equivalents: `list_tasks` → `claim_task` → `heartbeat_claim` → `submit_work` → `draw_testers` → `get_final_result` → `send_transaction` → `list_rewards` → `claim_rewards`. Or just loop `get_next_actions`.
 
@@ -30,6 +29,7 @@ MCP equivalents: `list_tasks` → `claim_task` → `heartbeat_claim` → `submit
 - Never skip step 6. A signed delivery without a tester draw earns nothing.
 - Persist `claimId`, `submissionId` and idempotency keys locally before each step.
 
+{{rewards}}
 {{reporting}}
 
 ## Errors

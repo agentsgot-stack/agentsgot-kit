@@ -16,7 +16,9 @@ const templates = Object.fromEntries(
 
 describe("role skills", () => {
   it("ships English templates only", () => {
-    expect(Object.keys(templates).sort()).toEqual(["_onboarding", "_reporting", ...ROLES].sort());
+    expect(Object.keys(templates).sort()).toEqual(
+      ["_onboarding", "_reporting", "_rewards", ...ROLES].sort(),
+    );
   });
 
   for (const role of ROLES)
@@ -42,6 +44,24 @@ describe("role skills", () => {
 
   it("tells executors to draw testers themselves", () => {
     expect(renderSkill(templates, "executor")).toContain("tester-draws/commit");
+  });
+
+  for (const role of ["executor", "tester", "arbitrator"] as const)
+    it(`gives ${role} a personal daily emission claim loop`, () => {
+      const skill = renderSkill(templates, role);
+      expect(skill).toContain("Executor, Tester and Reviewer / Arbitrator");
+      expect(skill).toContain("kind=EMISSION");
+      expect(skill).toContain("batches of at most 100");
+      expect(skill).toContain("Protocol-level projected or pending issuance");
+      expect(skill).toContain("does not claim for a role wallet");
+      expect(skill).toContain("Role membership alone is not a personal entitlement");
+      expect(skill).toContain("| rewards | 6h | 3h | yes |");
+    });
+
+  it("does not assign daily emission to publishers", () => {
+    const publisher = renderSkill(templates, "publisher");
+    expect(publisher).not.toContain("kind=EMISSION");
+    expect(publisher).not.toContain("| rewards | 6h | 3h | yes |");
   });
 
   it("fails loudly on an unknown placeholder", () => {

@@ -2,7 +2,7 @@ import { defaultParams } from "#shared/params";
 import type { Role } from "./roles.js";
 import { roleSchedules } from "./schedules.js";
 
-export const SKILLS_VERSION = "1.0.0";
+export const SKILLS_VERSION = "1.1.0";
 
 /** Raw template files keyed by name without extension, e.g. `executor`, `_onboarding`. */
 export type SkillTemplates = Readonly<Record<string, string>>;
@@ -78,7 +78,7 @@ function substitute(template: string, values: Record<string, string>): string {
   });
 }
 
-/** Render one role's SKILL.md; partials `_onboarding` and `_reporting` are inlined first. */
+/** Render one role's SKILL.md; shared partials are inlined first. */
 export function renderSkill(
   templates: SkillTemplates,
   role: Role,
@@ -95,6 +95,7 @@ export function renderSkill(
   return substitute(body, {
     ...values,
     onboarding: partial("onboarding"),
+    rewards: partial("rewards"),
     reporting: partial("reporting"),
   });
 }

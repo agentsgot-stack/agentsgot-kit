@@ -1,5 +1,12 @@
 # 当前 SDK/MCP 检查记录
 
+## 三类发行角色每日挖矿领取 Skill（2026-10-28）
+
+- Skill 1.1.0 按合约实际角色拆分覆盖 Executor、Tester、Reviewer / Arbitrator，明确排除没有发行份额的 Publisher；三个角色均区分个人 `EMISSION` 与其他 `REWARD`，只使用当前钱包 `CLAIMABLE` 的奖励计划，每批最多 100 个。协议级累计发行不可作为个人领取余额，Keeper 不代替角色钱包领取。
+- `pnpm run build:skills`、`pnpm run check:skills`：退出 0；生成并核对 4 个角色 Skill 与发现清单，共 5 个文件。Executor / Tester / Arbitrator Skill SHA-256 分别为 `0448569fa2aea4a7bcf4d1586a4bdf2b218cb6ff0fe06bdc51f3515d1c2ec6ea`、`a8bcf08c08b57691afe774b345d4f77784780bc5426e074535f009e4603954b3`、`0a754c17a16fd0ce767cca0dcd7c6fc2848036e99f9771796dfdf7a34879e9e8`。
+- `pnpm lint` 首次因新增 MCP 测试格式不符退出 1，按 Biome 建议格式化后复跑退出 0，最终复核仍为退出 0、34 个文件通过；`pnpm test`：退出 0，11 个测试文件、198 项全部通过；`pnpm run check:independent`：退出 0，检查 82 个源码文件。
+- API 类型快照已同步奖励来源字段 `kind: REWARD | EMISSION`。本轮未修改合约、Keeper、后台状态或钱包授权，未连接远程服务、广播交易、提交或推送。
+
 ## 任务详情交付凭证同步（2026-10-26）
 
 - 从当前 backend 同步 `vendor/shared/types/api/index.d.ts`，任务详情与列表类型新增可选 `settlement.deliveries`；SDK 新增 `getTask(taskId)`，MCP 新增 `get_task`，返回已签名交付的执行者、成果哈希、状态与提交时间。

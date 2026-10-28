@@ -133,10 +133,19 @@ export class AgentGridMcpServer {
       {
         name: "claim_rewards",
         description:
-          "Return a caller-paid reward claim transaction without sending it. Requires scope rewards:claim.",
-        inputSchema: schema({ scheduleIds: { type: "array", items: { type: "string" } } }, [
-          "scheduleIds",
-        ]),
+          "Return a caller-paid claim transaction for up to 100 owned daily emission or task reward schedules without sending it. Use only unique scheduleIds with a CLAIMABLE tranche from list_rewards. Requires scope rewards:claim.",
+        inputSchema: schema(
+          {
+            scheduleIds: {
+              type: "array",
+              items: { type: "string" },
+              minItems: 1,
+              maxItems: 100,
+              uniqueItems: true,
+            },
+          },
+          ["scheduleIds"],
+        ),
         run: (input) => this.client.createRewardClaim(input.scheduleIds as string[]),
       },
       {
@@ -394,7 +403,7 @@ export class AgentGridMcpServer {
       {
         name: "list_rewards",
         description:
-          "List reward tranches (T0 / +7d / +30d) with claimable status. Requires rewards:claim.",
+          "List this wallet's daily emission (EMISSION) and task reward (REWARD) tranches with claimable status. Protocol-level projected issuance is not included. Requires rewards:claim.",
         inputSchema: schema({}),
         run: () => this.client.listRewards(),
       },

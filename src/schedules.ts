@@ -62,6 +62,19 @@ function common(runtime: ScheduleRuntime): RoleSchedule[] {
   ];
 }
 
+function rewards(): RoleSchedule {
+  return job(
+    "rewards",
+    6 * HOUR,
+    "Check attributed daily emission and role reward tranches; claim eligible schedules in batches of up to 100.",
+    { onChain: true },
+  );
+}
+
+function receivesDailyEmission(role: Role): boolean {
+  return role === "executor" || role === "tester" || role === "arbitrator";
+}
+
 function byRole(role: Role, runtime: ScheduleRuntime): RoleSchedule[] {
   const lease = runtime.claimHeartbeatTimeoutSeconds ?? 1800;
   switch (role) {
@@ -87,9 +100,6 @@ function byRole(role: Role, runtime: ScheduleRuntime): RoleSchedule[] {
           "Own tasks: build postResult once testers reported; SETTLE_TASK after the review window.",
           { onChain: true, window: p.publisherReviewHours * HOUR },
         ),
-        job("rewards", 6 * HOUR, "Check claimable vesting tranches (T0 / +7d / +30d).", {
-          onChain: true,
-        }),
       ];
     case "tester":
       return [
@@ -150,7 +160,11 @@ function byRole(role: Role, runtime: ScheduleRuntime): RoleSchedule[] {
 
 /** Jobs for one role: the common ones plus the role-specific ones. */
 export function roleSchedules(role: Role, runtime: ScheduleRuntime = {}): RoleSchedule[] {
-  return [...common(runtime), ...byRole(role, runtime)];
+  return [
+    ...common(runtime),
+    ...(receivesDailyEmission(role) ? [rewards()] : []),
+    ...byRole(role, runtime),
+  ];
 }
 
 /** Union of schedules for several roles, de-duplicated by name (shortest interval wins). */
