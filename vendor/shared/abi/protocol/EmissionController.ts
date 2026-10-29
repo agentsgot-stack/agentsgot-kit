@@ -18,49 +18,32 @@ export const emissionControllerAbi = [
             "internalType": "contract IParamRegistry"
           },
           {
-            "name": "taskEscrow",
-            "type": "address",
-            "internalType": "contract ITaskEscrow"
-          },
-          {
             "name": "vault",
             "type": "address",
             "internalType": "contract IncentiveVault"
           },
           {
-            "name": "rewardVesting",
-            "type": "address",
-            "internalType": "contract IRewardVesting"
-          },
-          {
-            "name": "platformTreasury",
-            "type": "address",
-            "internalType": "contract IPlatformTreasury"
-          },
-          {
             "name": "protocolProof",
             "type": "address",
             "internalType": "contract IProtocolProof"
-          },
-          {
-            "name": "executorRecipient",
-            "type": "address",
-            "internalType": "address"
-          },
-          {
-            "name": "testerRecipient",
-            "type": "address",
-            "internalType": "address"
-          },
-          {
-            "name": "reviewerRecipient",
-            "type": "address",
-            "internalType": "address"
           }
         ]
       }
     ],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "BURN_ADDRESS",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -84,6 +67,130 @@ export const emissionControllerAbi = [
         "name": "",
         "type": "string",
         "internalType": "string"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "allocationLeaf",
+    "inputs": [
+      {
+        "name": "epoch",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "taskId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "beneficiary",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "role",
+        "type": "uint8",
+        "internalType": "uint8"
+      },
+      {
+        "name": "taskWeight",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "executionWeight",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "claim",
+    "inputs": [
+      {
+        "name": "claims",
+        "type": "tuple[]",
+        "internalType": "struct EmissionController.EmissionClaim[]",
+        "components": [
+          {
+            "name": "epoch",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "taskId",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "role",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "taskWeight",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "executionWeight",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "amount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "proof",
+            "type": "bytes32[]",
+            "internalType": "bytes32[]"
+          }
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "amount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "claimedAllocations",
+    "inputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
       }
     ],
     "stateMutability": "view"
@@ -167,19 +274,31 @@ export const emissionControllerAbi = [
         "name": "finalized",
         "type": "bool",
         "internalType": "bool"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "executorRecipient",
-    "inputs": [],
-    "outputs": [
+      },
       {
-        "name": "",
-        "type": "address",
-        "internalType": "address"
+        "name": "totalTaskWeight",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "allocatedAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "burnedAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "activeTaskCount",
+        "type": "uint32",
+        "internalType": "uint32"
+      },
+      {
+        "name": "allocationRoot",
+        "type": "bytes32",
+        "internalType": "bytes32"
       }
     ],
     "stateMutability": "view"
@@ -199,10 +318,36 @@ export const emissionControllerAbi = [
   },
   {
     "type": "function",
+    "name": "hasFinalizedEpoch",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "initialize",
     "inputs": [],
     "outputs": [],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "lastFinalizedEpoch",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -213,19 +358,6 @@ export const emissionControllerAbi = [
         "name": "",
         "type": "address",
         "internalType": "contract IParamRegistry"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "platformTreasury",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "contract IPlatformTreasury"
       }
     ],
     "stateMutability": "view"
@@ -284,6 +416,31 @@ export const emissionControllerAbi = [
             "name": "finalized",
             "type": "bool",
             "internalType": "bool"
+          },
+          {
+            "name": "totalTaskWeight",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "allocatedAmount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "burnedAmount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "activeTaskCount",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "allocationRoot",
+            "type": "bytes32",
+            "internalType": "bytes32"
           }
         ]
       }
@@ -318,32 +475,6 @@ export const emissionControllerAbi = [
   },
   {
     "type": "function",
-    "name": "reviewerRecipient",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "rewardVesting",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "contract IRewardVesting"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "submitDay",
     "inputs": [
       {
@@ -357,9 +488,19 @@ export const emissionControllerAbi = [
             "internalType": "uint64"
           },
           {
-            "name": "totalBilledVolume",
+            "name": "allocationRoot",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "totalTaskWeight",
             "type": "uint256",
             "internalType": "uint256"
+          },
+          {
+            "name": "activeTaskCount",
+            "type": "uint32",
+            "internalType": "uint32"
           },
           {
             "name": "expectedEmissionAgt",
@@ -389,32 +530,6 @@ export const emissionControllerAbi = [
   },
   {
     "type": "function",
-    "name": "taskEscrow",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "contract ITaskEscrow"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "testerRecipient",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "token",
     "inputs": [],
     "outputs": [
@@ -422,6 +537,19 @@ export const emissionControllerAbi = [
         "name": "",
         "type": "address",
         "internalType": "contract IERC20"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "totalOutstanding",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -459,6 +587,86 @@ export const emissionControllerAbi = [
   },
   {
     "type": "event",
+    "name": "EmissionBurned",
+    "inputs": [
+      {
+        "name": "epoch",
+        "type": "uint64",
+        "indexed": true,
+        "internalType": "uint64"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "burnAddress",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "EmissionClaimed",
+    "inputs": [
+      {
+        "name": "epoch",
+        "type": "uint64",
+        "indexed": true,
+        "internalType": "uint64"
+      },
+      {
+        "name": "taskId",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "beneficiary",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "role",
+        "type": "uint8",
+        "indexed": false,
+        "internalType": "uint8"
+      },
+      {
+        "name": "taskWeight",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "executionWeight",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "leaf",
+        "type": "bytes32",
+        "indexed": false,
+        "internalType": "bytes32"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "EmissionFinalized",
     "inputs": [
       {
@@ -468,28 +676,22 @@ export const emissionControllerAbi = [
         "internalType": "uint64"
       },
       {
-        "name": "executorAmount",
+        "name": "allocatedAmount",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
       },
       {
-        "name": "testerAmount",
+        "name": "burnedAmount",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
       },
       {
-        "name": "reviewerAmount",
-        "type": "uint256",
+        "name": "allocationRoot",
+        "type": "bytes32",
         "indexed": false,
-        "internalType": "uint256"
-      },
-      {
-        "name": "platformAmount",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
+        "internalType": "bytes32"
       }
     ],
     "anonymous": false
@@ -515,6 +717,24 @@ export const emissionControllerAbi = [
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
+      },
+      {
+        "name": "totalTaskWeight",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "activeTaskCount",
+        "type": "uint32",
+        "indexed": false,
+        "internalType": "uint32"
+      },
+      {
+        "name": "allocationRoot",
+        "type": "bytes32",
+        "indexed": false,
+        "internalType": "bytes32"
       }
     ],
     "anonymous": false
@@ -564,6 +784,17 @@ export const emissionControllerAbi = [
         "name": "account",
         "type": "address",
         "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "AllocationAlreadyClaimed",
+    "inputs": [
+      {
+        "name": "leaf",
+        "type": "bytes32",
+        "internalType": "bytes32"
       }
     ]
   },
@@ -628,6 +859,22 @@ export const emissionControllerAbi = [
   },
   {
     "type": "error",
+    "name": "InvalidAllocationProof",
+    "inputs": [
+      {
+        "name": "leaf",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "InvalidAllocationRoot",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "InvalidAmount",
     "inputs": []
   },
@@ -663,6 +910,22 @@ export const emissionControllerAbi = [
       },
       {
         "name": "currentEpoch",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "InvalidEpochOrder",
+    "inputs": [
+      {
+        "name": "expected",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "actual",
         "type": "uint64",
         "internalType": "uint64"
       }

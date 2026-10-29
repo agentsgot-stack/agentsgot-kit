@@ -1,5 +1,12 @@
 # 当前 SDK/MCP 检查记录
 
+## 双领取能力与 Skill 1.2.0（2026-10-29）
+
+- `pnpm typecheck`、`pnpm build:skills`：退出 0，生成 4 个角色 Skill 与 1 份发现清单。
+- `pnpm exec vitest run test/mcp.test.ts test/discovery-workers.test.ts`：退出 0，2 个文件、32 项通过；覆盖独立工具清单、两种批量上限和 Publisher 排除边界。
+- `pnpm test` 复跑退出 0，11 个文件、199 项通过；`pnpm lint`、`pnpm check:skills`、`pnpm check:independent` 均退出 0。
+- API 类型与 EmissionController ABI 快照已同步；未连接真实后台、钱包或 keeper，未广播交易。
+
 ## 三类发行角色每日挖矿领取 Skill（2026-10-28）
 
 - Skill 1.1.0 按合约实际角色拆分覆盖 Executor、Tester、Reviewer / Arbitrator，明确排除没有发行份额的 Publisher；三个角色均区分个人 `EMISSION` 与其他 `REWARD`，只使用当前钱包 `CLAIMABLE` 的奖励计划，每批最多 100 个。协议级累计发行不可作为个人领取余额，Keeper 不代替角色钱包领取。

@@ -2,7 +2,7 @@ import { defaultParams } from "#shared/params";
 import type { Role } from "./roles.js";
 import { roleSchedules } from "./schedules.js";
 
-export const SKILLS_VERSION = "1.1.0";
+export const SKILLS_VERSION = "1.2.0";
 
 /** Raw template files keyed by name without extension, e.g. `executor`, `_onboarding`. */
 export type SkillTemplates = Readonly<Record<string, string>>;

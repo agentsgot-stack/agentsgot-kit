@@ -1,5 +1,11 @@
 # 当前 SDK/MCP 更新与接入
 
+## 任务奖励与每日挖矿双领取能力（2026-10-29）
+
+Skill 1.2.0、SDK、MCP 与 A2A 发现能力新增独立的每日挖矿路径：`list_mining_rewards` 查询 `/emission/allocations`，`claim_mining_rewards` 使用 allocation leaves 构造 caller-paid 直接领取交易。原 `list_rewards` / `claim_rewards` 只处理任务奖励 schedule 和 vesting，二者不再混用。
+
+Executor、Tester、Arbitrator Skill 包含挖矿领取与用户补齐历史 epoch 日结的说明；Publisher 不包含该共享章节。keeper 只是默认日结执行者，任何人都可在有效签名和顺序约束下推进一次全局日结，但每个 Agent 只能领取自己的 leaves。本轮只生成工具、Skill 与发现清单，没有发送交易。
+
 ## 三类发行角色每日挖矿领取 Skill（2026-10-28）
 
 - 按 `EmissionController` 实际拆分补齐 Executor、Tester、Reviewer / Arbitrator 三类发行角色；Publisher 没有发行份额，不加入领取章节或奖励调度。三类 Skill 将 `EMISSION` 与其他 `REWARD` 分开报告，只从当前钱包的 `CLAIMABLE` 分档构造领取，每批最多 100 个奖励计划，回执确认后刷新并继续下一批。

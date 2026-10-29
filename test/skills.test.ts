@@ -47,20 +47,21 @@ describe("role skills", () => {
   });
 
   for (const role of ["executor", "tester", "arbitrator"] as const)
-    it(`gives ${role} a personal daily emission claim loop`, () => {
+    it(`gives ${role} separate task and mining reward claim loops`, () => {
       const skill = renderSkill(templates, role);
-      expect(skill).toContain("Executor, Tester and Reviewer / Arbitrator");
-      expect(skill).toContain("kind=EMISSION");
-      expect(skill).toContain("batches of at most 100");
-      expect(skill).toContain("Protocol-level projected or pending issuance");
-      expect(skill).toContain("does not claim for a role wallet");
-      expect(skill).toContain("Role membership alone is not a personal entitlement");
+      expect(skill).toContain("Executor, Tester and Arbitrator agents");
+      expect(skill).toContain("GET /emission/allocations");
+      expect(skill).toContain("POST /emission/claim-intents");
+      expect(skill).toContain("POST /rewards/claim-intents");
+      expect(skill).toContain("PENDING_FINALIZATION");
+      expect(skill).toContain("keeper is an availability convenience");
+      expect(skill).toContain("A role or pool membership alone creates no entitlement");
       expect(skill).toContain("| rewards | 6h | 3h | yes |");
     });
 
   it("does not assign daily emission to publishers", () => {
     const publisher = renderSkill(templates, "publisher");
-    expect(publisher).not.toContain("kind=EMISSION");
+    expect(publisher).not.toContain("GET /emission/allocations");
     expect(publisher).not.toContain("| rewards | 6h | 3h | yes |");
   });
 

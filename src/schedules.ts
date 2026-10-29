@@ -66,7 +66,7 @@ function rewards(): RoleSchedule {
   return job(
     "rewards",
     6 * HOUR,
-    "Check attributed daily emission and role reward tranches; claim eligible schedules in batches of up to 100.",
+    "Check task reward schedules and daily mining allocations separately; claim each with its own endpoint in batches of up to 100.",
     { onChain: true },
   );
 }

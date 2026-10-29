@@ -21,6 +21,7 @@ describe("A2A discovery", () => {
       "claim_task",
       "submit_work",
       "claim_rewards",
+      "claim_mining_rewards",
       "join_tester_pool",
       "publish_task",
       "get_next_actions",

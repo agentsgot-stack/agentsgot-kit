@@ -21,6 +21,10 @@ function server() {
     claimTask: vi.fn(async () => ({ id: "claim" })),
     submitWork: vi.fn(async () => ({ id: "sub", cid: "bafy", cidHash: "0x1", status: "SIGNED" })),
     createRewardClaim: vi.fn(async () => ({ scheduleIds: ["1"], tx: { to: "0x1" } })),
+    listMiningRewards: vi.fn(async () => ({
+      items: [{ leaf: "0xleaf", status: "CLAIMABLE" }],
+    })),
+    createMiningRewardClaim: vi.fn(async () => ({ leaves: ["0xleaf"], tx: { to: "0x3" } })),
     getJoinTesterPoolIntent: vi.fn(async () => ({
       inPool: false,
       meetsMinimum: true,
@@ -70,6 +74,7 @@ describe("MCP server", () => {
         "claim_task",
         "submit_work",
         "claim_rewards",
+        "claim_mining_rewards",
         "join_tester_pool",
         "publish_task",
         "accept_result",
@@ -91,23 +96,32 @@ describe("MCP server", () => {
         "sign_delivery",
         "get_submission_file",
         "list_rewards",
+        "list_mining_rewards",
         "submit_fallback_report",
         "get_role_guide",
         "list_actions",
       ],
     );
   });
-  it("describes daily emission claims and enforces the batch boundary", async () => {
+  it("keeps task and mining claims separate and enforces both batch boundaries", async () => {
     const result = await server().mcp.handle({ jsonrpc: "2.0", id: 1, method: "tools/list" });
     const tools = (
       result?.result as {
         tools: { name: string; description: string; inputSchema: Record<string, unknown> }[];
       }
     ).tools;
-    expect(tools.find(({ name }) => name === "list_rewards")?.description).toContain("EMISSION");
+    expect(tools.find(({ name }) => name === "list_rewards")?.description).toContain("task reward");
+    expect(tools.find(({ name }) => name === "list_mining_rewards")?.description).toContain(
+      "daily mining",
+    );
     expect(tools.find(({ name }) => name === "claim_rewards")?.inputSchema).toMatchObject({
       properties: {
         scheduleIds: { minItems: 1, maxItems: 100, uniqueItems: true },
+      },
+    });
+    expect(tools.find(({ name }) => name === "claim_mining_rewards")?.inputSchema).toMatchObject({
+      properties: {
+        leaves: { minItems: 1, maxItems: 100, uniqueItems: true },
       },
     });
   });
@@ -178,6 +192,14 @@ describe("MCP server", () => {
   it("claim_rewards returns a pending transaction and does not send", async () => {
     expect(await call(server().mcp, "claim_rewards", { scheduleIds: ["1"] })).toMatchObject({
       result: { structuredContent: { tx: { to: "0x1" } } },
+    });
+  });
+  it("lists and claims mining rewards without mixing task schedule ids", async () => {
+    expect(await call(server().mcp, "list_mining_rewards")).toMatchObject({
+      result: { structuredContent: { items: [{ leaf: "0xleaf", status: "CLAIMABLE" }] } },
+    });
+    expect(await call(server().mcp, "claim_mining_rewards", { leaves: ["0xleaf"] })).toMatchObject({
+      result: { structuredContent: { tx: { to: "0x3" } } },
     });
   });
   it("join_tester_pool defaults to the API join intent", async () => {

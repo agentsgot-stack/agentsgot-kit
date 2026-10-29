@@ -27,6 +27,7 @@ export const TOOL_NEXT_STEPS: Record<string, string> = {
   submit_test_report: "get_next_actions; nothing else is required for this delivery.",
   get_final_result: "Ask the user to approve, then send_transaction with the returned tx.",
   claim_rewards: "Ask the user to approve, then send_transaction.",
+  claim_mining_rewards: "Ask the user to approve, then send_transaction.",
   join_tester_pool: "If canJoin, ask the user to approve and send_transaction; then heartbeat.",
   join_arbitrator_pool:
     "If canJoin, ask the user to approve and send_transaction; then list_arbitrator_cases.",
@@ -48,6 +49,7 @@ export const TOOL_NEXT_STEPS: Record<string, string> = {
   sign_delivery: "IMMEDIATELY draw_testers with the same taskId.",
   get_submission_file: "Judge every criterion, then submit_test_report.",
   list_rewards: "claim_rewards with the claimable scheduleIds.",
+  list_mining_rewards: "claim_mining_rewards with the claimable leaves.",
   submit_fallback_report: "Ask the user to approve, then send_transaction before the deadline.",
   get_role_guide: "get_eligibility, then get_next_actions.",
 };
@@ -133,7 +135,7 @@ export class AgentGridMcpServer {
       {
         name: "claim_rewards",
         description:
-          "Return a caller-paid claim transaction for up to 100 owned daily emission or task reward schedules without sending it. Use only unique scheduleIds with a CLAIMABLE tranche from list_rewards. Requires scope rewards:claim.",
+          "Return a caller-paid task reward claim transaction for up to 100 owned schedules without sending it. Use only unique scheduleIds with a CLAIMABLE tranche from list_rewards. Task rewards may vest; this tool never claims daily mining rewards. Requires scope rewards:claim.",
         inputSchema: schema(
           {
             scheduleIds: {
@@ -147,6 +149,24 @@ export class AgentGridMcpServer {
           ["scheduleIds"],
         ),
         run: (input) => this.client.createRewardClaim(input.scheduleIds as string[]),
+      },
+      {
+        name: "claim_mining_rewards",
+        description:
+          "Return a caller-paid direct daily mining claim transaction for up to 100 owned allocation leaves without sending it. Use only unique CLAIMABLE leaves from list_mining_rewards. Mining rewards do not use task-reward vesting. Requires scope rewards:claim.",
+        inputSchema: schema(
+          {
+            leaves: {
+              type: "array",
+              items: { type: "string" },
+              minItems: 1,
+              maxItems: 100,
+              uniqueItems: true,
+            },
+          },
+          ["leaves"],
+        ),
+        run: (input) => this.client.createMiningRewardClaim(input.leaves as string[]),
       },
       {
         name: "join_tester_pool",
@@ -403,9 +423,16 @@ export class AgentGridMcpServer {
       {
         name: "list_rewards",
         description:
-          "List this wallet's daily emission (EMISSION) and task reward (REWARD) tranches with claimable status. Protocol-level projected issuance is not included. Requires rewards:claim.",
+          "List this wallet's task reward schedules and vesting tranches. Daily mining allocations are intentionally excluded; use list_mining_rewards for those. Requires rewards:claim.",
         inputSchema: schema({}),
         run: () => this.client.listRewards(),
+      },
+      {
+        name: "list_mining_rewards",
+        description:
+          "List this wallet's finalized or pending daily mining allocations by epoch, task and role. CLAIMABLE allocations are directly withdrawable without task-reward vesting. Requires rewards:claim.",
+        inputSchema: schema({}),
+        run: () => this.client.listMiningRewards(),
       },
       {
         name: "submit_fallback_report",

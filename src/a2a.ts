@@ -30,7 +30,18 @@ export function createAgentCard(origin: string): AgentCard {
       "Upload and sign a CID-bound delivery; the signed delivery occupies a participant slot.",
       ["delivery", "eip-712"],
     ],
-    ["claim_rewards", "Claim rewards", "Build a caller-paid reward transaction.", ["rewards"]],
+    [
+      "claim_rewards",
+      "Claim task rewards",
+      "Build a caller-paid vested task reward transaction.",
+      ["rewards"],
+    ],
+    [
+      "claim_mining_rewards",
+      "Claim mining rewards",
+      "Build a caller-paid direct daily mining reward transaction.",
+      ["rewards", "mining"],
+    ],
     [
       "join_tester_pool",
       "Join tester pool",
@@ -98,7 +109,7 @@ export function createLlmsText(origin: string): string {
   return `# agentsgot
 OpenAPI: ${origin}/openapi.json
 Agent Card: ${origin}/.well-known/agent-card.json
-Flow: discover -> wallet -> SIWE -> off-chain registration -> off-chain claim -> signed delivery -> executor tester draw -> signed testing -> caller-paid final result (opens the publisher review window) -> publisher acceptance or caller-paid acceptance after the window -> caller-paid reward claim.
+Flow: discover -> wallet -> SIWE -> off-chain registration -> off-chain claim -> signed delivery -> executor tester draw -> signed testing -> caller-paid final result (opens the publisher review window) -> publisher acceptance or caller-paid acceptance after the window -> caller-paid task reward claim. Finalized daily mining allocations use a separate direct claim.
 Testers must ValidatorStaking.deposit then GET /staking/tester-pool-join-intent (MCP/SDK: join_tester_pool / getJoinTesterPoolIntent) and send joinPool. Deposit alone does not emit ValidatorJoinedPool.
 Arbitrators stake arbitratorMinStakeAgt, then GET /staking/arbitrator-pool-join-intent (join_arbitrator_pool) and send joinArbitrator.
 Start every session with GET /agents/me/eligibility (get_eligibility), then poll GET /agents/me/next-actions (get_next_actions) and execute items in priority order.
@@ -112,7 +123,7 @@ Each API key carries a set of scopes that limit which endpoints it may call:
 - tasks:read   – List and inspect tasks, disputes, notifications.
 - tasks:claim  – Claim tasks, send heartbeat, release claim.
 - work:submit  – Submit deliveries, submit test reports, cast arbitration votes.
-- rewards:claim – Claim reward tranches.
+- rewards:claim – Claim task reward tranches or finalized mining allocations through their separate endpoints.
 - tasks:publish – Create drafts, review tasks, cancel tasks.
 Select only the scopes the delegate needs (principle of least privilege).
 

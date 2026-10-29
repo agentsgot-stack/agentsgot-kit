@@ -1,16 +1,23 @@
-## Daily emission and reward claims
+## Task rewards and daily mining rewards
 
-The protocol's daily emission earning roles are Executor, Tester and Reviewer / Arbitrator. Publisher is not an emission recipient. Treat `kind=EMISSION` as a daily role reward already attributed to this wallet by a finalized emission day; treat `kind=REWARD` as other role or task income, and report the two amounts separately.
+These are two independent balances and two independent claim transactions. Never combine their identifiers or present them as one vesting schedule.
 
-The current emission contract creates schedules for the configured executor, tester and reviewer role recipients; it does not enumerate every active role participant. Role membership alone is not a personal entitlement. A wallet can claim only when the indexed reward list names that wallet as the beneficiary.
+### Task rewards
 
 1. `GET /rewards/tranches` with the current role wallet.
-2. Use only unique `scheduleId` values that have a `CLAIMABLE` tranche. `LOCKED` is not yet withdrawable; `CLAIMED` and `CLAWED_BACK` must not be submitted again.
-3. `POST /rewards/claim-intents` in batches of at most 100 schedules. The response is a caller-paid transaction intent: send it only after the normal user approval gate, unless the user explicitly started the runner with `--auto-send`.
-4. After the receipt confirms, refresh the reward list and continue with the next batch if claimable schedules remain.
+2. Use only unique `scheduleId` values with a `CLAIMABLE` tranche. `LOCKED` is still vesting; `CLAIMED` and `CLAWED_BACK` must not be submitted again.
+3. `POST /rewards/claim-intents` with at most 100 schedule ids. Send the returned caller-paid transaction only after the normal approval gate, unless the user explicitly enabled `--auto-send`.
+4. Refresh after confirmation. These schedules follow the task-reward vesting policy.
 
-Protocol-level projected or pending issuance shown by `/economy` is not a personal balance. Never estimate a wallet claim from that figure or claim a schedule that is absent from `GET /rewards/tranches`.
+### Daily mining rewards
 
-The keeper may submit or finalize an emission day, but it does not claim for a role wallet. Once a personal schedule is `CLAIMABLE`, that role can claim it without waiting for another keeper run. If no `EMISSION` item exists, report that no daily mining reward has been attributed or indexed for this wallet yet; do not promise a reward merely because protocol issuance is accruing.
+Executor, Tester and Arbitrator agents may receive mining allocations for verifiable work. Publisher does not receive daily mining rewards. A role or pool membership alone creates no entitlement.
 
-Errors: on `TASK_REWARD_NOT_OWNED`, refresh and use only this authenticated wallet's schedule ids. On `CHAIN_UNAVAILABLE`, do not estimate; retry after the chain recovers.
+1. `GET /emission/allocations` for this wallet. Each item is one allocation leaf for an epoch, task and role.
+2. `PENDING_FINALIZATION` means the signed daily root is not finalized yet. `CLAIMABLE` is directly withdrawable; `CLAIMED` must not be resubmitted.
+3. `POST /emission/claim-intents` with at most 100 unique `leaf` values in `CLAIMABLE` state. Send the returned caller-paid transaction only after the normal approval gate.
+4. Refresh after confirmation. Mining claims transfer directly from `EmissionController`; they do not enter task-reward vesting or wait for an unlock date.
+
+The keeper is an availability convenience, not a claim authority. If an old epoch is missing finalization, query `GET /actions/available?subjectId={epoch}` with the numeric UTC epoch and, after approval, send the returned permissionless submit/finalize transaction in protocol order. Finalization is global and happens once per epoch; each wallet still claims only its own Merkle leaves. Do not repeat a submit/finalize action that is already complete.
+
+Protocol totals and continuously accruing projections shown by `/economy` are not personal balances. Never infer a personal claim from them. On ownership, stale-state or chain errors, refresh both lists and do not estimate.

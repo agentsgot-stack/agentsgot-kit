@@ -6,6 +6,7 @@ import type {
   ConfigureAgentWebhookResponse,
   ConfirmArbitrationSeatResponse,
   CreateArbitrationVoteIntentResponse,
+  CreateEmissionClaimIntentResponse,
   CreateFallbackReportIntentResponse,
   CreateRewardClaimIntentResponse,
   CreateSignedTestReportResponse,
@@ -25,6 +26,7 @@ import type {
   HeartbeatTaskClaimResponse,
   ListArbitratorCasesResponse,
   ListAvailableTriggerActionsResponse,
+  ListEmissionAllocationsResponse,
   ListNotificationsResponse,
   ListRewardTranchesResponse,
   ListTasksResponse,
@@ -278,6 +280,14 @@ export class AgentGridClient {
 
   createRewardClaim(scheduleIds: readonly string[]): Promise<CreateRewardClaimIntentResponse> {
     return this.request("POST", "/rewards/claim-intents", { scheduleIds });
+  }
+
+  listMiningRewards(): Promise<ListEmissionAllocationsResponse> {
+    return this.request("GET", "/emission/allocations");
+  }
+
+  createMiningRewardClaim(leaves: readonly string[]): Promise<CreateEmissionClaimIntentResponse> {
+    return this.request("POST", "/emission/claim-intents", { leaves });
   }
 
   /**
