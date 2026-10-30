@@ -85,8 +85,23 @@ export const CollusionReportProofSchema = z.object({
 
 export const EmissionDayProofSchema = z.object({
   epoch: UintStringSchema,
-  activeIndependentExecutors30d: z.number().int().min(0).max(10_000_000),
-  expectedEmissionAgt: UintStringSchema,
+  platformAmount: UintStringSchema,
+  executorAmount: UintStringSchema,
+  testerAmount: UintStringSchema,
+  arbAmount: UintStringSchema,
+  execAccruedSnapshot: UintStringSchema,
+  testAccruedSnapshot: UintStringSchema,
+  burnAmount: UintStringSchema,
+  nonce: UintStringSchema,
+  deadline: UintStringSchema,
+  signature: SignatureSchema.optional(),
+});
+
+export const HourlyAnchorProofSchema = z.object({
+  hourId: UintStringSchema,
+  recordsRoot: Hex32Schema,
+  poolSnapshotRoot: Hex32Schema,
+  seatSnapshotRoot: Hex32Schema,
   nonce: UintStringSchema,
   deadline: UintStringSchema,
   signature: SignatureSchema.optional(),
@@ -150,8 +165,21 @@ export const PROTOCOL_PROOF_TYPES = {
   ],
   EmissionDay: [
     { name: "epoch", type: "uint64" },
-    { name: "activeIndependentExecutors30d", type: "uint32" },
-    { name: "expectedEmissionAgt", type: "uint256" },
+    { name: "platformAmount", type: "uint256" },
+    { name: "executorAmount", type: "uint256" },
+    { name: "testerAmount", type: "uint256" },
+    { name: "arbAmount", type: "uint256" },
+    { name: "execAccruedSnapshot", type: "uint256" },
+    { name: "testAccruedSnapshot", type: "uint256" },
+    { name: "burnAmount", type: "uint256" },
+    { name: "nonce", type: "uint256" },
+    { name: "deadline", type: "uint64" },
+  ],
+  HourlyAnchor: [
+    { name: "hourId", type: "uint64" },
+    { name: "recordsRoot", type: "bytes32" },
+    { name: "poolSnapshotRoot", type: "bytes32" },
+    { name: "seatSnapshotRoot", type: "bytes32" },
     { name: "nonce", type: "uint256" },
     { name: "deadline", type: "uint64" },
   ],
@@ -162,12 +190,18 @@ export const PROTOCOL_PROOF_TYPES = {
     { name: "nonce", type: "uint256" },
     { name: "deadline", type: "uint64" },
   ],
+  TesterSeatClaim: [
+    { name: "taskId", type: "bytes32" },
+    { name: "tester", type: "address" },
+    { name: "amount", type: "uint256" },
+    { name: "nonce", type: "uint256" },
+    { name: "deadline", type: "uint64" },
+  ],
 } as const;
 
 export function assertProtocolProofBounds(
   input:
     | { kind: "PUBLISHER_PROFILE"; completedTasks: number; reputation: number }
-
     | {
         kind: "ARBITRATION_CASE";
         criterionCount: number;
@@ -175,7 +209,16 @@ export function assertProtocolProofBounds(
         sourceCount: number;
         weightBps: readonly number[];
       }
-    | { kind: "EMISSION_DAY"; activeIndependentExecutors30d: number },
+    | {
+        kind: "EMISSION_DAY";
+        platformAmount: bigint;
+        executorAmount: bigint;
+        testerAmount: bigint;
+        arbAmount: bigint;
+        execAccruedSnapshot: bigint;
+        testAccruedSnapshot: bigint;
+        burnAmount: bigint;
+      },
 ): void {
   if (input.kind === "PUBLISHER_PROFILE") {
     if (
@@ -204,9 +247,15 @@ export function assertProtocolProofBounds(
     return;
   }
   if (
-    !Number.isInteger(input.activeIndependentExecutors30d) ||
-    input.activeIndependentExecutors30d < 0 ||
-    input.activeIndependentExecutors30d > 10_000_000
+    input.platformAmount < 0n ||
+    input.executorAmount < 0n ||
+    input.testerAmount < 0n ||
+    input.arbAmount < 0n ||
+    input.execAccruedSnapshot < 0n ||
+    input.testAccruedSnapshot < 0n ||
+    input.burnAmount < 0n ||
+    input.execAccruedSnapshot > input.executorAmount ||
+    input.testAccruedSnapshot > input.testerAmount
   )
     throw new RangeError("EMISSION_DAY_OUT_OF_BOUNDS");
 }

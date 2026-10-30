@@ -170,14 +170,6 @@ export function computeReserve(maxTier: Tier, runDays: number, params: Params): 
   return tierDailyFee(maxTier, params) * BigInt(runDays);
 }
 
-export interface DeductionSplit {
-  executor: bigint;
-  tester: bigint;
-  reviewer: bigint;
-  platform: bigint;
-  total: bigint;
-}
-
 export function computeDeduction(
   lockedTier: Tier,
   billedSeconds: bigint,
@@ -200,15 +192,6 @@ export function computeSegmentedDeduction(
     total += (dailyFee(seg.tier, params, fees) * seg.seconds) / BigInt(SECONDS_PER_DAY);
   }
   return total;
-}
-
-export function splitDeduction(total: bigint, params: Params): DeductionSplit {
-  nonnegative(total, "deduction total");
-  const executor = bpsDown(total, parameter(params, "deductionExecBps"));
-  const tester = bpsDown(total, parameter(params, "deductionTestBps"));
-  const reviewer = bpsDown(total, parameter(params, "deductionRevBps"));
-  const platform = total - executor - tester - reviewer;
-  return { executor, tester, reviewer, platform, total };
 }
 
 // ---------------------------------------------------------------------------
@@ -329,7 +312,7 @@ export function allocateExecutorPool(
     const amount =
       i === weights.length - 1
         ? pool - allocated
-        : (pool * BigInt(Math.round(w.weight * 1_000_000_000))) / 1_000_000_000n;
+        : (pool * BigInt(Math.floor(w.weight * 1_000_000_000))) / 1_000_000_000n;
     allocated += amount;
     return { submissionIndex: w.submissionIndex, weight: w.weight, amount };
   });
@@ -370,40 +353,6 @@ export function allocateProRataExecutorPool(
       amount: 1n + proportional,
     };
   });
-}
-
-// ---------------------------------------------------------------------------
-// Reject bond (§4.6)
-// ---------------------------------------------------------------------------
-
-export function computeRejectBond(
-  deductionExec: bigint,
-  lockedTier: Tier,
-  params: Params,
-  fees?: TaskDailyFees,
-): bigint {
-  nonnegative(deductionExec, "deductionExec");
-  const fromExec = bpsDown(deductionExec, parameter(params, "rejectBondExecPctBps"));
-  const minFee =
-    (dailyFee(lockedTier, params, fees) *
-      BigInt(parameter(params, "rejectBondMinFeeMultiplierBps"))) /
-    BigInt(BPS);
-  return fromExec > minFee ? fromExec : minFee;
-}
-
-export function computeT1ReviewBond(
-  deductionExec: bigint,
-  lockedTier: Tier,
-  params: Params,
-  fees?: TaskDailyFees,
-): bigint {
-  nonnegative(deductionExec, "deductionExec");
-  const fromExec = bpsDown(deductionExec, parameter(params, "t1ReviewBondExecPctBps"));
-  const minFee =
-    (dailyFee(lockedTier, params, fees) *
-      BigInt(parameter(params, "t1ReviewBondMinFeeMultiplierBps"))) /
-    BigInt(BPS);
-  return fromExec > minFee ? fromExec : minFee;
 }
 
 // ---------------------------------------------------------------------------
@@ -457,11 +406,153 @@ export function computeDailyEmission(input: EmissionInput, params: Params): Emis
   nonnegative(input.genesisBalance, "genesisBalance");
   const H = parameter(params, "emissionHalfLifeDays");
   const lambda = 1 - 2 ** (-1 / H);
-  const rawEmission = BigInt(Math.floor(Number(input.treasuryBalance) * lambda));
+  // Prefer integer approximation when balance fits in Number safely; otherwise use bps of 1e9.
+  const scale = 1_000_000_000n;
+  const lambdaScaled = BigInt(Math.floor(lambda * Number(scale)));
+  const rawEmission = (input.treasuryBalance * lambdaScaled) / scale;
   const safetyBps = parameter(params, "emissionDailySafetyCapBps");
   const safetyCap = bpsDown(input.genesisBalance, safetyBps);
   const dailyEmission = rawEmission < safetyCap ? rawEmission : safetyCap;
   return { lambda, dailyEmission, safetyCap };
+}
+
+/** Economic model v3 daily emission split (§4.7): platform / exec / test / arb. */
+export interface EmissionSplit {
+  platform: bigint;
+  executor: bigint;
+  tester: bigint;
+  arbitrator: bigint;
+  total: bigint;
+}
+
+export function splitDailyEmission(dailyEmission: bigint, params: Params): EmissionSplit {
+  nonnegative(dailyEmission, "dailyEmission");
+  const platform = bpsDown(dailyEmission, parameter(params, "emissionPlatformBps"));
+  const executor = bpsDown(dailyEmission, parameter(params, "emissionExecBps"));
+  const tester = bpsDown(dailyEmission, parameter(params, "emissionTestBps"));
+  const arbitrator = dailyEmission - platform - executor - tester;
+  return { platform, executor, tester, arbitrator, total: dailyEmission };
+}
+
+/**
+ * Accrue executor pool share for one second across running tasks (§4.7.1).
+ * `dP_i / dt = 65% · r_d · F_i / Σ F_k` where r_d = E_d / 86400.
+ */
+export function executorPoolRatePerSecond(
+  dailyExecutorEmission: bigint,
+  taskFeeWei: bigint,
+  totalRunningFeesWei: bigint,
+): bigint {
+  nonnegative(dailyExecutorEmission, "dailyExecutorEmission");
+  nonnegative(taskFeeWei, "taskFeeWei");
+  nonnegative(totalRunningFeesWei, "totalRunningFeesWei");
+  if (totalRunningFeesWei === 0n || taskFeeWei === 0n) return 0n;
+  return (dailyExecutorEmission * taskFeeWei) / (BigInt(SECONDS_PER_DAY) * totalRunningFeesWei);
+}
+
+/**
+ * Accrue tester seat share for one second (§4.7.2).
+ * `dT_s / dt = 15% · r_d · F_i(s) / Σ F_i(u)`.
+ */
+export function testerSeatRatePerSecond(
+  dailyTesterEmission: bigint,
+  seatTaskFeeWei: bigint,
+  totalActiveSeatFeesWei: bigint,
+): bigint {
+  nonnegative(dailyTesterEmission, "dailyTesterEmission");
+  nonnegative(seatTaskFeeWei, "seatTaskFeeWei");
+  nonnegative(totalActiveSeatFeesWei, "totalActiveSeatFeesWei");
+  if (totalActiveSeatFeesWei === 0n || seatTaskFeeWei === 0n) return 0n;
+  return (dailyTesterEmission * seatTaskFeeWei) / (BigInt(SECONDS_PER_DAY) * totalActiveSeatFeesWei);
+}
+
+/**
+ * Allocate a task executor pool by score using largest-remainder method (§4.4 / §4.7.1).
+ * Eligible set E: rewardEligible submissions. Empty E → empty allocation (caller burns pool).
+ */
+export function allocateByScore(
+  pool: bigint,
+  scores: readonly { submissionIndex: number; score: number; rewardEligible: boolean }[],
+): AllocationResult[] {
+  nonnegative(pool, "pool");
+  const set = scores
+    .filter(({ rewardEligible }) => rewardEligible)
+    .sort((a, b) => b.score - a.score || a.submissionIndex - b.submissionIndex);
+  if (set.length === 0) return [];
+  const totalScore = set.reduce((sum, entry) => sum + entry.score, 0);
+  if (totalScore <= 0) {
+    const even = pool / BigInt(set.length);
+    let distributed = 0n;
+    return set.map((entry, index) => {
+      const amount = index === set.length - 1 ? pool - distributed : even;
+      distributed += amount;
+      return { submissionIndex: entry.submissionIndex, weight: 1 / set.length, amount };
+    });
+  }
+  // Largest-remainder: floor shares then distribute remainder by fractional part.
+  const SCALE = 1_000_000n;
+  const units = set.map((entry) => ({
+    ...entry,
+    units: BigInt(Math.max(0, Math.round(entry.score * Number(SCALE)))),
+  }));
+  const totalUnits = units.reduce((sum, entry) => sum + entry.units, 0n);
+  if (totalUnits === 0n) return [];
+  const floors = units.map((entry) => {
+    const raw = (pool * entry.units) / totalUnits;
+    const remainder = (pool * entry.units) % totalUnits;
+    return { ...entry, amount: raw, remainder, weight: Number(entry.units) / Number(totalUnits) };
+  });
+  let remaining = pool - floors.reduce((sum, entry) => sum + entry.amount, 0n);
+  for (const entry of floors
+    .slice()
+    .sort((a, b) =>
+      b.remainder > a.remainder
+        ? 1
+        : b.remainder < a.remainder
+          ? -1
+          : a.submissionIndex - b.submissionIndex,
+    )) {
+    if (remaining <= 0n) break;
+    entry.amount += 1n;
+    remaining -= 1n;
+  }
+  return floors.map(({ submissionIndex, weight, amount }) => ({ submissionIndex, weight, amount }));
+}
+
+/** Vesting tranches for executor mining share (§4.10): 60% / 25% / 15% at T0 / +7d / +30d. */
+export function vestingTranches(
+  amount: bigint,
+  t0Seconds: number,
+  params: Params,
+): { amount: bigint; releaseAtSeconds: number }[] {
+  return vestingSchedule(amount, t0Seconds, params);
+}
+
+/**
+ * Arbitrator weight (§4.7.3):
+ * min(stake, cap) × responseRate + Σ arbitratorMinStake × arbCaseBonusBps[tier] / 10000
+ * responseRateBps is 0–10000.
+ */
+export function computeArbitratorWeight(
+  stakeWei: bigint,
+  responseRateBps: number,
+  activeSeats: readonly { tier: Tier }[],
+  params: Params,
+): bigint {
+  nonnegative(stakeWei, "stakeWei");
+  if (!Number.isInteger(responseRateBps) || responseRateBps < 0 || responseRateBps > BPS) {
+    throw new RangeError("responseRateBps must be an integer in [0, 10000]");
+  }
+  const cap = agtToWei(parameter(params, "arbitratorWeightCapAgt"));
+  const capped = stakeWei < cap ? stakeWei : cap;
+  const base = (capped * BigInt(responseRateBps)) / BigInt(BPS);
+  const minStake = agtToWei(parameter(params, "arbitratorMinStakeAgt"));
+  let bonus = 0n;
+  for (const seat of activeSeats) {
+    const bps = parameter(params, `arbCaseBonusBps.${seat.tier}` as keyof Params);
+    bonus += bpsDown(minStake, bps);
+  }
+  return base + bonus;
 }
 
 export interface TaskEmission {
@@ -722,6 +813,29 @@ export function computeCaseFee(disputeValue: bigint, params: Params): bigint {
 export function computeAppealBond(caseFee: bigint, params: Params): bigint {
   nonnegative(caseFee, "caseFee");
   return bpsDown(caseFee, parameter(params, "appealBondMultiplierBps"));
+}
+
+/**
+ * Economic model v3 appeal fee (§7.3): min(appealFeeBps · F_t* / 10000, appealFeeCapAgt).
+ * Charged per appealed submission; paid entirely to revealed arbitrators.
+ */
+export function computeAppealFee(
+  lockedTier: Tier,
+  params: Params,
+  fees?: TaskDailyFees,
+): bigint {
+  const proportional = bpsDown(dailyFee(lockedTier, params, fees), parameter(params, "appealFeeBps"));
+  const cap = agtToWei(parameter(params, "appealFeeCapAgt"));
+  return proportional < cap ? proportional : cap;
+}
+
+/** Final appeal fee is 2× the first-round appeal fee. */
+export function computeFinalAppealFee(
+  lockedTier: Tier,
+  params: Params,
+  fees?: TaskDailyFees,
+): bigint {
+  return computeAppealFee(lockedTier, params, fees) * 2n;
 }
 
 export function computeCaseLock(

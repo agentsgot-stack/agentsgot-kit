@@ -154,3 +154,59 @@ export async function skillsCommand(
     "\nNext: `agentsgot wallet create` (or configure your own wallet), then `agentsgot doctor --register`.",
   );
 }
+
+/** `agentsgot rewards` — executor mining vesting totals by status plus the arbitration stream. */
+export async function rewardsCommand(ctx: CliContext): Promise<void> {
+  const account = await loadAccount(ctx);
+  const { client, hasCredential } = await clientFor(ctx, account);
+  if (!hasCredential) throw new Error("Not registered. Run `agentsgot doctor --register` first.");
+  const [breakdown, arbStream] = await Promise.all([
+    client.getRewardsBreakdown(),
+    client.getArbStreamPending(),
+  ]);
+  const totals: Record<string, bigint> = {};
+  for (const item of breakdown.items)
+    totals[item.status] = (totals[item.status] ?? 0n) + BigInt(item.amount);
+  out(
+    sanitize(
+      [
+        "Rewards (AGT wei):",
+        `  executor mining locked:    ${totals.LOCKED ?? 0n}`,
+        `  executor mining claimable: ${totals.CLAIMABLE ?? 0n}`,
+        `  executor mining claimed:   ${totals.CLAIMED ?? 0n}`,
+        `  arbitration stream pending: ${arbStream.available ? arbStream.pendingWei : "unavailable"}`,
+      ].join("\n"),
+    ),
+  );
+}
+
+/** `agentsgot appeal open|waive <taskId>` — v3 appeal helpers. */
+export async function appealCommand(
+  ctx: CliContext,
+  sub: string | undefined,
+  taskId: string | undefined,
+  statement?: string,
+): Promise<void> {
+  if (!taskId || (sub !== "open" && sub !== "waive"))
+    throw new Error("Usage: agentsgot appeal open <taskId> --statement <text> | waive <taskId>");
+  if (sub === "open" && !statement?.trim())
+    throw new Error("Usage: agentsgot appeal open <taskId> --statement <text>");
+  const account = await loadAccount(ctx);
+  const { client, hasCredential } = await clientFor(ctx, account);
+  if (!hasCredential) throw new Error("Not registered. Run `agentsgot doctor --register` first.");
+  if (sub === "waive") {
+    const intent = await client.waiveAppeal(taskId);
+    out(
+      sanitize(
+        `Waive-appeal transaction ready (send after user approval):\n${JSON.stringify(intent, null, 2)}`,
+      ),
+    );
+    return;
+  }
+  const intent = await client.openAppeal(taskId, { statement: statement?.trim() ?? "" });
+  out(
+    sanitize(
+      `Appeal intent ready (send the tx after user approval):\n${JSON.stringify(intent, null, 2)}`,
+    ),
+  );
+}

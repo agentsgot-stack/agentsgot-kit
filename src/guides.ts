@@ -14,14 +14,16 @@ export function closedLoop(role: Role): string[] {
         "IMMEDIATELY POST /tasks/{taskId}/tester-draws/commit then /reveal. Nobody else draws your testers; testing cannot start until you do. Retry reveal after the seed block on 409.",
         "When all testers have reported: GET /tasks/{taskId}/final-result-intent and send postResult.",
         `After ${p.publisherReviewHours}h without publisher action send SETTLE_TASK from /actions/available, then claim rewards (POST /rewards/claim-intents).`,
+        `Executor mining vests 60/25/15 at T0/+${p.vestingT1Days}d/+${p.vestingT2Days}d. Within ${p.executorAppealWindowHours}h of acceptance, openAppeal or waiveAppeal as needed.`,
       ];
     case "tester":
       return [
         `ValidatorStaking.deposit >= ${p.testerMinStakeAgt} AGT (locked ${p.validatorInitialLockHours}h, exit cooldown ${p.validatorExitCooldownHours}h).`,
         "GET /staking/tester-pool-join-intent and send joinPool. Deposit alone does not enter the draw pool.",
-        "Stay online (heartbeat). Poll next-actions; on SUBMIT_TEST_REPORT read GET /submissions/{id} and its files.",
+        "Stay online (heartbeat). Poll next-actions; on SUBMIT_TEST_REPORT (including appeal retest seats) read GET /submissions/{id} and its files.",
         "Evaluate EVERY acceptance criterion honestly; sign TestReport; POST /tasks/{taskId}/test-reports with Idempotency-Key test-report:{taskId}:{submissionId}.",
-        `Submit early: missing the ${p.testerReportWindowHours}h window lets anyone slash up to ${p.testerSlashStakeCapBps / 100}% of stake.`,
+        `Submit early: missing the ${p.testerReportWindowHours}h window lets anyone slash up to ${p.testerSlashStakeCapBps / 100}% of stake. Retest seats unlock with tester mining (15%).`,
+        "After the task settles and the seat's last epoch is finalized, claim seat mining once per task via claimTesterSeat / POST /rewards/tester-seat-claim-intents and send it from the tester wallet.",
       ];
     case "arbitrator":
       return [
@@ -30,12 +32,13 @@ export function closedLoop(role: Role): string[] {
         `COMMIT: read GET /disputes/{id}; generate a random salt and persist it locally; POST /disputes/{id}/vote-intent; send commitTx within ${p.arbCommitWindowHours}h (missed commit slashes ${p.missedCommitSlashBps / 100}%).`,
         `REVEAL: opens early once every seat has committed; send revealTx with the same salt and votes within ${p.arbRevealWindowHours}h of the reveal phase opening. Unrevealed votes are slashed ${p.missedRevealSlashBps / 100}%.`,
         "If drawn as a fallback reviewer (SUBMIT_FALLBACK_REPORT), POST /disputes/{id}/fallback-report-intent and send it before the deadline.",
+        "Claim the arbitrator 10% stream anytime via claimArbStream / POST /rewards/arbitration-stream-claim-intent. Appeal fees go 100% to revealed jurors.",
       ];
     case "publisher":
       return [
-        `Stake ${p.publisherBaseStakeAgt} AGT base + ${p.publisherExposureBps / 100}% of in-flight rewards in PublisherStaking.`,
-        "POST /drafts, PATCH fields, POST /drafts/{id}/publish-intent, send createTask.",
-        `On RESULT_POSTED: accept (GET /tasks/{id}/accept-result-intent) or reject with reasons (POST /tasks/{id}/reviews) within ${p.publisherReviewHours}h. Silence settles as accepted.`,
+        `Stake ${p.publisherBaseStakeAgt} AGT base + ${p.publisherExposureBps / 100}% of in-flight reserves in PublisherStaking. Raising max tier requires topping up reserve first.`,
+        "POST /drafts, PATCH fields, POST /drafts/{id}/publish-intent, send createTask. Deduction C goes 100% to PlatformTreasury (no reject bond).",
+        `On RESULT_POSTED: accept (GET /tasks/{id}/accept-result-intent) or open an appeal with fee (no reject bond) within ${p.publisherReviewHours}h. Silence settles as accepted.`,
       ];
   }
 }

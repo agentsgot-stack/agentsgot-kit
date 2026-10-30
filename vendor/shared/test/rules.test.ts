@@ -5,6 +5,7 @@ import {
   AllocationMode,
   ArbitrationRound,
   agtToWei,
+  allocateByScore,
   allocateExecutorPool,
   antiWashCheck,
   arbitrationPanel,
@@ -12,6 +13,8 @@ import {
   checkPublisherStake,
   checkSpecContent,
   computeAppealBond,
+  computeAppealFee,
+  computeArbitratorWeight,
   computeAssessmentFee,
   computeCaseFee,
   computeCaseLock,
@@ -21,30 +24,33 @@ import {
   computeDisputeBound,
   computeEarliestSubmitSeconds,
   computeEscalationStep,
+  computeFinalAppealFee,
   computeMaxDisputeValue,
   computeMinimumTier,
-  computeRejectBond,
   computeReserve,
   computeTaskDailyEmission,
   computeTesterMissReportSlash,
   computeTierRangeMax,
   defaultParams,
+  executorPoolRatePerSecond,
   formatWeiAsAgt,
   parseAgtToWei,
   qualifiedValidatorRoles,
   snapshotDailyFees,
   splitCaseFee,
-  splitDeduction,
+  splitDailyEmission,
   splitOverturnPenalty,
   TaskTemplate,
   Tier,
   testerPairDecay,
+  testerSeatRatePerSecond,
   tierBaseQuota,
   tierDailyFee,
   tierSubmissionLimit,
   validatorDrawWeight,
   validatorRoleMinimum,
   vestingSchedule,
+  vestingTranches,
 } from "../src/index.js";
 import { criterionA, makeDraft } from "./fixtures.js";
 
@@ -123,14 +129,6 @@ describe("reserve and deduction", () => {
     expect(computeDeduction(Tier.T2, 43200n, defaultParams)).toBe(1000n * AGT);
   });
 
-  it("splits deduction 65/15/10/10", () => {
-    const split = splitDeduction(10_000n, defaultParams);
-    expect(split.executor).toBe(6_500n);
-    expect(split.tester).toBe(1_500n);
-    expect(split.reviewer).toBe(1_000n);
-    expect(split.platform).toBe(1_000n);
-    expect(split.executor + split.tester + split.reviewer + split.platform).toBe(split.total);
-  });
 });
 
 describe("assessment fee", () => {
@@ -203,12 +201,7 @@ describe("allocation", () => {
   });
 });
 
-describe("reject bond and vesting", () => {
-  it("computes reject bond", () => {
-    const bond = computeRejectBond(7000n, Tier.T1, defaultParams);
-    expect(bond).toBeGreaterThan(0n);
-  });
-
+describe("vesting", () => {
   it("creates 3 vesting tranches at 60/25/15%", () => {
     const schedule = vestingSchedule(100n, 1_000, defaultParams);
     expect(schedule).toHaveLength(3);
@@ -382,6 +375,70 @@ describe("anti-wash", () => {
     const result = antiWashCheck(defaultParams);
     expect(result.ok).toBe(true);
     expect(result.maxEmissionBps).toBeLessThan(result.unrecoverableBps);
+  });
+});
+
+describe("economic model v3", () => {
+  it("splits daily emission into 10/65/15/10", () => {
+    const daily = 800_000n * AGT;
+    const split = splitDailyEmission(daily, defaultParams);
+    expect(split.platform + split.executor + split.tester + split.arbitrator).toBe(daily);
+    expect(split.platform).toBe(80_000n * AGT);
+    expect(split.executor).toBe(520_000n * AGT);
+    expect(split.tester).toBe(120_000n * AGT);
+    expect(split.arbitrator).toBe(80_000n * AGT);
+  });
+
+  it("computes appeal fee with tier cap", () => {
+    expect(computeAppealFee(Tier.T1, defaultParams)).toBe(15n * AGT);
+    expect(computeAppealFee(Tier.T2, defaultParams)).toBe(100n * AGT);
+    expect(computeAppealFee(Tier.T3, defaultParams)).toBe(1000n * AGT);
+    expect(computeAppealFee(Tier.T4, defaultParams)).toBe(2000n * AGT);
+    expect(computeAppealFee(Tier.T5, defaultParams)).toBe(2000n * AGT);
+    expect(computeFinalAppealFee(Tier.T1, defaultParams)).toBe(30n * AGT);
+  });
+
+  it("allocates by score with largest remainder conservation", () => {
+    const pool = 1000n;
+    const results = allocateByScore(pool, [
+      { submissionIndex: 0, score: 60, rewardEligible: true },
+      { submissionIndex: 1, score: 40, rewardEligible: true },
+      { submissionIndex: 2, score: 90, rewardEligible: false },
+    ]);
+    expect(results.reduce((sum, row) => sum + row.amount, 0n)).toBe(pool);
+    expect(results.map(({ submissionIndex }) => submissionIndex)).toEqual([0, 1]);
+  });
+
+  it("accrues executor and tester rates proportional to fees", () => {
+    const execDaily = 650n * AGT;
+    const testDaily = 150n * AGT;
+    const feeA = 300n * AGT;
+    const feeB = 700n * AGT;
+    expect(executorPoolRatePerSecond(execDaily, feeA, feeA + feeB)).toBe(
+      (execDaily * feeA) / (86_400n * (feeA + feeB)),
+    );
+    expect(testerSeatRatePerSecond(testDaily, feeB, feeA + feeB)).toBe(
+      (testDaily * feeB) / (86_400n * (feeA + feeB)),
+    );
+    expect(executorPoolRatePerSecond(execDaily, feeA, 0n)).toBe(0n);
+  });
+
+  it("builds vesting tranches matching 60/25/15", () => {
+    const amount = 1000n * AGT;
+    const t0 = 1_700_000_000;
+    const tranches = vestingTranches(amount, t0, defaultParams);
+    expect(tranches).toHaveLength(3);
+    expect(tranches.reduce((sum, row) => sum + row.amount, 0n)).toBe(amount);
+    expect(tranches[0]!.amount).toBe(600n * AGT);
+    expect(tranches[1]!.amount).toBe(250n * AGT);
+    expect(tranches[2]!.amount).toBe(150n * AGT);
+  });
+
+  it("computes arbitrator weight with seat bonuses", () => {
+    const stake = agtToWei(1_000_000);
+    const weight = computeArbitratorWeight(stake, 10_000, [{ tier: Tier.T3 }], defaultParams);
+    const bonus = (agtToWei(1_000_000) * 1000n) / 10_000n;
+    expect(weight).toBe(stake + bonus);
   });
 });
 

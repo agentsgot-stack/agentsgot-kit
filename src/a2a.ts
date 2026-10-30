@@ -32,14 +32,8 @@ export function createAgentCard(origin: string): AgentCard {
     ],
     [
       "claim_rewards",
-      "Claim task rewards",
-      "Build a caller-paid vested task reward transaction.",
-      ["rewards"],
-    ],
-    [
-      "claim_mining_rewards",
-      "Claim mining rewards",
-      "Build a caller-paid direct daily mining reward transaction.",
+      "Claim executor mining",
+      "Build a caller-paid RewardVesting claim transaction for vested executor mining.",
       ["rewards", "mining"],
     ],
     [

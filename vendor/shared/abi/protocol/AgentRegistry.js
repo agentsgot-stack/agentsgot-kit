@@ -121,6 +121,19 @@ export const agentRegistryAbi = [
   },
   {
     "type": "function",
+    "name": "HOURLY_ANCHOR_TYPEHASH",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "PUBLISHER_PROFILE_TYPEHASH",
     "inputs": [],
     "outputs": [
@@ -148,6 +161,19 @@ export const agentRegistryAbi = [
   {
     "type": "function",
     "name": "TESTER_ASSIGNMENT_TYPEHASH",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "TESTER_SEAT_CLAIM_TYPEHASH",
     "inputs": [],
     "outputs": [
       {
@@ -423,14 +449,88 @@ export const agentRegistryAbi = [
         "internalType": "uint64"
       },
       {
-        "name": "activeIndependentExecutors30d",
-        "type": "uint32",
-        "internalType": "uint32"
-      },
-      {
-        "name": "expectedEmissionAgt",
+        "name": "platformAmount",
         "type": "uint256",
         "internalType": "uint256"
+      },
+      {
+        "name": "executorAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "testerAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "arbAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "execAccruedSnapshot",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "testAccruedSnapshot",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "burnAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "nonce",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "deadline",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "signature",
+        "type": "bytes",
+        "internalType": "bytes"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "consumeHourlyAnchor",
+    "inputs": [
+      {
+        "name": "hourId",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "recordsRoot",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "poolSnapshotRoot",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "seatSnapshotRoot",
+        "type": "bytes32",
+        "internalType": "bytes32"
       },
       {
         "name": "nonce",
@@ -573,6 +673,50 @@ export const agentRegistryAbi = [
         "name": "executorTier",
         "type": "uint8",
         "internalType": "uint8"
+      },
+      {
+        "name": "nonce",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "deadline",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "signature",
+        "type": "bytes",
+        "internalType": "bytes"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "consumeTesterSeatClaim",
+    "inputs": [
+      {
+        "name": "taskId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "tester",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "internalType": "uint256"
       },
       {
         "name": "nonce",

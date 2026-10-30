@@ -21,10 +21,15 @@ function server() {
     claimTask: vi.fn(async () => ({ id: "claim" })),
     submitWork: vi.fn(async () => ({ id: "sub", cid: "bafy", cidHash: "0x1", status: "SIGNED" })),
     createRewardClaim: vi.fn(async () => ({ scheduleIds: ["1"], tx: { to: "0x1" } })),
-    listMiningRewards: vi.fn(async () => ({
-      items: [{ leaf: "0xleaf", status: "CLAIMABLE" }],
+    getArbStreamPending: vi.fn(async () => ({
+      account: "0xabc",
+      pendingWei: "5",
+      weight: "1",
+      available: true,
     })),
-    createMiningRewardClaim: vi.fn(async () => ({ leaves: ["0xleaf"], tx: { to: "0x3" } })),
+    claimArbStream: vi.fn(async () => ({ account: "0xabc", tx: { to: "0x3" } })),
+    openAppeal: vi.fn(async () => ({ taskId: "t", tx: { to: "0x4" } })),
+    claimTesterSeat: vi.fn(async () => ({ taskId: "t", amountWei: "7", tx: { to: "0x5" } })),
     getJoinTesterPoolIntent: vi.fn(async () => ({
       inPool: false,
       meetsMinimum: true,
@@ -74,7 +79,6 @@ describe("MCP server", () => {
         "claim_task",
         "submit_work",
         "claim_rewards",
-        "claim_mining_rewards",
         "join_tester_pool",
         "publish_task",
         "accept_result",
@@ -96,33 +100,35 @@ describe("MCP server", () => {
         "sign_delivery",
         "get_submission_file",
         "list_rewards",
-        "list_mining_rewards",
+        "get_rewards_breakdown",
+        "open_appeal",
+        "waive_appeal",
+        "get_arb_stream_pending",
+        "claim_arb_stream",
+        "claim_tester_seat",
         "submit_fallback_report",
         "get_role_guide",
         "list_actions",
       ],
     );
   });
-  it("keeps task and mining claims separate and enforces both batch boundaries", async () => {
+  it("enforces the vesting claim batch boundary and requires an appeal statement", async () => {
     const result = await server().mcp.handle({ jsonrpc: "2.0", id: 1, method: "tools/list" });
     const tools = (
       result?.result as {
         tools: { name: string; description: string; inputSchema: Record<string, unknown> }[];
       }
     ).tools;
-    expect(tools.find(({ name }) => name === "list_rewards")?.description).toContain("task reward");
-    expect(tools.find(({ name }) => name === "list_mining_rewards")?.description).toContain(
-      "daily mining",
+    expect(tools.find(({ name }) => name === "list_rewards")?.description).toContain(
+      "executor mining",
     );
     expect(tools.find(({ name }) => name === "claim_rewards")?.inputSchema).toMatchObject({
       properties: {
         scheduleIds: { minItems: 1, maxItems: 100, uniqueItems: true },
       },
     });
-    expect(tools.find(({ name }) => name === "claim_mining_rewards")?.inputSchema).toMatchObject({
-      properties: {
-        leaves: { minItems: 1, maxItems: 100, uniqueItems: true },
-      },
+    expect(tools.find(({ name }) => name === "open_appeal")?.inputSchema).toMatchObject({
+      required: ["taskId", "statement"],
     });
   });
   it("ships instructions with params-driven thresholds and role prompts", async () => {
@@ -194,13 +200,25 @@ describe("MCP server", () => {
       result: { structuredContent: { tx: { to: "0x1" } } },
     });
   });
-  it("lists and claims mining rewards without mixing task schedule ids", async () => {
-    expect(await call(server().mcp, "list_mining_rewards")).toMatchObject({
-      result: { structuredContent: { items: [{ leaf: "0xleaf", status: "CLAIMABLE" }] } },
+  it("reads and claims the arbitration stream", async () => {
+    expect(await call(server().mcp, "get_arb_stream_pending")).toMatchObject({
+      result: { structuredContent: { pendingWei: "5", available: true } },
     });
-    expect(await call(server().mcp, "claim_mining_rewards", { leaves: ["0xleaf"] })).toMatchObject({
+    expect(await call(server().mcp, "claim_arb_stream")).toMatchObject({
       result: { structuredContent: { tx: { to: "0x3" } } },
     });
+  });
+  it("claim_tester_seat requests a signed claim for the given task", async () => {
+    const { client, mcp } = server();
+    expect(await call(mcp, "claim_tester_seat", { taskId: "t" })).toMatchObject({
+      result: { structuredContent: { amountWei: "7", tx: { to: "0x5" } } },
+    });
+    expect(client.claimTesterSeat).toHaveBeenCalledWith("t");
+  });
+  it("open_appeal forwards the statement and criteria", async () => {
+    const { client, mcp } = server();
+    await call(mcp, "open_appeal", { taskId: "t", statement: "defect", criteria: ["c1"] });
+    expect(client.openAppeal).toHaveBeenCalledWith("t", { statement: "defect", criteria: ["c1"] });
   });
   it("join_tester_pool defaults to the API join intent", async () => {
     const { client, mcp } = server();

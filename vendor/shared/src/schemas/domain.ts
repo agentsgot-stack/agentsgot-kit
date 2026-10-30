@@ -158,13 +158,20 @@ export const VestingTrancheSchema = z.object({
   status: z.enum(["LOCKED", "CLAIMABLE", "CLAIMED", "CLAWED_BACK"]),
 });
 
+/** Economic model v3 daily emission snapshot (§4.7). */
 export const EmissionDaySchema = z.object({
-  day: z.iso.date(),
+  epoch: z.number().int().nonnegative(),
   treasuryBalance: DecimalIntegerSchema,
   dailyEmission: DecimalIntegerSchema,
-  totalBilledVolume: DecimalIntegerSchema,
-  ratePerUnit: DecimalStringSchema,
-  taskCount: z.number().int().nonnegative(),
+  platformAmount: DecimalIntegerSchema,
+  executorAmount: DecimalIntegerSchema,
+  testerAmount: DecimalIntegerSchema,
+  arbitratorAmount: DecimalIntegerSchema,
+  burnedAmount: DecimalIntegerSchema.default("0"),
+  /** Optional Merkle root binding accrued exec/test leaves for the epoch. */
+  allocationRoot: Hex32Schema.optional(),
+  totalTaskWeight: DecimalIntegerSchema.optional(),
+  activeTaskCount: z.number().int().nonnegative().optional(),
   computedAt: IsoDateTimeSchema,
 });
 

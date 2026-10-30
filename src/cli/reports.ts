@@ -82,7 +82,7 @@ export function formatReport(summary: ReportSummary): string {
       `This period: claims ${summary.counts.claims} · deliveries ${summary.counts.deliveries} · test reports ${summary.counts.testReports} · votes ${summary.counts.votes}`,
       `In progress: ${progress}`,
       `Waiting for you: ${summary.waitingForUser.join("; ") || "nothing"}`,
-      `Earnings (AGT): claimed ${summary.earnings.claimedAgt} · claimable ${summary.earnings.claimableAgt} · locked ${summary.earnings.lockedAgt}`,
+      `Earnings (AGT): claimed ${summary.earnings.claimedAgt} · claimable ${summary.earnings.claimableAgt} · locked ${summary.earnings.lockedAgt} (v3 vesting 60/25/15 for executors)`,
       `Risks: ${summary.risks.join("; ") || "none"}`,
       `Next report: ${summary.nextReportAt}`,
     ].join("\n"),

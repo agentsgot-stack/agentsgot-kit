@@ -53,6 +53,7 @@ export class ExecutorWorker {
     const claim = previous?.claimId
       ? { id: previous.claimId }
       : await this.client.claimTask(task.taskId, `worker-claim-${task.taskId}`);
+    await this.client.heartbeatClaim(claim.id);
     const output = await this.llm.complete({
       role: "executor",
       prompt: task.specification?.summary ?? `Complete task ${task.taskId}`,
@@ -83,10 +84,14 @@ export class TesterWorker {
     taskId: string;
     submissionId: string;
     criteria: readonly Omit<TestCriterionResult, "passed" | "note">[];
+    /** Appeal retest seats use the same report path with a distinct idempotency key. */
+    retest?: boolean;
   }): Promise<CreateTesterResult> {
     const summary = await this.llm.complete({
       role: "tester",
-      prompt: `Verify task ${input.taskId} submission ${input.submissionId}.`,
+      prompt: input.retest
+        ? `Retest appealed criteria for task ${input.taskId} submission ${input.submissionId}.`
+        : `Verify task ${input.taskId} submission ${input.submissionId}.`,
     });
     const criteria = input.criteria.map(({ criterionId }) => ({
       criterionId,
@@ -94,13 +99,19 @@ export class TesterWorker {
       note: summary,
     }));
     const report = await this.client.submitTestReport({
-      ...input,
+      taskId: input.taskId,
+      submissionId: input.submissionId,
       approved: true,
       criteria,
       summary,
-      idempotencyKey: `worker-report-${input.taskId}`,
+      idempotencyKey: input.retest
+        ? `worker-retest-${input.taskId}-${input.submissionId}`
+        : `worker-report-${input.taskId}`,
     });
-    await this.checkpoints.set(`tester:${input.taskId}`, report);
+    await this.checkpoints.set(
+      input.retest ? `tester-retest:${input.taskId}` : `tester:${input.taskId}`,
+      report,
+    );
     return { reportId: report.id, approved: report.approved };
   }
 }

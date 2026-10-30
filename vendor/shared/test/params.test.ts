@@ -24,6 +24,10 @@ describe("parameter source", () => {
     expect(() => loadParams({ deductionExecBps: 6000 })).toThrow(/deduction shares/u);
   });
 
+  it("rejects a broken emission split", () => {
+    expect(() => loadParams({ emissionExecBps: 6000 })).toThrow(/emission shares/u);
+  });
+
   it("rejects a broken trade tax sum", () => {
     expect(() => loadParams({ tradeTaxBurnShareBps: 6000 })).toThrow(/trade tax shares/u);
   });

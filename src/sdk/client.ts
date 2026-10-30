@@ -5,28 +5,32 @@ import type {
   CommitTesterDrawSeedResponse,
   ConfigureAgentWebhookResponse,
   ConfirmArbitrationSeatResponse,
+  CreateArbitrationStreamClaimIntentResponse,
+  CreateTesterSeatClaimIntentResponse,
   CreateArbitrationVoteIntentResponse,
-  CreateEmissionClaimIntentResponse,
   CreateFallbackReportIntentResponse,
   CreateRewardClaimIntentResponse,
   CreateSignedTestReportResponse,
+  CreateTaskAppealRequest,
+  CreateTaskAppealResponse,
   CreateTaskClaimResponse,
   CreateTaskReviewResponse,
   CreateTaskSubmissionResponse,
   GetAcceptResultIntentResponse,
   GetAgentEligibilityResponse,
   GetAgentNextActionsResponse,
+  GetArbitrationStreamPendingResponse,
   GetArbitratorPoolJoinIntentResponse,
   GetCancellationCompensationIntentResponse,
   GetDisputeResponse,
   GetFinalResultIntentResponse,
+  GetRewardsBreakdownResponse,
   GetTaskResponse,
   GetTesterPoolJoinIntentResponse,
   HeartbeatAgentResponse,
   HeartbeatTaskClaimResponse,
   ListArbitratorCasesResponse,
   ListAvailableTriggerActionsResponse,
-  ListEmissionAllocationsResponse,
   ListNotificationsResponse,
   ListRewardTranchesResponse,
   ListTasksResponse,
@@ -35,6 +39,7 @@ import type {
   RevealTesterDrawResponse,
   SignExecutorDeliveryResponse,
   VerifySiweResponse,
+  WaiveTaskAppealResponse,
 } from "#shared/api";
 import type { HttpPort, TransactionRequest, WalletPort } from "../ports.js";
 
@@ -155,6 +160,11 @@ export class AgentGridClient {
 
   heartbeatClaim(claimId: string): Promise<HeartbeatTaskClaimResponse> {
     return this.request("POST", `/claims/${claimId}/heartbeat`);
+  }
+
+  /** Alias for agent presence heartbeat (`POST /agents/heartbeat`). */
+  heartbeat(): Promise<HeartbeatAgentResponse> {
+    return this.reportPresence();
   }
 
   async submitWork(input: {
@@ -282,12 +292,35 @@ export class AgentGridClient {
     return this.request("POST", "/rewards/claim-intents", { scheduleIds });
   }
 
-  listMiningRewards(): Promise<ListEmissionAllocationsResponse> {
-    return this.request("GET", "/emission/allocations");
+  getRewardsBreakdown(): Promise<GetRewardsBreakdownResponse> {
+    return this.request("GET", "/rewards/breakdown");
   }
 
-  createMiningRewardClaim(leaves: readonly string[]): Promise<CreateEmissionClaimIntentResponse> {
-    return this.request("POST", "/emission/claim-intents", { leaves });
+  /** TaskEscrow.openAppeal intent (appeal → retest → arbitration). */
+  openAppeal(taskId: string, input: CreateTaskAppealRequest): Promise<CreateTaskAppealResponse> {
+    return this.request("POST", `/tasks/${taskId}/appeals`, input);
+  }
+
+  /** TaskEscrow.waiveAppeal intent for an awarded executor. */
+  waiveAppeal(taskId: string): Promise<WaiveTaskAppealResponse> {
+    return this.request("POST", `/tasks/${taskId}/waive-appeal`);
+  }
+
+  getArbStreamPending(): Promise<GetArbitrationStreamPendingResponse> {
+    return this.request("GET", "/rewards/arb-stream/pending");
+  }
+
+  /** ArbitrationStream.claim intent for this wallet. */
+  claimArbStream(): Promise<CreateArbitrationStreamClaimIntentResponse> {
+    return this.request("POST", "/rewards/arbitration-stream-claim-intent");
+  }
+
+  /**
+   * Signed TaskEscrow.claimTesterSeat intent for this wallet's seat mining on a settled task.
+   * Only epochs finalized on chain count; the transaction must be sent by the tester.
+   */
+  claimTesterSeat(taskId: string): Promise<CreateTesterSeatClaimIntentResponse> {
+    return this.request("POST", "/rewards/tester-seat-claim-intents", { taskId });
   }
 
   /**

@@ -103,13 +103,18 @@ function byRole(role: Role, runtime: ScheduleRuntime): RoleSchedule[] {
       ];
     case "tester":
       return [
-        job("assignments", 120, "Poll for TesterAssigned duties (event-driven with a webhook).", {
-          window: p.testerReportWindowHours * HOUR,
-        }),
+        job(
+          "assignments",
+          120,
+          "Poll for TesterAssigned and appeal-retest seats (event-driven with a webhook).",
+          {
+            window: p.testerReportWindowHours * HOUR,
+          },
+        ),
         job(
           "evaluate",
           120,
-          `Evaluate immediately; submit by 50% of the ${p.testerReportWindowHours}h window, expedite after 80%.`,
+          `Evaluate immediately (including retest seats); submit by 50% of the ${p.testerReportWindowHours}h / appealRetestHours window, expedite after 80%.`,
           { trigger: "event" },
         ),
         job(

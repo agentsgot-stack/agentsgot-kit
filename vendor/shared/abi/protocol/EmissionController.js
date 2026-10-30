@@ -26,6 +26,16 @@ export const emissionControllerAbi = [
             "name": "protocolProof",
             "type": "address",
             "internalType": "contract IProtocolProof"
+          },
+          {
+            "name": "platformTreasury",
+            "type": "address",
+            "internalType": "contract IPlatformTreasury"
+          },
+          {
+            "name": "arbitrationStream",
+            "type": "address",
+            "internalType": "contract IArbitrationStream"
           }
         ]
       }
@@ -41,6 +51,45 @@ export const emissionControllerAbi = [
         "name": "",
         "type": "address",
         "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "DEFAULT_ADMIN_ROLE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "ESCROW_ROLE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "GOVERNANCE_ROLE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
       }
     ],
     "stateMutability": "view"
@@ -73,124 +122,13 @@ export const emissionControllerAbi = [
   },
   {
     "type": "function",
-    "name": "allocationLeaf",
-    "inputs": [
+    "name": "arbitrationStream",
+    "inputs": [],
+    "outputs": [
       {
-        "name": "epoch",
-        "type": "uint64",
-        "internalType": "uint64"
-      },
-      {
-        "name": "taskId",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      },
-      {
-        "name": "beneficiary",
+        "name": "",
         "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "role",
-        "type": "uint8",
-        "internalType": "uint8"
-      },
-      {
-        "name": "taskWeight",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "executionWeight",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "amount",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "claim",
-    "inputs": [
-      {
-        "name": "claims",
-        "type": "tuple[]",
-        "internalType": "struct EmissionController.EmissionClaim[]",
-        "components": [
-          {
-            "name": "epoch",
-            "type": "uint64",
-            "internalType": "uint64"
-          },
-          {
-            "name": "taskId",
-            "type": "bytes32",
-            "internalType": "bytes32"
-          },
-          {
-            "name": "role",
-            "type": "uint8",
-            "internalType": "uint8"
-          },
-          {
-            "name": "taskWeight",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "executionWeight",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "amount",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "proof",
-            "type": "bytes32[]",
-            "internalType": "bytes32[]"
-          }
-        ]
-      }
-    ],
-    "outputs": [
-      {
-        "name": "amount",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "claimedAllocations",
-    "inputs": [
-      {
-        "name": "",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bool",
-        "internalType": "bool"
+        "internalType": "contract IArbitrationStream"
       }
     ],
     "stateMutability": "view"
@@ -241,27 +179,27 @@ export const emissionControllerAbi = [
         "internalType": "uint256"
       },
       {
-        "name": "totalBilledVolume",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "executorAmount",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "testerAmount",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "reviewerAmount",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
         "name": "platformAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "executorEscrowed",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "testerEscrowed",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "arbStreamed",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "burnedAmount",
         "type": "uint256",
         "internalType": "uint256"
       },
@@ -274,31 +212,19 @@ export const emissionControllerAbi = [
         "name": "finalized",
         "type": "bool",
         "internalType": "bool"
-      },
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "executorEscrowBalance",
+    "inputs": [],
+    "outputs": [
       {
-        "name": "totalTaskWeight",
+        "name": "",
         "type": "uint256",
         "internalType": "uint256"
-      },
-      {
-        "name": "allocatedAmount",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "burnedAmount",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "activeTaskCount",
-        "type": "uint32",
-        "internalType": "uint32"
-      },
-      {
-        "name": "allocationRoot",
-        "type": "bytes32",
-        "internalType": "bytes32"
       }
     ],
     "stateMutability": "view"
@@ -311,6 +237,43 @@ export const emissionControllerAbi = [
         "name": "epoch",
         "type": "uint64",
         "internalType": "uint64"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "getRoleAdmin",
+    "inputs": [
+      {
+        "name": "role",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "grantRole",
+    "inputs": [
+      {
+        "name": "role",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "account",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "outputs": [],
@@ -331,8 +294,43 @@ export const emissionControllerAbi = [
   },
   {
     "type": "function",
+    "name": "hasRole",
+    "inputs": [
+      {
+        "name": "role",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "account",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "initialize",
-    "inputs": [],
+    "inputs": [
+      {
+        "name": "governance",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "escrow",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
     "outputs": [],
     "stateMutability": "nonpayable"
   },
@@ -364,6 +362,19 @@ export const emissionControllerAbi = [
   },
   {
     "type": "function",
+    "name": "platformTreasury",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract IPlatformTreasury"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "previewDay",
     "inputs": [],
     "outputs": [
@@ -383,27 +394,27 @@ export const emissionControllerAbi = [
             "internalType": "uint256"
           },
           {
-            "name": "totalBilledVolume",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "executorAmount",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "testerAmount",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "reviewerAmount",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
             "name": "platformAmount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "executorEscrowed",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "testerEscrowed",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "arbStreamed",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "burnedAmount",
             "type": "uint256",
             "internalType": "uint256"
           },
@@ -416,31 +427,6 @@ export const emissionControllerAbi = [
             "name": "finalized",
             "type": "bool",
             "internalType": "bool"
-          },
-          {
-            "name": "totalTaskWeight",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "allocatedAmount",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "burnedAmount",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "activeTaskCount",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "allocationRoot",
-            "type": "bytes32",
-            "internalType": "bytes32"
           }
         ]
       }
@@ -475,6 +461,78 @@ export const emissionControllerAbi = [
   },
   {
     "type": "function",
+    "name": "pullExecutorEscrow",
+    "inputs": [
+      {
+        "name": "to",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "pullTesterEscrow",
+    "inputs": [
+      {
+        "name": "to",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "renounceRole",
+    "inputs": [
+      {
+        "name": "role",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "callerConfirmation",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "revokeRole",
+    "inputs": [
+      {
+        "name": "role",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "account",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "submitDay",
     "inputs": [
       {
@@ -488,22 +546,37 @@ export const emissionControllerAbi = [
             "internalType": "uint64"
           },
           {
-            "name": "allocationRoot",
-            "type": "bytes32",
-            "internalType": "bytes32"
-          },
-          {
-            "name": "totalTaskWeight",
+            "name": "platformAmount",
             "type": "uint256",
             "internalType": "uint256"
           },
           {
-            "name": "activeTaskCount",
-            "type": "uint32",
-            "internalType": "uint32"
+            "name": "executorAmount",
+            "type": "uint256",
+            "internalType": "uint256"
           },
           {
-            "name": "expectedEmissionAgt",
+            "name": "testerAmount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "arbAmount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "execAccruedSnapshot",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "testAccruedSnapshot",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "burnAmount",
             "type": "uint256",
             "internalType": "uint256"
           },
@@ -530,6 +603,38 @@ export const emissionControllerAbi = [
   },
   {
     "type": "function",
+    "name": "supportsInterface",
+    "inputs": [
+      {
+        "name": "interfaceId",
+        "type": "bytes4",
+        "internalType": "bytes4"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "testerEscrowBalance",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "token",
     "inputs": [],
     "outputs": [
@@ -537,19 +642,6 @@ export const emissionControllerAbi = [
         "name": "",
         "type": "address",
         "internalType": "contract IERC20"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "totalOutstanding",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -612,61 +704,6 @@ export const emissionControllerAbi = [
   },
   {
     "type": "event",
-    "name": "EmissionClaimed",
-    "inputs": [
-      {
-        "name": "epoch",
-        "type": "uint64",
-        "indexed": true,
-        "internalType": "uint64"
-      },
-      {
-        "name": "taskId",
-        "type": "bytes32",
-        "indexed": true,
-        "internalType": "bytes32"
-      },
-      {
-        "name": "beneficiary",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "role",
-        "type": "uint8",
-        "indexed": false,
-        "internalType": "uint8"
-      },
-      {
-        "name": "taskWeight",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      },
-      {
-        "name": "executionWeight",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      },
-      {
-        "name": "amount",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      },
-      {
-        "name": "leaf",
-        "type": "bytes32",
-        "indexed": false,
-        "internalType": "bytes32"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
     "name": "EmissionFinalized",
     "inputs": [
       {
@@ -676,7 +713,25 @@ export const emissionControllerAbi = [
         "internalType": "uint64"
       },
       {
-        "name": "allocatedAmount",
+        "name": "platformAmount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "executorEscrowed",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "testerEscrowed",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "arbStreamed",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
@@ -686,12 +741,6 @@ export const emissionControllerAbi = [
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
-      },
-      {
-        "name": "allocationRoot",
-        "type": "bytes32",
-        "indexed": false,
-        "internalType": "bytes32"
       }
     ],
     "anonymous": false
@@ -719,22 +768,53 @@ export const emissionControllerAbi = [
         "internalType": "uint256"
       },
       {
-        "name": "totalTaskWeight",
+        "name": "platformAmount",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
       },
       {
-        "name": "activeTaskCount",
-        "type": "uint32",
+        "name": "executorEscrowed",
+        "type": "uint256",
         "indexed": false,
-        "internalType": "uint32"
+        "internalType": "uint256"
       },
       {
-        "name": "allocationRoot",
-        "type": "bytes32",
+        "name": "testerEscrowed",
+        "type": "uint256",
         "indexed": false,
-        "internalType": "bytes32"
+        "internalType": "uint256"
+      },
+      {
+        "name": "arbAmount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "burnedAmount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "ExecutorEscrowPulled",
+    "inputs": [
+      {
+        "name": "to",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
       }
     ],
     "anonymous": false
@@ -754,6 +834,100 @@ export const emissionControllerAbi = [
   },
   {
     "type": "event",
+    "name": "RoleAdminChanged",
+    "inputs": [
+      {
+        "name": "role",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "previousAdminRole",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "newAdminRole",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "RoleGranted",
+    "inputs": [
+      {
+        "name": "role",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "account",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "sender",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "RoleRevoked",
+    "inputs": [
+      {
+        "name": "role",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "account",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "sender",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "TesterEscrowPulled",
+    "inputs": [
+      {
+        "name": "to",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "Upgraded",
     "inputs": [
       {
@@ -764,6 +938,27 @@ export const emissionControllerAbi = [
       }
     ],
     "anonymous": false
+  },
+  {
+    "type": "error",
+    "name": "AccessControlBadConfirmation",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "AccessControlUnauthorizedAccount",
+    "inputs": [
+      {
+        "name": "account",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "neededRole",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ]
   },
   {
     "type": "error",
@@ -784,17 +979,6 @@ export const emissionControllerAbi = [
         "name": "account",
         "type": "address",
         "internalType": "address"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "AllocationAlreadyClaimed",
-    "inputs": [
-      {
-        "name": "leaf",
-        "type": "bytes32",
-        "internalType": "bytes32"
       }
     ]
   },
@@ -854,23 +1038,39 @@ export const emissionControllerAbi = [
   },
   {
     "type": "error",
-    "name": "InvalidAddress",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "InvalidAllocationProof",
+    "name": "InsufficientEscrow",
     "inputs": [
       {
-        "name": "leaf",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        "name": "available",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "requested",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ]
   },
   {
     "type": "error",
-    "name": "InvalidAllocationRoot",
+    "name": "InvalidAccrual",
+    "inputs": [
+      {
+        "name": "accrued",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "share",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "InvalidAddress",
     "inputs": []
   },
   {
@@ -935,6 +1135,22 @@ export const emissionControllerAbi = [
     "type": "error",
     "name": "InvalidInitialization",
     "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidSplit",
+    "inputs": [
+      {
+        "name": "sum",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "expected",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
   },
   {
     "type": "error",

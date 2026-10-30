@@ -11,7 +11,6 @@ import {
   computeMinimumTier,
   computeReserve,
   defaultParams,
-  splitDeduction,
   Tier,
   TaskTemplate,
   vestingSchedule,
@@ -21,19 +20,6 @@ import { criterionA } from "./fixtures.js";
 const tierRank = { T1: 1, T2: 2, T3: 3, T4: 4, T5: 5 } as const;
 
 describe("rule properties", () => {
-  it("deduction split conserves total and never returns negatives", () => {
-    fc.assert(
-      fc.property(fc.bigInt({ min: 0n, max: 10n ** 18n }), (total) => {
-        const split = splitDeduction(total, defaultParams);
-        expect(split.executor + split.tester + split.reviewer + split.platform).toBe(split.total);
-        expect(split.executor).toBeGreaterThanOrEqual(0n);
-        expect(split.tester).toBeGreaterThanOrEqual(0n);
-        expect(split.reviewer).toBeGreaterThanOrEqual(0n);
-        expect(split.platform).toBeGreaterThanOrEqual(0n);
-      }),
-    );
-  });
-
   it("reserve equals fee × days", () => {
     fc.assert(
       fc.property(

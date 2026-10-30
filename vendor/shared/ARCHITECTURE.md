@@ -64,7 +64,7 @@ abi/protocol/               protocol Hardhat 产物生成的 JSON ABI 与 TypeSc
 
 - 层级：`computeMinimumTier`、`computeTierRangeMax`、`tierDailyFee`、`tierDaysRange`；
 - 发布：`checkDraft`、`checkPublisherStake`；
-- 资金：`computeReserve`、`computeDeduction`、`splitDeduction`、`computeAssessmentFee`、案件费/锁定额；
+- 资金：`computeReserve`、`computeDeduction`、`computeAssessmentFee`、案件费/锁定额；
 - 评分与分配：`computeSubmissionScore`、`allocateExecutorPool`；
 - 资格与质押：发布者基础/敞口、验证者动态质押；
 - 仲裁：`arbitrationPanel`、`t1FallbackPanel`；

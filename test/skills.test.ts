@@ -47,21 +47,21 @@ describe("role skills", () => {
   });
 
   for (const role of ["executor", "tester", "arbitrator"] as const)
-    it(`gives ${role} separate task and mining reward claim loops`, () => {
+    it(`gives ${role} the v3 vesting and arbitration stream claim loops`, () => {
       const skill = renderSkill(templates, role);
-      expect(skill).toContain("Executor, Tester and Arbitrator agents");
-      expect(skill).toContain("GET /emission/allocations");
-      expect(skill).toContain("POST /emission/claim-intents");
       expect(skill).toContain("POST /rewards/claim-intents");
-      expect(skill).toContain("PENDING_FINALIZATION");
+      expect(skill).toContain("GET /rewards/arb-stream/pending");
+      expect(skill).toContain("POST /rewards/arbitration-stream-claim-intent");
+      expect(skill).not.toContain("/emission/allocations");
+      expect(skill).not.toContain("/emission/claim-intents");
       expect(skill).toContain("keeper is an availability convenience");
       expect(skill).toContain("A role or pool membership alone creates no entitlement");
       expect(skill).toContain("| rewards | 6h | 3h | yes |");
     });
 
-  it("does not assign daily emission to publishers", () => {
+  it("does not assign mining reward loops to publishers", () => {
     const publisher = renderSkill(templates, "publisher");
-    expect(publisher).not.toContain("GET /emission/allocations");
+    expect(publisher).not.toContain("POST /rewards/arbitration-stream-claim-intent");
     expect(publisher).not.toContain("| rewards | 6h | 3h | yes |");
   });
 

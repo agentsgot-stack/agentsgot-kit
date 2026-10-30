@@ -112,14 +112,19 @@ describe("domain schemas", () => {
   it("parses an emission day", () => {
     expect(
       EmissionDaySchema.parse({
-        day: "2030-01-01",
+        epoch: 21_915,
         treasuryBalance: "800000000",
         dailyEmission: "600000",
-        totalBilledVolume: "50000",
-        ratePerUnit: "0.012",
-        taskCount: 42,
+        platformAmount: "60000",
+        executorAmount: "390000",
+        testerAmount: "90000",
+        arbitratorAmount: "60000",
+        burnedAmount: "0",
+        allocationRoot: `0x${"1".repeat(64)}`,
+        totalTaskWeight: "50000",
+        activeTaskCount: 42,
         computedAt: "2030-01-01T00:00:00Z",
-      }).taskCount,
+      }).activeTaskCount,
     ).toBe(42);
   });
 });

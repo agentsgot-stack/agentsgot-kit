@@ -70,15 +70,9 @@
 
 每个字段携带 `value | null`、`source: user|ai|rule`、`confirmation: unconfirmed|confirmed|suggested`。
 
-### 1.5 `DeductionSplit`
+### 1.5 扣费去向（经济模型 v3）
 
-| 字段 | 类型 | 说明 |
-|---|---|---|
-| `executor` | `bigint` | 70% · C |
-| `tester` | `bigint` | 15% · C |
-| `reviewer` | `bigint` | 10% · C |
-| `platform` | `bigint` | 5% · C |
-| `total` | `bigint` | = C |
+任务扣费 `C` **100% 进入 `PlatformTreasury`**，不拆给执行者 / 测试者 / 复核者。争议标的 `V = deductionExecBps · C / 10000`（默认 65% · C）只用于案件锁定与容量拦截，不是报酬拆分。
 
 ### 1.6 `VestingTranche`
 
@@ -113,11 +107,9 @@
 | `computeReserve` | maxTier, runDays, params | `bigint` | F_max × D |
 | `computeDeduction` | lockedTier, billedSeconds, params | `bigint` | F_t × s / 86400 |
 | `computeSegmentedDeduction` | segments[], params | `bigint` | 分段计费 |
-| `splitDeduction` | total, params | `DeductionSplit` | 65/15/10/10，平台为余数 |
 | `computeAssessmentFee` | acceptedIndex, currentTier, lockedTier, params | `bigint` | 5% × F_cur × 2^⌊(k-1)/N⌋ |
 | `computeSubmissionScore` | criterionScores[], threshold, params | score, passes, isJunk | 逐条汇总 |
 | `allocateExecutorPool` | pool, scores[], mode, topK? | AllocationResult[] | 三种分配模式 |
-| `computeRejectBond` | deductionExec, lockedTier, params | `bigint` | 拒绝保证金 |
 | `vestingSchedule` | amount, acceptedAtSeconds, params | tranches[] | 60/25/15% |
 | `computeDailyEmission` | treasuryBalance, genesisBalance, params | emission, safetyCap | 半衰期 + 安全阀 |
 | `computeTaskDailyEmission` | taskBilled, totalBilled, dailyEmission, cumEmission, cumDeduction, params | taskEmission | 逐任务发行 |
@@ -152,7 +144,7 @@
 | `ReviewerDraw` | 复核者抽签、结果上链 |
 | `RewardVesting` | 分期释放、维护期缺陷回收 |
 | `ArbitrationCourt` | 争议仲裁（承诺-揭示投票）、申诉、保证金/罚没 |
-| `DailyEmission` | 每日 Merkle 根、发行上限、逐任务发行分配 |
+| `DailyEmission` | 每日发行上限与逐任务发行分配（平台 10% / 执行 65% / 测试 15% / 仲裁 10%） |
 | `PublisherStaking` | 发布者基础质押与预留管理 |
 | `ValidatorStaking` | 验证者质押、锁定、退出冷却 |
 | `AgentRegistry` | 执行者链上身份惰性登记 |
@@ -192,10 +184,20 @@ function postResult(SettlementProof calldata proof, Payees calldata payees) exte
 // R − C → PublisherStaking.refund (publisher stake, never the wallet).
 function acceptResult(bytes32 taskId) external;
 
-// Publisher opens a review-window dispute (Status.Disputed); pays the case fee from the wallet.
-function openDispute(bytes32 taskId, bytes32 reasonHash, bytes calldata caseProof) external;
+// Publisher or a posted executor opens an appeal inside the review window; pays appealFee
+// = min(appealFeeBps × F_{t*}, appealFeeCapAgt), 100% to revealed jurors.
+function openAppeal(bytes32 taskId, bytes32 reasonHash, bytes calldata caseProof) external returns (bytes32 caseId);
+// A posted executor waives its appeal right (irreversible: openAppeal then reverts AlreadyWaived);
+// once every executor waives, the window closes early.
+function waiveAppeal(bytes32 taskId) external;
 // Publisher opens a maintenance-period defect dispute on an accepted task.
 function openMaintenanceDispute(bytes32 taskId, bytes32 reasonHash, bytes calldata caseProof) external;
+// Tester mining seat: amount comes from the backend-signed EIP-712 TesterSeatClaim(taskId, tester, amount,
+// nonce, deadline) (POST /rewards/tester-seat-claim-intents), pulled from EmissionController tester escrow;
+// one claim per (taskId, tester).
+function claimTesterSeat(bytes32 taskId, uint256 amount, uint256 nonce, uint64 deadline, bytes calldata signature)
+    external returns (uint256 paid);
+function testerSeatClaimed(bytes32 taskId, address tester) external view returns (bool);
 // ArbitrationCourt callbacks: ruling pays testers, splits reviewer pool with the majority panel and
 // refunds the publisher stake per 01-RULES §4.6; a maintenance defect claws back unreleased tranches.
 function onCourtRuling(bytes32 taskId, IArbitrationCourt.Ruling ruling, uint16 executorAwardBps) external;
@@ -209,8 +211,8 @@ function cancelTask(uint256 taskId) external;
 ```solidity
 // TaskEscrow：发布时写入的五档日费快照，tier 为 1–5
 function taskDailyFeeWei(bytes32 taskId, uint8 tier) external view returns (uint256);
-// TaskEscrow：结果上链后的争议标的（执行者池）与拒绝保证金 max(5% × C_exec, 0.5 × F_{t*})
-function disputeAmounts(bytes32 taskId) external view returns (uint256 disputeValue, uint256 rejectBond);
+// TaskEscrow：结果上链后的争议标的 V 与申诉费 min(appealFeeBps × F_{t*}, appealFeeCapAgt)
+function disputeAmounts(bytes32 taskId) external view returns (uint256 disputeValue, uint256 appealFeeAmount);
 // ArbitrationCourt：案件费 max(caseFeeBps × V, caseFeeMinAgt)；prepareCase 用它复核传入值
 function quoteCaseFee(uint256 disputeValue) external view returns (uint256);
 // ArbitrationCourt：已开案件的申诉保证金 = caseFee × appealBondMultiplierBps / 10000
@@ -250,8 +252,9 @@ event TaskRejected(uint256 indexed taskId, uint256 bondAmount);
 event DeductionSettled(uint256 indexed taskId, uint256 total, uint256 refund);
 event VestingCreated(uint256 indexed taskId, address indexed beneficiary, uint256 amount, uint256 releaseAt);
 event ReviewersPaid(bytes32 indexed taskId, address[] reviewers, uint256 perReviewer, uint256 toPool);
-event DisputeOpened(bytes32 indexed taskId, bytes32 indexed caseId, bytes32 indexed reasonHash);
+event AppealOpened(bytes32 indexed taskId, bytes32 indexed caseId, bytes32 indexed reasonHash, uint256 appealFee);
 event MaintenanceDisputeOpened(bytes32 indexed taskId, bytes32 indexed caseId, bytes32 indexed reasonHash);
+event TesterSeatClaimed(bytes32 indexed taskId, address indexed tester, uint256 amount);
 event TesterPaid(bytes32 indexed taskId, address indexed tester, uint256 amount, uint256 redirected); // TesterAssignment
 event ReserveRefunded(bytes32 indexed taskId, address indexed publisher, uint256 amount, uint256 newBalance); // PublisherStaking
 event PanelSharePaid(bytes32 indexed caseId, uint256 amount, uint256 perJuror, uint256 jurors); // ArbitrationSettlement
@@ -374,7 +377,7 @@ interface AgentGridClient {
 }
 ```
 
-正常路径顺序：接单 → 交付签名（此时占用参与名额）→ 执行者抽签（commit → reveal）→ 测试报告 → `getFinalResult` 上链（进入 `publisherReviewHours` 评审窗口）→ 发布者 `getAcceptResult` 提前验收，或窗口后任意账户发送 `listActions` 中的 `SETTLE_TASK` → `createRewardClaim` 领奖。验收时测试者与复核者一次性到账，`R − C` 记入发布者质押余额。评审窗口内发布者可 `POST /tasks/{id}/disputes` 取得 `TaskEscrow.openDispute` calldata；已验收任务在维护期内同一接口返回 `openMaintenanceDispute`。任务资源 `participation.occupied` / `submitted` 均计已签名交付数；接单本身不占名额。
+正常路径顺序：接单 → 交付签名（此时占用参与名额）→ 执行者抽签（commit → reveal）→ 测试报告 → `getFinalResult` 上链（进入 `publisherReviewHours` 评审窗口）→ 发布者 `getAcceptResult` 提前验收，或窗口后任意账户发送 `listActions` 中的 `SETTLE_TASK` → `createRewardClaim` 领奖。验收时测试者与复核者一次性到账，`R − C` 记入发布者质押余额。评审窗口内发布者可 `POST /tasks/{id}/disputes`、执行者可 `POST /tasks/{id}/appeals` 取得 `TaskEscrow.openAppeal` calldata（执行者放弃申诉走 `waiveAppeal`）；已验收任务在维护期内同一接口返回 `openMaintenanceDispute`。任务资源 `participation.occupied` / `submitted` 均计已签名交付数；接单本身不占名额。
 
 **委托场景：** 第三方 Agent 调用 `setCredential(delegatedApiKey)` 后，以密钥拥有者的身份执行上述流程。`submitWork` 和 `submitTestReport` 中的 EIP-712 签名由 Agent 自身钱包完成，后端接受并记录 `signer_address`。
 

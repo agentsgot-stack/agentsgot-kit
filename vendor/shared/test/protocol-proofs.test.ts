@@ -31,7 +31,19 @@ describe("protocol proof primitives", () => {
       "ArbitrationCase",
       "CollusionReport",
       "EmissionDay",
+      "HourlyAnchor",
       "Settlement",
+      "TesterSeatClaim",
+    ]);
+  });
+
+  it("matches the TesterSeatClaim typehash field order", () => {
+    expect(PROTOCOL_PROOF_TYPES.TesterSeatClaim.map(({ name }) => name)).toEqual([
+      "taskId",
+      "tester",
+      "amount",
+      "nonce",
+      "deadline",
     ]);
   });
 
@@ -44,11 +56,32 @@ describe("protocol proof primitives", () => {
     ]);
   });
 
+  it("matches the v3 EmissionDay typehash field order", () => {
+    expect(PROTOCOL_PROOF_TYPES.EmissionDay.map(({ name }) => name)).toEqual([
+      "epoch",
+      "platformAmount",
+      "executorAmount",
+      "testerAmount",
+      "arbAmount",
+      "execAccruedSnapshot",
+      "testAccruedSnapshot",
+      "burnAmount",
+      "nonce",
+      "deadline",
+    ]);
+  });
+
   it("rejects protocol facts outside contract hard bounds", () => {
     expect(() =>
       assertProtocolProofBounds({
         kind: "EMISSION_DAY",
-        activeIndependentExecutors30d: 10_000_001,
+        platformAmount: 1n,
+        executorAmount: 1n,
+        testerAmount: 1n,
+        arbAmount: 1n,
+        execAccruedSnapshot: 2n,
+        testAccruedSnapshot: 0n,
+        burnAmount: 0n,
       }),
     ).toThrow("EMISSION_DAY_OUT_OF_BOUNDS");
     expect(() =>

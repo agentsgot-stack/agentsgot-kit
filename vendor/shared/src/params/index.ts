@@ -53,7 +53,15 @@ function validateParams(candidate: unknown): Params {
       get("deductionRevBps") +
       get("deductionPlatBps") ===
       10_000,
-    "deduction shares must total 10000 bps",
+    "legacy deduction shares must total 10000 bps",
+  );
+  assertInvariant(
+    get("emissionPlatformBps") +
+      get("emissionExecBps") +
+      get("emissionTestBps") +
+      get("emissionArbBps") ===
+      10_000,
+    "emission shares must total 10000 bps",
   );
   assertInvariant(
     get("vestingT0Bps") + get("vestingT1Bps") + (10_000 - get("vestingT0Bps") - get("vestingT1Bps")) ===
@@ -118,10 +126,8 @@ function validateParams(candidate: unknown): Params {
       get("participantsWarning") <= get("participantsMax"),
     "participant limits must satisfy min <= default <= warning <= max",
   );
-  assertInvariant(
-    get("emissionSafetyCoeffBps") * get("unrecoverableCostBps") < get("unrecoverableCostBps") * 10_000,
-    "emission safety coefficient ρ must be < 1 (ρ·u < u)",
-  );
+  // emissionSafetyCoeffBps / unrecoverableCostBps are deprecated in economic model v3
+  // and no longer participate in §4.7 emission; retained for historical param compatibility.
 
   return values as Params;
 }

@@ -8,6 +8,8 @@ export { rewardVestingAbi } from "./RewardVesting.js";
 export { platformTreasuryAbi } from "./PlatformTreasury.js";
 export { emissionControllerAbi } from "./EmissionController.js";
 export { incentiveVaultAbi } from "./IncentiveVault.js";
+export { hourlyAnchorAbi } from "./HourlyAnchor.js";
+export { arbitrationStreamAbi } from "./ArbitrationStream.js";
 export { arbitrationCourtAbi } from "./ArbitrationCourt.js";
 export { arbitrationSelectionAbi } from "./ArbitrationSelection.js";
 export { arbitrationCaseProofVerifierAbi } from "./ArbitrationCaseProofVerifier.js";

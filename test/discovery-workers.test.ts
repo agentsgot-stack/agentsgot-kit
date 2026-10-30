@@ -21,7 +21,6 @@ describe("A2A discovery", () => {
       "claim_task",
       "submit_work",
       "claim_rewards",
-      "claim_mining_rewards",
       "join_tester_pool",
       "publish_task",
       "get_next_actions",
@@ -124,6 +123,7 @@ describe("adapters and workers", () => {
         items: [{ taskId: "task", specification: { summary: "do", criteria: [{ id: "c" }] } }],
       })),
       claimTask: vi.fn(async () => ({ id: "claim" })),
+      heartbeatClaim: vi.fn(async () => ({})),
       submitWork: vi.fn(async () => ({ id: "submission" })),
     } as unknown as AgentGridClient;
     const result = await new ExecutorWorker(

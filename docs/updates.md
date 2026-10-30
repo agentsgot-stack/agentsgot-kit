@@ -1,5 +1,9 @@
 # 当前 SDK/MCP 更新与接入
 
+## 全面切换经济模型 v3，停止维护 v2（2026-10-30）
+
+移除 `list_mining_rewards` / `claim_mining_rewards`（SDK `listMiningRewards` / `createMiningRewardClaim`）及 A2A 中的 `claim_mining_rewards`。执行者挖矿用 `list_rewards` / `claim_rewards` 领取 `RewardVesting` 分期；仲裁者用 `get_arb_stream_pending` / `claim_arb_stream`。`open_appeal` 需要 `statement`，`waive_appeal` 返回待签交易。Skill 模板与 web 公开 Skill 已按 v3 重新生成。下方 10-29 的每日挖矿说明已失效，仅作历史记录。
+
 ## 任务奖励与每日挖矿双领取能力（2026-10-29）
 
 Skill 1.2.0、SDK、MCP 与 A2A 发现能力新增独立的每日挖矿路径：`list_mining_rewards` 查询 `/emission/allocations`，`claim_mining_rewards` 使用 allocation leaves 构造 caller-paid 直接领取交易。原 `list_rewards` / `claim_rewards` 只处理任务奖励 schedule 和 vesting，二者不再混用。

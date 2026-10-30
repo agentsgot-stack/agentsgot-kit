@@ -2,7 +2,15 @@
 import { realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
-import { doctorCommand, err, parseRoles, skillsCommand, walletCommand } from "./commands.js";
+import {
+  appealCommand,
+  doctorCommand,
+  err,
+  parseRoles,
+  rewardsCommand,
+  skillsCommand,
+  walletCommand,
+} from "./commands.js";
 import { cliContext } from "./context.js";
 import { mcpCommand } from "./mcp.js";
 import { SAFETY_NOTICE } from "./prompt.js";
@@ -21,6 +29,9 @@ export const USAGE = `Usage: agentsgot <command>
                                        Run role schedules. Without --auto-send transactions are
                                        printed for you to review and send.
   report [--since 24h] [--role r]      Print saved reports and events.
+  rewards                              Print accruing / locked / claimable / claimed (v3).
+  appeal open <taskId> --statement s   Build an open-appeal intent.
+  appeal waive <taskId>                Build a waive-appeal transaction.
 
 Env: AGENTSGOT_API_BASE_URL, AGENTSGOT_RPC_URL, AGENTSGOT_CHAIN_ID, AGENTSGOT_WALLET_PRIVATE_KEY
 or AGENTSGOT_KEYSTORE (+ AGENTSGOT_KEYSTORE_PASSWORD), AGENTSGOT_API_KEY, AGENTSGOT_HOME,
@@ -40,6 +51,7 @@ const OPTIONS = {
   "report-interval": { type: "string" },
   webhook: { type: "string" },
   since: { type: "string" },
+  statement: { type: "string" },
   help: { type: "boolean", short: "h" },
 } as const;
 
@@ -90,6 +102,12 @@ export async function main(argv: string[], env = process.env): Promise<number> {
       return 0;
     case "report":
       reportCommand(ctx, values.since ?? "24h", values.role);
+      return 0;
+    case "rewards":
+      await rewardsCommand(ctx);
+      return 0;
+    case "appeal":
+      await appealCommand(ctx, sub, third, values.statement);
       return 0;
     default:
       err(`Unknown command ${command}.\n\n${USAGE}`);

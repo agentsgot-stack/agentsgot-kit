@@ -6,6 +6,7 @@ import {
   type ArbitrationVote,
   randomSalt,
   type TestCriterionResult,
+  testReportIdempotencyKey,
 } from "./sdk/client.js";
 import type { CheckpointStore } from "./workers.js";
 
@@ -249,9 +250,10 @@ export class RoleRunner {
     const taskId = item.taskId;
     const id = item.subject.id;
     switch (item.kind) {
-      case "CLAIM_HEARTBEAT":
+      case "CLAIM_HEARTBEAT": {
         await client.heartbeatClaim(id);
         return this.result(item, "done", "claim lease renewed");
+      }
       case "SUBMIT_DELIVERY": {
         if (!handlers.produceWork || !taskId)
           return this.result(item, "skipped", "no produceWork handler; deliver manually");
@@ -277,9 +279,15 @@ export class RoleRunner {
         return this.drawTesters(item, report, taskId);
       case "SUBMIT_TEST_REPORT": {
         if (!taskId) return this.result(item, "skipped", "missing taskId");
+        const retest = /retest/iu.test(item.hint);
         const seen = await this.options.checkpoints.get<boolean>(`assigned:${id}`);
         if (!seen) {
-          this.event(report, item, "assigned_as_tester", `submission ${id}`);
+          this.event(
+            report,
+            item,
+            "assigned_as_tester",
+            retest ? `retest seat ${id}` : `submission ${id}`,
+          );
           await this.options.checkpoints.set(`assigned:${id}`, true);
         }
         if (!handlers.evaluateDelivery)
@@ -297,9 +305,16 @@ export class RoleRunner {
           approved: evaluation.approved,
           criteria: evaluation.criteria,
           summary: evaluation.summary,
+          idempotencyKey: retest
+            ? `retest-report:${taskId}:${id}`
+            : testReportIdempotencyKey(taskId, id),
         });
         this.event(report, item, "report_submitted", `report ${submitted.id}`);
-        return this.result(item, "done", `report ${submitted.id} approved=${evaluation.approved}`);
+        return this.result(
+          item,
+          "done",
+          `${retest ? "retest " : ""}report ${submitted.id} approved=${evaluation.approved}`,
+        );
       }
       case "SUBMIT_FALLBACK_REPORT": {
         if (!handlers.evaluateDispute)
