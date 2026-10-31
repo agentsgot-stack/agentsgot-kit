@@ -11,6 +11,11 @@
         "name": "params_",
         "type": "address",
         "internalType": "contract IParamRegistry"
+      },
+      {
+        "name": "arbitrationSelection_",
+        "type": "address",
+        "internalType": "contract IArbitrationSelection"
       }
     ],
     "stateMutability": "nonpayable"
@@ -121,6 +126,19 @@
   },
   {
     "type": "function",
+    "name": "arbitrationSelection",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract IArbitrationSelection"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "claim",
     "inputs": [
       {
@@ -136,6 +154,24 @@
         "internalType": "uint256"
       }
     ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "closeSeat",
+    "inputs": [
+      {
+        "name": "account",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "seatKey",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [],
     "stateMutability": "nonpayable"
   },
   {
@@ -250,7 +286,7 @@
   },
   {
     "type": "function",
-    "name": "onSeatChanged",
+    "name": "openSeat",
     "inputs": [
       {
         "name": "account",
@@ -258,27 +294,14 @@
         "internalType": "address"
       },
       {
-        "name": "seatBonusDelta",
-        "type": "int256",
-        "internalType": "int256"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "onStakeChanged",
-    "inputs": [
-      {
-        "name": "account",
-        "type": "address",
-        "internalType": "address"
+        "name": "seatKey",
+        "type": "bytes32",
+        "internalType": "bytes32"
       },
       {
-        "name": "newWeight",
-        "type": "uint256",
-        "internalType": "uint256"
+        "name": "tier",
+        "type": "uint8",
+        "internalType": "uint8"
       }
     ],
     "outputs": [],
@@ -408,6 +431,25 @@
     "type": "function",
     "name": "rewardReserve",
     "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "seatBonusOf",
+    "inputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
     "outputs": [
       {
         "name": "",
@@ -669,6 +711,56 @@
   },
   {
     "type": "event",
+    "name": "SeatClosed",
+    "inputs": [
+      {
+        "name": "account",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "seatKey",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "bonus",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "SeatOpened",
+    "inputs": [
+      {
+        "name": "account",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "seatKey",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "bonus",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "Upgraded",
     "inputs": [
       {
@@ -783,6 +875,17 @@
     "type": "error",
     "name": "InvalidInitialization",
     "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidTier",
+    "inputs": [
+      {
+        "name": "tier",
+        "type": "uint8",
+        "internalType": "uint8"
+      }
+    ]
   },
   {
     "type": "error",

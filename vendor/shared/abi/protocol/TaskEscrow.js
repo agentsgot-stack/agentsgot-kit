@@ -473,6 +473,25 @@ export const taskEscrowAbi = [
   },
   {
     "type": "function",
+    "name": "lockedTierOf",
+    "inputs": [
+      {
+        "name": "taskId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint8",
+        "internalType": "enum ITaskEscrow.Tier"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "maintenanceOf",
     "inputs": [
       {

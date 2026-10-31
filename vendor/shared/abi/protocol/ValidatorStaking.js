@@ -16,6 +16,11 @@ export const validatorStakingAbi = [
         "name": "protocolProof_",
         "type": "address",
         "internalType": "contract IProtocolProof"
+      },
+      {
+        "name": "arbitrationStream_",
+        "type": "address",
+        "internalType": "contract IArbitrationStream"
       }
     ],
     "stateMutability": "nonpayable"
@@ -113,6 +118,19 @@ export const validatorStakingAbi = [
         "name": "",
         "type": "uint256",
         "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "arbitrationStream",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract IArbitrationStream"
       }
     ],
     "stateMutability": "view"

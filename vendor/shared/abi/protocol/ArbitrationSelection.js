@@ -31,6 +31,11 @@ export const arbitrationSelectionAbi = [
         "name": "settlement_",
         "type": "address",
         "internalType": "address"
+      },
+      {
+        "name": "arbitrationStream_",
+        "type": "address",
+        "internalType": "contract IArbitrationStream"
       }
     ],
     "stateMutability": "nonpayable"
@@ -83,6 +88,38 @@ export const arbitrationSelectionAbi = [
         "name": "",
         "type": "address",
         "internalType": "contract IAgentRegistry"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "arbitrationStream",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract IArbitrationStream"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "arbitratorAt",
+    "inputs": [
+      {
+        "name": "index",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "stateMutability": "view"
@@ -690,6 +727,25 @@ export const arbitrationSelectionAbi = [
         "name": "",
         "type": "address",
         "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "streamWeight",
+    "inputs": [
+      {
+        "name": "juror",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
