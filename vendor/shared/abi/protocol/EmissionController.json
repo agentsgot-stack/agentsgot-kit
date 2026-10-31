@@ -435,6 +435,72 @@
   },
   {
     "type": "function",
+    "name": "previewEpoch",
+    "inputs": [
+      {
+        "name": "epoch",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "day",
+        "type": "tuple",
+        "internalType": "struct EmissionController.Day",
+        "components": [
+          {
+            "name": "treasuryBalance",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "dailyEmission",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "platformAmount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "executorEscrowed",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "testerEscrowed",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "arbStreamed",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "burnedAmount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "submitted",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "finalized",
+            "type": "bool",
+            "internalType": "bool"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "protocolProof",
     "inputs": [],
     "outputs": [

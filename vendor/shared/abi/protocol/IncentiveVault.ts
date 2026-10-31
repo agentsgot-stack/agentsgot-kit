@@ -136,6 +136,19 @@ export const incentiveVaultAbi = [
   },
   {
     "type": "function",
+    "name": "fundedEpoch",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "genesisDistributor",
     "inputs": [],
     "outputs": [
