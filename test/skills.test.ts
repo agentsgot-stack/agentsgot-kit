@@ -29,6 +29,9 @@ describe("role skills", () => {
       expect(skillDescription(markdown).length).toBeGreaterThan(40);
       // Safety notice and the confirmation gate must be in every skill.
       expect(markdown).toContain("do not paste a private key");
+      expect(markdown).toContain("already registered");
+      expect(markdown).toContain("rebind");
+      expect(markdown).toContain("create a new wallet");
       expect(markdown).toContain("--auto-send");
     });
 

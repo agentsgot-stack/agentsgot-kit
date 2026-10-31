@@ -1,3 +1,4 @@
+import { AgentGridError } from "../ports.js";
 import { isRole, ROLES, type Role } from "../roles.js";
 import {
   type CliContext,
@@ -5,6 +6,7 @@ import {
   gasBalance,
   loadAccount,
   loginAndRegister,
+  resolveApiKey,
 } from "./context.js";
 import { buildChecks, formatChecks } from "./doctor.js";
 import { homePaths, loadCredential } from "./home.js";
@@ -89,6 +91,8 @@ export async function doctorCommand(
   const api = await reachable(ctx.apiBaseUrl);
   let apiError = api.error;
   let loggedIn = false;
+  let loginFix: string | undefined;
+  let registeredFix: string | undefined;
   let gasWei: bigint | null = null;
   let eligibility: Awaited<
     ReturnType<Awaited<ReturnType<typeof clientFor>>["client"]["getEligibility"]>
@@ -96,22 +100,42 @@ export async function doctorCommand(
   if (wallet) {
     gasWei = await gasBalance(ctx, wallet.address as `0x${string}`);
     const stored = loadCredential(ctx.home);
-    const hasKey =
-      Boolean(ctx.env.AGENTSGOT_API_KEY) ||
-      (stored?.address.toLowerCase() === wallet.address.toLowerCase() &&
-        stored.apiBaseUrl === ctx.apiBaseUrl);
-    if (api.ok && (hasKey || register)) {
+    if (api.ok && (stored || ctx.env.AGENTSGOT_API_KEY || register)) {
       try {
         const account = await loadAccount(ctx);
+        const resolved = await resolveApiKey(ctx, account.address);
+        const key = resolved.key;
         const { client } = await clientFor(ctx, account);
-        if (!hasKey) {
-          const result = await loginAndRegister(ctx, client, account.address);
-          err(
-            `Registered agent ${result.agentId}; API key stored encrypted in ${paths.credentials}.`,
-          );
+        if (resolved.paused && !key) {
+          err(resolved.paused);
+          loginFix = resolved.paused;
+          registeredFix = resolved.paused;
+        } else if (resolved.paused) {
+          err(resolved.paused);
         }
-        loggedIn = true;
-        eligibility = await client.getEligibility();
+        if (!resolved.paused && !key && register) {
+          try {
+            const result = await loginAndRegister(ctx, client, account.address);
+            err(
+              `Registered agent ${result.agentId}; API key stored encrypted in ${paths.credentials}.`,
+            );
+            loggedIn = true;
+            eligibility = await client.getEligibility();
+          } catch (error) {
+            if (error instanceof AgentGridError && error.code === "AGENT_ALREADY_REGISTERED") {
+              const hint =
+                "This wallet is already registered. Do not register it again. If its API key is saved, run doctor without --register. If the key is gone, create a new one in Agent Center and set AGENTSGOT_API_KEY in your own shell.";
+              err(hint);
+              loginFix = hint;
+              registeredFix = hint;
+            } else {
+              throw error;
+            }
+          }
+        } else if (key) {
+          loggedIn = true;
+          eligibility = await client.getEligibility();
+        }
       } catch (error) {
         apiError = sanitize((error as Error).message);
       }
@@ -126,6 +150,8 @@ export async function doctorCommand(
     apiReachable: api.ok,
     ...(apiError ? { apiError } : {}),
     loggedIn,
+    ...(loginFix ? { loginFix } : {}),
+    ...(registeredFix ? { registeredFix } : {}),
     registered: eligibility?.registered ?? false,
     credentialPath: paths.credentials,
     online: eligibility ? eligibility.online : null,
@@ -151,7 +177,7 @@ export async function skillsCommand(
   out(`Installed ${role} skill: ${path}`);
   out(`\nAdd the MCP server to your ${target} config:\n${mcpSnippet(target)}`);
   out(
-    "\nNext: `agentsgot wallet create` (or configure your own wallet), then `agentsgot doctor --register`.",
+    "\nNext: follow the skill's connection cases, then `agentsgot doctor`. Use `--register` only when this wallet has no agent yet.",
   );
 }
 

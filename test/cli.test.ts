@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { afterEach, describe, expect, it } from "vitest";
+import { planApiKeyBinding } from "../src/cli/binding.js";
 import { parseRoles } from "../src/cli/commands.js";
 import { buildChecks, formatAgt, formatChecks } from "../src/cli/doctor.js";
 import { agentHome, homePaths, loadCredential, saveCredential } from "../src/cli/home.js";
@@ -67,6 +68,59 @@ describe("cli helpers", () => {
     const text = formatChecks(checks);
     expect(text).toMatch(/\[FAIL\].*wallet/u);
     expect(text).toMatch(/fix:/u);
+  });
+
+  it("explains an already registered wallet instead of telling the user to register again", () => {
+    const hint = "This wallet is already registered. Do not register it again.";
+    const text = formatChecks(
+      buildChecks({
+        roles: ["executor"],
+        wallet: { address: "0xabc", source: "env" },
+        gasWei: 1n,
+        agtWei: 1n,
+        apiReachable: true,
+        loggedIn: false,
+        loginFix: hint,
+        registered: false,
+        registeredFix: hint,
+        credentialPath: "/tmp/c.json",
+        online: false,
+        eligibility: null,
+      }),
+    );
+    expect(text).toContain(hint);
+    expect(text).not.toMatch(/doctor --register/u);
+  });
+
+  it("asks before replacing a saved API key and keeps it when the keys match", () => {
+    const saved = {
+      apiBaseUrl: "https://dev.agentsgot.network/api",
+      address: "0xabc",
+      apiKey: "agt_aaaaaaaaaaaa_old",
+    };
+    expect(
+      planApiKeyBinding({
+        envKey: "agt_bbbbbbbbbbbb_new",
+        saved,
+        walletAddress: "0xAbC",
+        apiBaseUrl: saved.apiBaseUrl,
+      }).prompt,
+    ).toMatch(/Current wallet 0xAbC/u);
+    expect(
+      planApiKeyBinding({
+        saved,
+        walletAddress: "0xabc",
+        apiBaseUrl: saved.apiBaseUrl,
+      }),
+    ).toEqual({ key: saved.apiKey, onAccept: "keep" });
+    const firstBind = planApiKeyBinding({
+      envKey: "agt_cccccccccccc_other",
+      saved: null,
+      walletAddress: "0xabc",
+      apiBaseUrl: saved.apiBaseUrl,
+    });
+    expect(firstBind.onAccept).toBe("use-env");
+    expect(firstBind.prompt).toMatch(/Create a new wallet/u);
   });
 
   it("summarizes and formats a report without leaking secrets", () => {

@@ -18,7 +18,10 @@ export interface DoctorInput {
   apiReachable: boolean;
   apiError?: string;
   loggedIn: boolean;
+  /** Replaces the default sign-in hint when registration was skipped on purpose. */
+  loginFix?: string;
   registered: boolean;
+  registeredFix?: string;
   credentialPath: string;
   online: boolean | null;
   eligibility: GetAgentEligibilityResponse | null;
@@ -76,7 +79,9 @@ export function buildChecks(input: DoctorInput): Check[] {
       detail: input.loggedIn ? "ok" : "not logged in",
       ...(input.loggedIn
         ? {}
-        : { fix: "Run `agentsgot doctor --register` to sign in and register." }),
+        : {
+            fix: input.loginFix ?? "Run `agentsgot doctor --register` to sign in and register.",
+          }),
     },
     {
       name: "agent registered",
@@ -84,7 +89,9 @@ export function buildChecks(input: DoctorInput): Check[] {
       detail: input.registered
         ? `API key saved (encrypted) in ${input.credentialPath}`
         : "no API key",
-      ...(input.registered ? {} : { fix: "Run `agentsgot doctor --register`." }),
+      ...(input.registered
+        ? {}
+        : { fix: input.registeredFix ?? "Run `agentsgot doctor --register`." }),
     },
     {
       name: "heartbeat online",

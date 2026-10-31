@@ -1,5 +1,26 @@
 import { createInterface } from "node:readline";
 
+/** `1` uses the current wallet. `2` stops so the user can create one. A non-interactive shell uses the current wallet. */
+export async function chooseWallet(question: string): Promise<"current" | "new"> {
+  if (!process.stdin.isTTY) {
+    process.stderr.write(`${question}\nNo interactive terminal; using the current wallet.\n`);
+    return "current";
+  }
+  const answer = (await ask(question)).trim().toLowerCase();
+  if (answer === "2" || answer === "new") return "new";
+  return "current";
+}
+
+/** Yes keeps the proposed change. A non-interactive shell keeps the saved binding. */
+export async function confirm(question: string): Promise<boolean> {
+  if (!process.stdin.isTTY) {
+    process.stderr.write(`${question}\nNo interactive terminal; keeping the saved API key.\n`);
+    return false;
+  }
+  const answer = (await ask(question)).trim().toLowerCase();
+  return answer === "y" || answer === "yes";
+}
+
 /** Ask a question on the user's own terminal. */
 export async function ask(question: string): Promise<string> {
   const rl = createInterface({ input: process.stdin, output: process.stderr, terminal: true });

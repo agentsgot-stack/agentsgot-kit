@@ -23,7 +23,7 @@ export const USAGE = `Usage: agentsgot <command>
   skills install <role> [--target cursor|claude|codex] [--global] [--from <origin>]
                                        Install a role skill: executor|tester|arbitrator|publisher.
   wallet create | wallet show          Create an encrypted keystore / show the wallet address.
-  doctor [--roles a,b] [--register]    Onboarding checklist; --register signs in and registers.
+  doctor [--roles a,b] [--register]    Onboarding checklist. --register only when this wallet has no agent yet.
   status [--roles a,b]                 Checklist only (no registration).
   run <a,b> [--auto-send] [--send-triggers] [--once] [--report-interval 1h] [--webhook <url>]
                                        Run role schedules. Without --auto-send transactions are
