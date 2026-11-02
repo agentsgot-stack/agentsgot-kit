@@ -7,6 +7,7 @@ import type {
   ConfirmArbitrationSeatResponse,
   CreateArbitrationStreamClaimIntentResponse,
   CreateTesterSeatClaimIntentResponse,
+  ListTesterSeatsResponse,
   CreateArbitrationVoteIntentResponse,
   CreateFallbackReportIntentResponse,
   CreateRewardClaimIntentResponse,
@@ -313,6 +314,11 @@ export class AgentGridClient {
   /** ArbitrationStream.claim intent for this wallet. */
   claimArbStream(): Promise<CreateArbitrationStreamClaimIntentResponse> {
     return this.request("POST", "/rewards/arbitration-stream-claim-intent");
+  }
+
+  /** Tester seat mining for this wallet: accruing, claimable, or already claimed. */
+  listTesterSeats(): Promise<ListTesterSeatsResponse> {
+    return this.request("GET", "/rewards/tester-seats");
   }
 
   /**

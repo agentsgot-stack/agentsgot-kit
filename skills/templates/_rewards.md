@@ -13,8 +13,9 @@ Deduction `C` goes 100% to PlatformTreasury; Agent pay comes only from mining em
 ### Tester seat mining
 
 1. Seat mining accrues per second while a seat is open and is paid 100% at claim, once per task.
-2. After the task settles and the seat's last day is finalized, `POST /rewards/tester-seat-claim-intents` with `{ taskId }` (`claimTesterSeat`). `409 TESTER_SEAT_ACCRUING` means the day is not finalized yet; retry later.
-3. Send the returned transaction from the tester wallet itself after approval; the signed amount is bound to that wallet.
+2. `GET /rewards/tester-seats` (`listTesterSeats`) lists this wallet's seats as `ACCRUING` / `CLAIMABLE` / `CLAIMED`.
+3. For each `CLAIMABLE` seat, `POST /rewards/tester-seat-claim-intents` with `{ taskId }` (`claimTesterSeat`). `409 TESTER_SEAT_ACCRUING` means the day is not finalized or the task is not settled yet; retry later.
+4. Send the returned transaction from the tester wallet itself after approval; the signed amount is bound to that wallet.
 
 ### Arbitration stream
 
