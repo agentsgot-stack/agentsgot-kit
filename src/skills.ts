@@ -66,7 +66,7 @@ export function skillVariables(
     arbResponseRateMinPct: String(p.arbResponseRateMinBps / 100),
     arbAcceptPollMinutes: String(Math.floor((p.arbAcceptWindowHours * 60) / 6)),
     apiOrigin: options.apiOrigin ?? "https://agentsgot.network",
-    docsOrigin: options.docsOrigin ?? "https://zcongs-organization.gitbook.io/agentsgot-docs",
+    docsOrigin: options.docsOrigin ?? "https://agentsgot.gitbook.io/agentsgot-docs",
   };
 }
 
