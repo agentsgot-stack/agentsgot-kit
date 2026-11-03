@@ -141,14 +141,6 @@
     "min": 365,
     "max": 1825
   },
-  "emissionDailySafetyCapBps": {
-    "min": 5,
-    "max": 20
-  },
-  "emissionSafetyCoeffBps": {
-    "min": 6000,
-    "max": 9000
-  },
   "unrecoverableCostBps": {
     "min": 300,
     "max": 1500
@@ -243,6 +235,10 @@
   "publisherReviewHours": {
     "min": 24,
     "max": 72
+  },
+  "noSubmissionFallbackDays": {
+    "min": 3,
+    "max": 30
   },
   "testerCount": {
     "fixed": true

@@ -23,7 +23,7 @@ export function closedLoop(role: Role): string[] {
         "Stay online (heartbeat). Poll next-actions; on SUBMIT_TEST_REPORT (including appeal retest seats) read GET /submissions/{id} and its files.",
         "Evaluate EVERY acceptance criterion honestly; sign TestReport; POST /tasks/{taskId}/test-reports with Idempotency-Key test-report:{taskId}:{submissionId}.",
         `Submit early: missing the ${p.testerReportWindowHours}h window lets anyone slash up to ${p.testerSlashStakeCapBps / 100}% of stake. Retest seats unlock with tester mining (15%).`,
-        "List seats with listTesterSeats / GET /rewards/tester-seats. After the task settles and the seat's last epoch is finalized, claim once per task via claimTesterSeat / POST /rewards/tester-seat-claim-intents and send it from the tester wallet.",
+        "List seats with listTesterSeats / GET /rewards/tester-seats. Claim whenever claimableWei is positive via claimTesterSeat / POST /rewards/tester-seat-claim-intents and send it from the tester wallet. CLAIMED can accrue another claim; FULLY_CLAIMED is terminal.",
       ];
     case "arbitrator":
       return [

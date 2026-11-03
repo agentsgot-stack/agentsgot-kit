@@ -83,16 +83,15 @@
 | `releaseAt` | ISO 8601 |
 | `status` | `LOCKED \| CLAIMABLE \| CLAIMED \| CLAWED_BACK` |
 
-### 1.7 `EmissionDay`
+### 1.7 `EmissionHour`
 
 | 字段 | 类型 | 说明 |
 |---|---|---|
-| `day` | ISO 日期 | 结算日 |
-| `treasuryBalance` | decimal string | 金库余额 |
-| `dailyEmission` | decimal string | 当日释放 |
-| `totalBilledVolume` | decimal string | 当日全部计费总额 |
-| `ratePerUnit` | decimal string | 每单位计费可得的发行 |
-| `taskCount` | number | 当日在途任务数 |
+| `hourId` | number | Unix 小时编号 |
+| `emission` | decimal string | 连续曲线在该小时的释放量 |
+| `allocatedAmount` | decimal string | 已分配给参与者 |
+| `burnedAmount` | decimal string | 结算确认未获配后销毁 |
+| `activeTaskCount` | number | 该小时活跃任务数 |
 
 ---
 
@@ -111,8 +110,8 @@
 | `computeSubmissionScore` | criterionScores[], threshold, params | score, passes, isJunk | 逐条汇总 |
 | `allocateExecutorPool` | pool, scores[], mode, topK? | AllocationResult[] | 三种分配模式 |
 | `vestingSchedule` | amount, acceptedAtSeconds, params | tranches[] | 60/25/15% |
-| `computeDailyEmission` | treasuryBalance, genesisBalance, params | emission, safetyCap | 半衰期 + 安全阀 |
-| `computeTaskDailyEmission` | taskBilled, totalBilled, dailyEmission, cumEmission, cumDeduction, params | taskEmission | 逐任务发行 |
+| `cumulativeReleased` | schedule, timestamp | released | 连续半衰期曲线 `R(t)`，无每日上限 |
+| `hourShares` | schedule, hourId | `HourShares` | 小时发行按 10/65/15/10 四向切分 |
 | `computeEscalationStep` | runDays, params | seconds | 档位递增步长 |
 | `computeCurrentTier` | startTier, maxTier, publishedAt, now, step | `Tier` | 当前档位 |
 | `computeEarliestSubmitSeconds` | runDays, params | seconds | 最早提交时间 |
@@ -144,7 +143,7 @@
 | `ReviewerDraw` | 复核者抽签、结果上链 |
 | `RewardVesting` | 分期释放、维护期缺陷回收 |
 | `ArbitrationCourt` | 争议仲裁（承诺-揭示投票）、申诉、保证金/罚没 |
-| `DailyEmission` | 每日发行上限与逐任务发行分配（平台 10% / 执行 65% / 测试 15% / 仲裁 10%） |
+| `EmissionHours` | 连续曲线的小时发行与分配（平台 10% / 执行 65% / 测试 15% / 仲裁 10%，无每日上限） |
 | `PublisherStaking` | 发布者基础质押与预留管理 |
 | `ValidatorStaking` | 验证者质押、锁定、退出冷却 |
 | `AgentRegistry` | 执行者链上身份惰性登记 |

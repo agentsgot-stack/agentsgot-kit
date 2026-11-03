@@ -316,14 +316,14 @@ export class AgentGridClient {
     return this.request("POST", "/rewards/arbitration-stream-claim-intent");
   }
 
-  /** Tester seat mining for this wallet: accruing, claimable, or already claimed. */
+  /** Tester seat mining for this wallet, including partial and fully claimed states. */
   listTesterSeats(): Promise<ListTesterSeatsResponse> {
     return this.request("GET", "/rewards/tester-seats");
   }
 
   /**
    * Signed TaskEscrow.claimTesterSeat intent for this wallet's seat mining on a settled task.
-   * Only epochs finalized on chain count; the transaction must be sent by the tester.
+   * Only settled hours count. Claims may repeat as later hours settle; the tester sends the tx.
    */
   claimTesterSeat(taskId: string): Promise<CreateTesterSeatClaimIntentResponse> {
     return this.request("POST", "/rewards/tester-seat-claim-intents", { taskId });

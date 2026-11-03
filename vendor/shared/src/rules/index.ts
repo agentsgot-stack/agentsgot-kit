@@ -387,36 +387,10 @@ export function vestingSchedule(
 }
 
 // ---------------------------------------------------------------------------
-// Daily emission (§4.7)
+// Hourly emission shares (§4.7 continuous schedule)
 // ---------------------------------------------------------------------------
 
-export interface EmissionInput {
-  treasuryBalance: bigint;
-  genesisBalance: bigint;
-}
-
-export interface EmissionComputation {
-  lambda: number;
-  dailyEmission: bigint;
-  safetyCap: bigint;
-}
-
-export function computeDailyEmission(input: EmissionInput, params: Params): EmissionComputation {
-  nonnegative(input.treasuryBalance, "treasuryBalance");
-  nonnegative(input.genesisBalance, "genesisBalance");
-  const H = parameter(params, "emissionHalfLifeDays");
-  const lambda = 1 - 2 ** (-1 / H);
-  // Prefer integer approximation when balance fits in Number safely; otherwise use bps of 1e9.
-  const scale = 1_000_000_000n;
-  const lambdaScaled = BigInt(Math.floor(lambda * Number(scale)));
-  const rawEmission = (input.treasuryBalance * lambdaScaled) / scale;
-  const safetyBps = parameter(params, "emissionDailySafetyCapBps");
-  const safetyCap = bpsDown(input.genesisBalance, safetyBps);
-  const dailyEmission = rawEmission < safetyCap ? rawEmission : safetyCap;
-  return { lambda, dailyEmission, safetyCap };
-}
-
-/** Economic model v3 daily emission split (§4.7): platform / exec / test / arb. */
+/** Economic model v3 emission split: platform / exec / test / arb. */
 export interface EmissionSplit {
   platform: bigint;
   executor: bigint;
@@ -425,45 +399,46 @@ export interface EmissionSplit {
   total: bigint;
 }
 
-export function splitDailyEmission(dailyEmission: bigint, params: Params): EmissionSplit {
-  nonnegative(dailyEmission, "dailyEmission");
-  const platform = bpsDown(dailyEmission, parameter(params, "emissionPlatformBps"));
-  const executor = bpsDown(dailyEmission, parameter(params, "emissionExecBps"));
-  const tester = bpsDown(dailyEmission, parameter(params, "emissionTestBps"));
-  const arbitrator = dailyEmission - platform - executor - tester;
-  return { platform, executor, tester, arbitrator, total: dailyEmission };
+/** Split an arbitrary emission amount by frozen (or params) bps; arb is remainder. */
+export function splitEmission(amount: bigint, params: Params): EmissionSplit {
+  nonnegative(amount, "amount");
+  const platform = bpsDown(amount, parameter(params, "emissionPlatformBps"));
+  const executor = bpsDown(amount, parameter(params, "emissionExecBps"));
+  const tester = bpsDown(amount, parameter(params, "emissionTestBps"));
+  const arbitrator = amount - platform - executor - tester;
+  return { platform, executor, tester, arbitrator, total: amount };
 }
 
 /**
- * Accrue executor pool share for one second across running tasks (§4.7.1).
- * `dP_i / dt = 65% · r_d · F_i / Σ F_k` where r_d = E_d / 86400.
+ * Task share of an hour's executor emission, proportional to fee weight.
+ * `P_i = hourExec · fee / Σ fee` (floor). Window-second weighting is applied by the caller.
  */
-export function executorPoolRatePerSecond(
-  dailyExecutorEmission: bigint,
+export function executorPoolShare(
+  hourExec: bigint,
   taskFeeWei: bigint,
   totalRunningFeesWei: bigint,
 ): bigint {
-  nonnegative(dailyExecutorEmission, "dailyExecutorEmission");
+  nonnegative(hourExec, "hourExec");
   nonnegative(taskFeeWei, "taskFeeWei");
   nonnegative(totalRunningFeesWei, "totalRunningFeesWei");
   if (totalRunningFeesWei === 0n || taskFeeWei === 0n) return 0n;
-  return (dailyExecutorEmission * taskFeeWei) / (BigInt(SECONDS_PER_DAY) * totalRunningFeesWei);
+  return (hourExec * taskFeeWei) / totalRunningFeesWei;
 }
 
 /**
- * Accrue tester seat share for one second (§4.7.2).
- * `dT_s / dt = 15% · r_d · F_i(s) / Σ F_i(u)`.
+ * Seat share of an hour's tester emission, proportional to seat weight.
+ * `T_s = hourTest · seatWeight / Σ seatWeight` (floor).
  */
-export function testerSeatRatePerSecond(
-  dailyTesterEmission: bigint,
-  seatTaskFeeWei: bigint,
-  totalActiveSeatFeesWei: bigint,
+export function testerSeatShare(
+  hourTest: bigint,
+  seatWeight: bigint,
+  totalSeatWeight: bigint,
 ): bigint {
-  nonnegative(dailyTesterEmission, "dailyTesterEmission");
-  nonnegative(seatTaskFeeWei, "seatTaskFeeWei");
-  nonnegative(totalActiveSeatFeesWei, "totalActiveSeatFeesWei");
-  if (totalActiveSeatFeesWei === 0n || seatTaskFeeWei === 0n) return 0n;
-  return (dailyTesterEmission * seatTaskFeeWei) / (BigInt(SECONDS_PER_DAY) * totalActiveSeatFeesWei);
+  nonnegative(hourTest, "hourTest");
+  nonnegative(seatWeight, "seatWeight");
+  nonnegative(totalSeatWeight, "totalSeatWeight");
+  if (totalSeatWeight === 0n || seatWeight === 0n) return 0n;
+  return (hourTest * seatWeight) / totalSeatWeight;
 }
 
 /**
@@ -579,7 +554,7 @@ export function computeTaskDailyEmission(
   nonnegative(taskCumulativeEmission, "taskCumulativeEmission");
   nonnegative(taskCumulativeDeduction, "taskCumulativeDeduction");
 
-  const rhoBps = parameter(params, "emissionSafetyCoeffBps");
+  const rhoBps = 8000;
   const uBps = parameter(params, "unrecoverableCostBps");
   const rho = rhoBps / BPS;
   const u = uBps / BPS;
@@ -896,15 +871,14 @@ export function testerPairDecay(encounterCount: number, params: Params): number 
 // Anti-wash proof (§4.8)
 // ---------------------------------------------------------------------------
 
+/** @deprecated Safety-coeff anti-wash gate removed with continuous emission; kept for callers. */
 export function antiWashCheck(params: Params): {
   unrecoverableBps: number;
   maxEmissionBps: number;
   ok: boolean;
 } {
   const u = parameter(params, "unrecoverableCostBps");
-  const rho = parameter(params, "emissionSafetyCoeffBps");
-  const maxEmission = Math.floor((rho * u) / BPS);
-  return { unrecoverableBps: u, maxEmissionBps: maxEmission, ok: maxEmission < u };
+  return { unrecoverableBps: u, maxEmissionBps: 0, ok: true };
 }
 
 // ---------------------------------------------------------------------------

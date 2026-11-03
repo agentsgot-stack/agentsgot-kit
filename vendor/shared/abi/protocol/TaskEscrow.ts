@@ -176,6 +176,34 @@ export const taskEscrowAbi = [
   },
   {
     "type": "function",
+    "name": "burnTaskPool",
+    "inputs": [
+      {
+        "name": "taskId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "hourId",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "cumulativePi",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "proof",
+        "type": "bytes32[]",
+        "internalType": "bytes32[]"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "cancel",
     "inputs": [
       {
@@ -277,7 +305,7 @@ export const taskEscrowAbi = [
   },
   {
     "type": "function",
-    "name": "claimTesterSeat",
+    "name": "claimTesterSeatWithProof",
     "inputs": [
       {
         "name": "taskId",
@@ -285,24 +313,19 @@ export const taskEscrowAbi = [
         "internalType": "bytes32"
       },
       {
+        "name": "hourId",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
         "name": "amount",
         "type": "uint256",
         "internalType": "uint256"
       },
       {
-        "name": "nonce",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "deadline",
-        "type": "uint64",
-        "internalType": "uint64"
-      },
-      {
-        "name": "signature",
-        "type": "bytes",
-        "internalType": "bytes"
+        "name": "merkleProof",
+        "type": "bytes32[]",
+        "internalType": "bytes32[]"
       }
     ],
     "outputs": [
@@ -894,6 +917,96 @@ export const taskEscrowAbi = [
   },
   {
     "type": "function",
+    "name": "settleNoSubmission",
+    "inputs": [
+      {
+        "name": "proof",
+        "type": "tuple",
+        "internalType": "struct ITaskEscrow.SettlementProof",
+        "components": [
+          {
+            "name": "taskId",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "lockedTier",
+            "type": "uint8",
+            "internalType": "enum ITaskEscrow.Tier"
+          },
+          {
+            "name": "lockedAt",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "billedUntil",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "deductionAgt",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "executorPoolAgt",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "testerPoolAgt",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "reviewerPoolAgt",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "platformAgt",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "executorPoolPi",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "hourId",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "resultsHash",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "nonce",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "deadline",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "signature",
+            "type": "bytes",
+            "internalType": "bytes"
+          }
+        ]
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "statusOf",
     "inputs": [
       {
@@ -966,8 +1079,8 @@ export const taskEscrowAbi = [
     "outputs": [
       {
         "name": "",
-        "type": "bool",
-        "internalType": "bool"
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -1233,6 +1346,43 @@ export const taskEscrowAbi = [
   },
   {
     "type": "event",
+    "name": "ExecutorMiningSettled",
+    "inputs": [
+      {
+        "name": "taskId",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "poolPi",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "vested",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "burned",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "awardBps",
+        "type": "uint16",
+        "indexed": false,
+        "internalType": "uint16"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "Initialized",
     "inputs": [
       {
@@ -1408,6 +1558,37 @@ export const taskEscrowAbi = [
         "type": "uint16",
         "indexed": false,
         "internalType": "uint16"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "TaskPoolBurned",
+    "inputs": [
+      {
+        "name": "taskId",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "hourId",
+        "type": "uint64",
+        "indexed": true,
+        "internalType": "uint64"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "cumulativePi",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
       }
     ],
     "anonymous": false
@@ -1606,6 +1787,11 @@ export const taskEscrowAbi = [
   {
     "type": "error",
     "name": "InvalidRuling",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidSeatProof",
     "inputs": []
   },
   {

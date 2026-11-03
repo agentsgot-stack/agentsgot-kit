@@ -82,7 +82,7 @@
   },
   {
     "type": "function",
-    "name": "EMISSION_DAY_TYPEHASH",
+    "name": "EMISSION_HOURS_TYPEHASH",
     "inputs": [],
     "outputs": [
       {
@@ -109,19 +109,6 @@
   {
     "type": "function",
     "name": "GOVERNANCE_ROLE",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "HOURLY_ANCHOR_TYPEHASH",
     "inputs": [],
     "outputs": [
       {
@@ -161,19 +148,6 @@
   {
     "type": "function",
     "name": "TESTER_ASSIGNMENT_TYPEHASH",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "TESTER_SEAT_CLAIM_TYPEHASH",
     "inputs": [],
     "outputs": [
       {
@@ -441,94 +415,20 @@
   },
   {
     "type": "function",
-    "name": "consumeEmissionDay",
+    "name": "consumeEmissionHours",
     "inputs": [
       {
-        "name": "epoch",
+        "name": "fromHour",
         "type": "uint64",
         "internalType": "uint64"
       },
       {
-        "name": "platformAmount",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "executorAmount",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "testerAmount",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "arbAmount",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "execAccruedSnapshot",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "testAccruedSnapshot",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "burnAmount",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "nonce",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "deadline",
+        "name": "toHour",
         "type": "uint64",
         "internalType": "uint64"
       },
       {
-        "name": "signature",
-        "type": "bytes",
-        "internalType": "bytes"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "consumeHourlyAnchor",
-    "inputs": [
-      {
-        "name": "hourId",
-        "type": "uint64",
-        "internalType": "uint64"
-      },
-      {
-        "name": "recordsRoot",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      },
-      {
-        "name": "poolSnapshotRoot",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      },
-      {
-        "name": "seatSnapshotRoot",
+        "name": "hoursHash",
         "type": "bytes32",
         "internalType": "bytes32"
       },
@@ -616,9 +516,34 @@
         "internalType": "bytes32"
       },
       {
+        "name": "lockedTier",
+        "type": "uint8",
+        "internalType": "uint8"
+      },
+      {
+        "name": "lockedAt",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "billedUntil",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
         "name": "deductionAgt",
         "type": "uint256",
         "internalType": "uint256"
+      },
+      {
+        "name": "executorPoolPi",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "hourId",
+        "type": "uint64",
+        "internalType": "uint64"
       },
       {
         "name": "nonce",
@@ -673,50 +598,6 @@
         "name": "executorTier",
         "type": "uint8",
         "internalType": "uint8"
-      },
-      {
-        "name": "nonce",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "deadline",
-        "type": "uint64",
-        "internalType": "uint64"
-      },
-      {
-        "name": "signature",
-        "type": "bytes",
-        "internalType": "bytes"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "consumeTesterSeatClaim",
-    "inputs": [
-      {
-        "name": "taskId",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      },
-      {
-        "name": "tester",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "amount",
-        "type": "uint256",
-        "internalType": "uint256"
       },
       {
         "name": "nonce",

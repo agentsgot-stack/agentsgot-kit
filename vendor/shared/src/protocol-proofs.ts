@@ -1,4 +1,4 @@
-import { z } from "zod";
+﻿import { z } from "zod";
 
 const Hex32Schema = z.string().regex(/^0x[0-9a-fA-F]{64}$/u);
 const AddressSchema = z.string().regex(/^0x[0-9a-fA-F]{40}$/u);
@@ -83,20 +83,6 @@ export const CollusionReportProofSchema = z.object({
   signature: SignatureSchema.optional(),
 });
 
-export const EmissionDayProofSchema = z.object({
-  epoch: UintStringSchema,
-  platformAmount: UintStringSchema,
-  executorAmount: UintStringSchema,
-  testerAmount: UintStringSchema,
-  arbAmount: UintStringSchema,
-  execAccruedSnapshot: UintStringSchema,
-  testAccruedSnapshot: UintStringSchema,
-  burnAmount: UintStringSchema,
-  nonce: UintStringSchema,
-  deadline: UintStringSchema,
-  signature: SignatureSchema.optional(),
-});
-
 export const HourlyAnchorProofSchema = z.object({
   hourId: UintStringSchema,
   recordsRoot: Hex32Schema,
@@ -163,37 +149,22 @@ export const PROTOCOL_PROOF_TYPES = {
     { name: "nonce", type: "uint256" },
     { name: "deadline", type: "uint64" },
   ],
-  EmissionDay: [
-    { name: "epoch", type: "uint64" },
-    { name: "platformAmount", type: "uint256" },
-    { name: "executorAmount", type: "uint256" },
-    { name: "testerAmount", type: "uint256" },
-    { name: "arbAmount", type: "uint256" },
-    { name: "execAccruedSnapshot", type: "uint256" },
-    { name: "testAccruedSnapshot", type: "uint256" },
-    { name: "burnAmount", type: "uint256" },
-    { name: "nonce", type: "uint256" },
-    { name: "deadline", type: "uint64" },
-  ],
-  HourlyAnchor: [
-    { name: "hourId", type: "uint64" },
-    { name: "recordsRoot", type: "bytes32" },
-    { name: "poolSnapshotRoot", type: "bytes32" },
-    { name: "seatSnapshotRoot", type: "bytes32" },
+  EmissionHours: [
+    { name: "fromHour", type: "uint64" },
+    { name: "toHour", type: "uint64" },
+    { name: "hoursHash", type: "bytes32" },
     { name: "nonce", type: "uint256" },
     { name: "deadline", type: "uint64" },
   ],
   Settlement: [
     { name: "taskId", type: "bytes32" },
     { name: "resultsHash", type: "bytes32" },
+    { name: "lockedTier", type: "uint8" },
+    { name: "lockedAt", type: "uint64" },
+    { name: "billedUntil", type: "uint64" },
     { name: "deductionAgt", type: "uint256" },
-    { name: "nonce", type: "uint256" },
-    { name: "deadline", type: "uint64" },
-  ],
-  TesterSeatClaim: [
-    { name: "taskId", type: "bytes32" },
-    { name: "tester", type: "address" },
-    { name: "amount", type: "uint256" },
+    { name: "executorPoolPi", type: "uint256" },
+    { name: "hourId", type: "uint64" },
     { name: "nonce", type: "uint256" },
     { name: "deadline", type: "uint64" },
   ],
@@ -208,16 +179,6 @@ export function assertProtocolProofBounds(
         excludedCount: number;
         sourceCount: number;
         weightBps: readonly number[];
-      }
-    | {
-        kind: "EMISSION_DAY";
-        platformAmount: bigint;
-        executorAmount: bigint;
-        testerAmount: bigint;
-        arbAmount: bigint;
-        execAccruedSnapshot: bigint;
-        testAccruedSnapshot: bigint;
-        burnAmount: bigint;
       },
 ): void {
   if (input.kind === "PUBLISHER_PROFILE") {
@@ -233,31 +194,16 @@ export function assertProtocolProofBounds(
     return;
   }
 
-  if (input.kind === "ARBITRATION_CASE") {
-    const weightTotal = input.weightBps.reduce((sum, value) => sum + value, 0);
-    if (
-      input.criterionCount < 1 ||
-      input.criterionCount > 64 ||
-      input.excludedCount > 256 ||
-      input.sourceCount > 256 ||
-      input.weightBps.length !== input.criterionCount ||
-      weightTotal !== 10_000
-    )
-      throw new RangeError("ARBITRATION_CASE_OUT_OF_BOUNDS");
-    return;
-  }
+  const weightTotal = input.weightBps.reduce((sum, value) => sum + value, 0);
   if (
-    input.platformAmount < 0n ||
-    input.executorAmount < 0n ||
-    input.testerAmount < 0n ||
-    input.arbAmount < 0n ||
-    input.execAccruedSnapshot < 0n ||
-    input.testAccruedSnapshot < 0n ||
-    input.burnAmount < 0n ||
-    input.execAccruedSnapshot > input.executorAmount ||
-    input.testAccruedSnapshot > input.testerAmount
+    input.criterionCount < 1 ||
+    input.criterionCount > 64 ||
+    input.excludedCount > 256 ||
+    input.sourceCount > 256 ||
+    input.weightBps.length !== input.criterionCount ||
+    weightTotal !== 10_000
   )
-    throw new RangeError("EMISSION_DAY_OUT_OF_BOUNDS");
+    throw new RangeError("ARBITRATION_CASE_OUT_OF_BOUNDS");
 }
 
 const BASE32 = "abcdefghijklmnopqrstuvwxyz234567";

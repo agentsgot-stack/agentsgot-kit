@@ -136,7 +136,7 @@ export const incentiveVaultAbi = [
   },
   {
     "type": "function",
-    "name": "fundedEpoch",
+    "name": "fundedAt",
     "inputs": [],
     "outputs": [
       {
@@ -302,6 +302,12 @@ export const incentiveVaultAbi = [
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
+      },
+      {
+        "name": "fundedAt",
+        "type": "uint64",
+        "indexed": false,
+        "internalType": "uint64"
       }
     ],
     "anonymous": false

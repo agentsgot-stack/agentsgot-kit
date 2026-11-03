@@ -126,8 +126,8 @@ function validateParams(candidate: unknown): Params {
       get("participantsWarning") <= get("participantsMax"),
     "participant limits must satisfy min <= default <= warning <= max",
   );
-  // emissionSafetyCoeffBps / unrecoverableCostBps are deprecated in economic model v3
-  // and no longer participate in §4.7 emission; retained for historical param compatibility.
+  // unrecoverableCostBps is deprecated in economic model v3 and retained for
+  // historical rule compatibility; computeTaskDailyEmission uses a fixed rho of 0.8.
 
   return values as Params;
 }

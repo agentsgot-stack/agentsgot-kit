@@ -6,11 +6,6 @@ export const hourlyAnchorAbi = [
         "name": "params_",
         "type": "address",
         "internalType": "contract IParamRegistry"
-      },
-      {
-        "name": "protocolProof_",
-        "type": "address",
-        "internalType": "contract IProtocolProof"
       }
     ],
     "stateMutability": "nonpayable"
@@ -37,6 +32,19 @@ export const hourlyAnchorAbi = [
         "name": "",
         "type": "string",
         "internalType": "string"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "emissionController",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "stateMutability": "view"
@@ -95,19 +103,6 @@ export const hourlyAnchorAbi = [
   },
   {
     "type": "function",
-    "name": "protocolProof",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "contract IProtocolProof"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "proxiableUUID",
     "inputs": [],
     "outputs": [
@@ -127,6 +122,34 @@ export const hourlyAnchorAbi = [
         "name": "hourId",
         "type": "uint64",
         "internalType": "uint64"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "recordSettledHour",
+    "inputs": [
+      {
+        "name": "hourId",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "recordsRoot_",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "poolSnapshotRoot_",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "seatSnapshotRoot_",
+        "type": "bytes32",
+        "internalType": "bytes32"
       }
     ],
     "outputs": [],
@@ -213,42 +236,12 @@ export const hourlyAnchorAbi = [
   },
   {
     "type": "function",
-    "name": "submitHourlyAnchor",
+    "name": "setEmissionController",
     "inputs": [
       {
-        "name": "hourId",
-        "type": "uint64",
-        "internalType": "uint64"
-      },
-      {
-        "name": "recordsRoot_",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      },
-      {
-        "name": "poolSnapshotRoot_",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      },
-      {
-        "name": "seatSnapshotRoot_",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      },
-      {
-        "name": "nonce",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "deadline",
-        "type": "uint64",
-        "internalType": "uint64"
-      },
-      {
-        "name": "signature",
-        "type": "bytes",
-        "internalType": "bytes"
+        "name": "controller",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "outputs": [],
@@ -358,6 +351,25 @@ export const hourlyAnchorAbi = [
       }
     ],
     "stateMutability": "view"
+  },
+  {
+    "type": "event",
+    "name": "EmissionControllerUpdated",
+    "inputs": [
+      {
+        "name": "previous",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "current",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
   },
   {
     "type": "event",
@@ -481,6 +493,17 @@ export const hourlyAnchorAbi = [
   },
   {
     "type": "error",
+    "name": "EmissionControllerAlreadySet",
+    "inputs": [
+      {
+        "name": "current",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "FailedInnerCall",
     "inputs": []
   },
@@ -520,6 +543,17 @@ export const hourlyAnchorAbi = [
     "type": "error",
     "name": "InvalidRoot",
     "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NotEmissionController",
+    "inputs": [
+      {
+        "name": "caller",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
   },
   {
     "type": "error",

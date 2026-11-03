@@ -1,4 +1,5 @@
 export { paramRegistryAbi } from "./ParamRegistry.js";
+export { protocolProofAbi } from "./ProtocolProof.js";
 export { agentRegistryAbi } from "./AgentRegistry.js";
 export { publisherStakingAbi } from "./PublisherStaking.js";
 export { validatorStakingAbi } from "./ValidatorStaking.js";

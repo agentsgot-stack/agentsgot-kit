@@ -96,6 +96,32 @@
   },
   {
     "type": "function",
+    "name": "HOUR",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "MAX_BATCH_HOURS",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "UPGRADER_ROLE",
     "inputs": [],
     "outputs": [
@@ -122,7 +148,31 @@
   },
   {
     "type": "function",
-    "name": "arbitrationAccounted",
+    "name": "arbitrationEmitted",
+    "inputs": [
+      {
+        "name": "from",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "to",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "arbitrationReleased",
     "inputs": [],
     "outputs": [
       {
@@ -135,32 +185,19 @@
   },
   {
     "type": "function",
-    "name": "arbitrationBudgets",
+    "name": "arbitrationScheduled",
     "inputs": [
       {
-        "name": "fromEpoch",
+        "name": "from",
         "type": "uint64",
         "internalType": "uint64"
       },
       {
-        "name": "toEpoch",
+        "name": "to",
         "type": "uint64",
         "internalType": "uint64"
       }
     ],
-    "outputs": [
-      {
-        "name": "budgets",
-        "type": "uint256[]",
-        "internalType": "uint256[]"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "arbitrationReleased",
-    "inputs": [],
     "outputs": [
       {
         "name": "",
@@ -185,83 +222,71 @@
   },
   {
     "type": "function",
-    "name": "dayStatus",
+    "name": "cumulativeReleased",
     "inputs": [
       {
-        "name": "epoch",
+        "name": "t",
         "type": "uint64",
         "internalType": "uint64"
       }
     ],
     "outputs": [
       {
-        "name": "submitted",
-        "type": "bool",
-        "internalType": "bool"
-      },
-      {
-        "name": "finalized",
-        "type": "bool",
-        "internalType": "bool"
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
   },
   {
     "type": "function",
-    "name": "emissionDays",
+    "name": "cumulativeShares",
     "inputs": [
       {
-        "name": "",
+        "name": "t",
         "type": "uint64",
         "internalType": "uint64"
       }
     ],
     "outputs": [
       {
-        "name": "treasuryBalance",
+        "name": "released",
         "type": "uint256",
         "internalType": "uint256"
       },
       {
-        "name": "dailyEmission",
+        "name": "platform",
         "type": "uint256",
         "internalType": "uint256"
       },
       {
-        "name": "platformAmount",
+        "name": "exec",
         "type": "uint256",
         "internalType": "uint256"
       },
       {
-        "name": "executorEscrowed",
+        "name": "test",
         "type": "uint256",
         "internalType": "uint256"
       },
       {
-        "name": "testerEscrowed",
+        "name": "arb",
         "type": "uint256",
         "internalType": "uint256"
-      },
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "execBps",
+    "inputs": [],
+    "outputs": [
       {
-        "name": "arbStreamed",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "burnedAmount",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "submitted",
-        "type": "bool",
-        "internalType": "bool"
-      },
-      {
-        "name": "finalized",
-        "type": "bool",
-        "internalType": "bool"
+        "name": "",
+        "type": "uint16",
+        "internalType": "uint16"
       }
     ],
     "stateMutability": "view"
@@ -275,32 +300,6 @@
         "name": "",
         "type": "uint256",
         "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "finalizeDay",
-    "inputs": [
-      {
-        "name": "epoch",
-        "type": "uint64",
-        "internalType": "uint64"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "firstEpoch",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint64",
-        "internalType": "uint64"
       }
     ],
     "stateMutability": "view"
@@ -344,19 +343,6 @@
   },
   {
     "type": "function",
-    "name": "hasFinalizedEpoch",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bool",
-        "internalType": "bool"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "hasRole",
     "inputs": [
       {
@@ -381,6 +367,109 @@
   },
   {
     "type": "function",
+    "name": "hasSettledHour",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "hourDecay18",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "hourShares",
+    "inputs": [
+      {
+        "name": "fromHour",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "toHour",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "shares",
+        "type": "tuple[]",
+        "internalType": "struct EmissionController.HourShares[]",
+        "components": [
+          {
+            "name": "emission",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "platform",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "exec",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "test",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "arb",
+            "type": "uint256",
+            "internalType": "uint256"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "hourlyAnchor",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract IHourlyAnchor"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "initialBalance",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "initialize",
     "inputs": [
       {
@@ -392,6 +481,11 @@
         "name": "escrow",
         "type": "address",
         "internalType": "address"
+      },
+      {
+        "name": "hourlyAnchor_",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "outputs": [],
@@ -399,20 +493,7 @@
   },
   {
     "type": "function",
-    "name": "lastFinalizedEpoch",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint64",
-        "internalType": "uint64"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "nextEpoch",
+    "name": "lastSettledHour",
     "inputs": [],
     "outputs": [
       {
@@ -438,6 +519,19 @@
   },
   {
     "type": "function",
+    "name": "platformBps",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint16",
+        "internalType": "uint16"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "platformTreasury",
     "inputs": [],
     "outputs": [
@@ -445,132 +539,6 @@
         "name": "",
         "type": "address",
         "internalType": "contract IPlatformTreasury"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "previewDay",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "tuple",
-        "internalType": "struct EmissionController.Day",
-        "components": [
-          {
-            "name": "treasuryBalance",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "dailyEmission",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "platformAmount",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "executorEscrowed",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "testerEscrowed",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "arbStreamed",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "burnedAmount",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "submitted",
-            "type": "bool",
-            "internalType": "bool"
-          },
-          {
-            "name": "finalized",
-            "type": "bool",
-            "internalType": "bool"
-          }
-        ]
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "previewEpoch",
-    "inputs": [
-      {
-        "name": "epoch",
-        "type": "uint64",
-        "internalType": "uint64"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "day",
-        "type": "tuple",
-        "internalType": "struct EmissionController.Day",
-        "components": [
-          {
-            "name": "treasuryBalance",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "dailyEmission",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "platformAmount",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "executorEscrowed",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "testerEscrowed",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "arbStreamed",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "burnedAmount",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "submitted",
-            "type": "bool",
-            "internalType": "bool"
-          },
-          {
-            "name": "finalized",
-            "type": "bool",
-            "internalType": "bool"
-          }
-        ]
       }
     ],
     "stateMutability": "view"
@@ -693,10 +661,93 @@
   },
   {
     "type": "function",
-    "name": "setFirstEpoch",
+    "name": "scheduleStarted",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "settleHours",
     "inputs": [
       {
-        "name": "epoch",
+        "name": "fromHour",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "toHour",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "entries",
+        "type": "tuple[]",
+        "internalType": "struct EmissionController.HourSettlement[]",
+        "components": [
+          {
+            "name": "recordsRoot",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "poolSnapshotRoot",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "seatSnapshotRoot",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "execAccrued",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "testAccrued",
+            "type": "uint256",
+            "internalType": "uint256"
+          }
+        ]
+      },
+      {
+        "name": "nonce",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "deadline",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "signature",
+        "type": "bytes",
+        "internalType": "bytes"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "startSchedule",
+    "inputs": [
+      {
+        "name": "amount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "fundedAt",
         "type": "uint64",
         "internalType": "uint64"
       }
@@ -706,73 +757,16 @@
   },
   {
     "type": "function",
-    "name": "submitDay",
-    "inputs": [
+    "name": "startTime",
+    "inputs": [],
+    "outputs": [
       {
-        "name": "submission",
-        "type": "tuple",
-        "internalType": "struct EmissionController.EmissionSubmission",
-        "components": [
-          {
-            "name": "epoch",
-            "type": "uint64",
-            "internalType": "uint64"
-          },
-          {
-            "name": "platformAmount",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "executorAmount",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "testerAmount",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "arbAmount",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "execAccruedSnapshot",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "testAccruedSnapshot",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "burnAmount",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "nonce",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "deadline",
-            "type": "uint64",
-            "internalType": "uint64"
-          },
-          {
-            "name": "signature",
-            "type": "bytes",
-            "internalType": "bytes"
-          }
-        ]
+        "name": "",
+        "type": "uint64",
+        "internalType": "uint64"
       }
     ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -789,6 +783,19 @@
         "name": "",
         "type": "bool",
         "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "testBps",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint16",
+        "internalType": "uint16"
       }
     ],
     "stateMutability": "view"
@@ -880,7 +887,7 @@
     "name": "EmissionBurned",
     "inputs": [
       {
-        "name": "epoch",
+        "name": "hourId",
         "type": "uint64",
         "indexed": true,
         "internalType": "uint64"
@@ -896,104 +903,6 @@
         "type": "address",
         "indexed": true,
         "internalType": "address"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "EmissionFinalized",
-    "inputs": [
-      {
-        "name": "epoch",
-        "type": "uint64",
-        "indexed": true,
-        "internalType": "uint64"
-      },
-      {
-        "name": "platformAmount",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      },
-      {
-        "name": "executorEscrowed",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      },
-      {
-        "name": "testerEscrowed",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      },
-      {
-        "name": "arbStreamed",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      },
-      {
-        "name": "burnedAmount",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "EmissionSubmitted",
-    "inputs": [
-      {
-        "name": "epoch",
-        "type": "uint64",
-        "indexed": true,
-        "internalType": "uint64"
-      },
-      {
-        "name": "treasuryBalance",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      },
-      {
-        "name": "dailyEmission",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      },
-      {
-        "name": "platformAmount",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      },
-      {
-        "name": "executorEscrowed",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      },
-      {
-        "name": "testerEscrowed",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      },
-      {
-        "name": "arbAmount",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      },
-      {
-        "name": "burnedAmount",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
       }
     ],
     "anonymous": false
@@ -1019,13 +928,92 @@
   },
   {
     "type": "event",
-    "name": "FirstEpochSet",
+    "name": "HourSettled",
     "inputs": [
       {
-        "name": "epoch",
+        "name": "hourId",
         "type": "uint64",
-        "indexed": false,
+        "indexed": true,
         "internalType": "uint64"
+      },
+      {
+        "name": "emission",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "platform",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "exec",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "test",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "arb",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "burned",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "HoursSettled",
+    "inputs": [
+      {
+        "name": "fromHour",
+        "type": "uint64",
+        "indexed": true,
+        "internalType": "uint64"
+      },
+      {
+        "name": "toHour",
+        "type": "uint64",
+        "indexed": true,
+        "internalType": "uint64"
+      },
+      {
+        "name": "platformAmount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "execEscrowed",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "testEscrowed",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "burnedAmount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
       }
     ],
     "anonymous": false
@@ -1120,6 +1108,31 @@
   },
   {
     "type": "event",
+    "name": "ScheduleStarted",
+    "inputs": [
+      {
+        "name": "fundedAt",
+        "type": "uint64",
+        "indexed": true,
+        "internalType": "uint64"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "hourDecay18",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "TesterEscrowPulled",
     "inputs": [
       {
@@ -1195,39 +1208,6 @@
   },
   {
     "type": "error",
-    "name": "DayAlreadyFinalized",
-    "inputs": [
-      {
-        "name": "epoch",
-        "type": "uint64",
-        "internalType": "uint64"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "DayAlreadySubmitted",
-    "inputs": [
-      {
-        "name": "epoch",
-        "type": "uint64",
-        "internalType": "uint64"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "DayNotSubmitted",
-    "inputs": [
-      {
-        "name": "epoch",
-        "type": "uint64",
-        "internalType": "uint64"
-      }
-    ]
-  },
-  {
-    "type": "error",
     "name": "ERC1967InvalidImplementation",
     "inputs": [
       {
@@ -1245,6 +1225,11 @@
   {
     "type": "error",
     "name": "FailedInnerCall",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "HourlyAnchorUnset",
     "inputs": []
   },
   {
@@ -1291,36 +1276,20 @@
   },
   {
     "type": "error",
-    "name": "InvalidComputation",
-    "inputs": [
-      {
-        "name": "expected",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "computed",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ]
-  },
-  {
-    "type": "error",
     "name": "InvalidConfiguration",
     "inputs": []
   },
   {
     "type": "error",
-    "name": "InvalidEpoch",
+    "name": "InvalidHourBatch",
     "inputs": [
       {
-        "name": "epoch",
+        "name": "fromHour",
         "type": "uint64",
         "internalType": "uint64"
       },
       {
-        "name": "currentEpoch",
+        "name": "toHour",
         "type": "uint64",
         "internalType": "uint64"
       }
@@ -1328,7 +1297,18 @@
   },
   {
     "type": "error",
-    "name": "InvalidEpochOrder",
+    "name": "InvalidHourId",
+    "inputs": [
+      {
+        "name": "hourId",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "InvalidHourOrder",
     "inputs": [
       {
         "name": "expected",
@@ -1349,19 +1329,8 @@
   },
   {
     "type": "error",
-    "name": "InvalidSplit",
-    "inputs": [
-      {
-        "name": "sum",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "expected",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ]
+    "name": "InvalidRoot",
+    "inputs": []
   },
   {
     "type": "error",
@@ -1386,6 +1355,17 @@
   },
   {
     "type": "error",
+    "name": "NotVault",
+    "inputs": [
+      {
+        "name": "caller",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "ReentrancyGuardReentrantCall",
     "inputs": []
   },
@@ -1402,7 +1382,12 @@
   },
   {
     "type": "error",
-    "name": "ScheduleStarted",
+    "name": "ScheduleAlreadyStarted",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ScheduleNotStarted",
     "inputs": []
   },
   {

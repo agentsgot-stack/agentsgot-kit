@@ -6,8 +6,9 @@ import {
   AllocationMode,
   allocateExecutorPool,
   antiWashCheck,
-  computeDailyEmission,
   computeDeduction,
+  cumulativeReleased,
+  buildSchedule,
   computeMinimumTier,
   computeReserve,
   defaultParams,
@@ -109,19 +110,22 @@ describe("rule properties", () => {
     );
   });
 
-  it("daily emission is nonnegative and capped", () => {
+  it("cumulative released is nonnegative and at most B0", () => {
+    const B0 = 800_000_000n * 10n ** 18n;
+    const schedule = buildSchedule({
+      startTime: 1_700_000_000n,
+      initialBalance: B0,
+      halfLifeDays: BigInt(defaultParams.emissionHalfLifeDays),
+      platformBps: BigInt(defaultParams.emissionPlatformBps),
+      execBps: BigInt(defaultParams.emissionExecBps),
+      testBps: BigInt(defaultParams.emissionTestBps),
+    });
     fc.assert(
-      fc.property(
-        fc.bigInt({ min: 0n, max: 1_000_000_000n }),
-        (balance) => {
-          const result = computeDailyEmission(
-            { treasuryBalance: balance, genesisBalance: 800_000_000n },
-            defaultParams,
-          );
-          expect(result.dailyEmission).toBeGreaterThanOrEqual(0n);
-          expect(result.dailyEmission).toBeLessThanOrEqual(result.safetyCap);
-        },
-      ),
+      fc.property(fc.bigInt({ min: 0n, max: 10n * 365n * 24n * 3600n }), (delta) => {
+        const released = cumulativeReleased(schedule, schedule.startTime + delta);
+        expect(released).toBeGreaterThanOrEqual(0n);
+        expect(released).toBeLessThanOrEqual(B0);
+      }),
     );
   });
 

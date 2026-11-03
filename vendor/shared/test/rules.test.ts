@@ -19,8 +19,7 @@ import {
   computeCaseFee,
   computeCaseLock,
   computeCurrentTier,
-  computeDailyEmission,
-  computeDeduction,
+    computeDeduction,
   computeDisputeBound,
   computeEarliestSubmitSeconds,
   computeEscalationStep,
@@ -32,18 +31,18 @@ import {
   computeTesterMissReportSlash,
   computeTierRangeMax,
   defaultParams,
-  executorPoolRatePerSecond,
+  executorPoolShare,
   formatWeiAsAgt,
   parseAgtToWei,
   qualifiedValidatorRoles,
   snapshotDailyFees,
   splitCaseFee,
-  splitDailyEmission,
+  splitEmission,
   splitOverturnPenalty,
   TaskTemplate,
   Tier,
   testerPairDecay,
-  testerSeatRatePerSecond,
+  testerSeatShare,
   tierBaseQuota,
   tierDailyFee,
   tierSubmissionLimit,
@@ -213,15 +212,6 @@ describe("vesting", () => {
 });
 
 describe("emission", () => {
-  it("computes daily emission with half-life and safety cap", () => {
-    const result = computeDailyEmission(
-      { treasuryBalance: 800_000_000n, genesisBalance: 800_000_000n },
-      defaultParams,
-    );
-    expect(result.dailyEmission).toBeGreaterThan(0n);
-    expect(result.dailyEmission).toBeLessThanOrEqual(result.safetyCap);
-  });
-
   it("per-task emission is capped by ρ·u·C_i", () => {
     const result = computeTaskDailyEmission(300n, 10_000n, 500n, 0n, 300n, defaultParams);
     expect(result.taskEmission).toBeGreaterThanOrEqual(0n);
@@ -379,10 +369,10 @@ describe("anti-wash", () => {
 });
 
 describe("economic model v3", () => {
-  it("splits daily emission into 10/65/15/10", () => {
-    const daily = 800_000n * AGT;
-    const split = splitDailyEmission(daily, defaultParams);
-    expect(split.platform + split.executor + split.tester + split.arbitrator).toBe(daily);
+  it("splits emission into 10/65/15/10", () => {
+    const amount = 800_000n * AGT;
+    const split = splitEmission(amount, defaultParams);
+    expect(split.platform + split.executor + split.tester + split.arbitrator).toBe(amount);
     expect(split.platform).toBe(80_000n * AGT);
     expect(split.executor).toBe(520_000n * AGT);
     expect(split.tester).toBe(120_000n * AGT);
@@ -409,18 +399,14 @@ describe("economic model v3", () => {
     expect(results.map(({ submissionIndex }) => submissionIndex)).toEqual([0, 1]);
   });
 
-  it("accrues executor and tester rates proportional to fees", () => {
-    const execDaily = 650n * AGT;
-    const testDaily = 150n * AGT;
+  it("accrues executor and tester hour shares proportional to fees", () => {
+    const hourExec = 650n * AGT;
+    const hourTest = 150n * AGT;
     const feeA = 300n * AGT;
     const feeB = 700n * AGT;
-    expect(executorPoolRatePerSecond(execDaily, feeA, feeA + feeB)).toBe(
-      (execDaily * feeA) / (86_400n * (feeA + feeB)),
-    );
-    expect(testerSeatRatePerSecond(testDaily, feeB, feeA + feeB)).toBe(
-      (testDaily * feeB) / (86_400n * (feeA + feeB)),
-    );
-    expect(executorPoolRatePerSecond(execDaily, feeA, 0n)).toBe(0n);
+    expect(executorPoolShare(hourExec, feeA, feeA + feeB)).toBe((hourExec * feeA) / (feeA + feeB));
+    expect(testerSeatShare(hourTest, feeB, feeA + feeB)).toBe((hourTest * feeB) / (feeA + feeB));
+    expect(executorPoolShare(hourExec, feeA, 0n)).toBe(0n);
   });
 
   it("builds vesting tranches matching 60/25/15", () => {

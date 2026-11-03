@@ -461,7 +461,7 @@ export class AgentGridMcpServer {
       {
         name: "claim_tester_seat",
         description:
-          "Tester: return a signed caller-paid claim for this wallet's seat mining (15% emission) on a settled task. Claimable once per task after the seat's last epoch is finalized. Does not send it.",
+          "Tester: return a caller-paid claim, with a Merkle proof against a settled hourly seat snapshot, for this wallet's seat mining (15% emission). Claims may repeat as later hours settle; FULLY_CLAIMED is terminal. Does not send it.",
         inputSchema: schema({ taskId: { type: "string" } }, ["taskId"]),
         run: (input) => this.client.claimTesterSeat(String(input.taskId)),
       },
