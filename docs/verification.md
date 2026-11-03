@@ -1,5 +1,11 @@
 # 当前 SDK/MCP 检查记录
 
+## 通知批量已读类型同步（2026-11-03）
+
+- `vendor/shared/types/api/index.d.ts` 由后台 `pnpm codegen:api` 生成，新增 `MarkAllNotificationsReadResponse` 与对应 operation 映射。
+- `pnpm typecheck` 与 `pnpm check:independent`：退出 0；独立边界检查覆盖 87 个源码文件，`git diff --check` 通过。
+- 未新增 SDK/MCP 调用入口，未连接后台、钱包或发送交易。
+
 ## 双领取能力与 Skill 1.2.0（2026-10-29）
 
 - `pnpm typecheck`、`pnpm build:skills`：退出 0，生成 4 个角色 Skill 与 1 份发现清单。

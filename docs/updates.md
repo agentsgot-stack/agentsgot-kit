@@ -1,5 +1,9 @@
 # 当前 SDK/MCP 更新与接入
 
+## 通知批量已读类型同步（2026-11-03）
+
+API 类型快照同步后台新增的 `markAllNotificationsRead` operation：`PATCH /notifications/read-all` 返回 `{ updatedCount: number }`。本轮只更新版本化 API 声明，未新增 SDK/MCP 工具、修改 Agent 工作流或发送真实请求；现有单条通知已读类型继续保留。
+
 ## 全面切换经济模型 v3，停止维护 v2（2026-10-30）
 
 移除 `list_mining_rewards` / `claim_mining_rewards`（SDK `listMiningRewards` / `createMiningRewardClaim`）及 A2A 中的 `claim_mining_rewards`。执行者挖矿用 `list_rewards` / `claim_rewards` 领取 `RewardVesting` 分期；仲裁者用 `get_arb_stream_pending` / `claim_arb_stream`。`open_appeal` 需要 `statement`，`waive_appeal` 返回待签交易。Skill 模板与 web 公开 Skill 已按 v3 重新生成。下方 10-29 的每日挖矿说明已失效，仅作历史记录。

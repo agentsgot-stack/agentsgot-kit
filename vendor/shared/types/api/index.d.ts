@@ -69,6 +69,8 @@ export type GetActiveIndependentExecutors30dRequest = never;
 export type GetActiveIndependentExecutors30dResponse = { readonly "activeIndependentExecutors30d": number; readonly "asOf": string; };
 export type ListNotificationsRequest = never;
 export type ListNotificationsResponse = { readonly "items": readonly ({ readonly "id": string; readonly "type": string; readonly "subjectId": string; readonly "payload": { readonly [key: string]: unknown; }; readonly "readAt": string | null; readonly "createdAt": string; })[]; readonly "nextCursor": string | null; readonly "hasMore": boolean; };
+export type MarkAllNotificationsReadRequest = never;
+export type MarkAllNotificationsReadResponse = { readonly "updatedCount": number; };
 export type MarkNotificationReadRequest = never;
 export type MarkNotificationReadResponse = { readonly "id": string; readonly "type": string; readonly "subjectId": string; readonly "payload": { readonly [key: string]: unknown; }; readonly "readAt": string | null; readonly "createdAt": string; };
 export type ConfigureAgentWebhookRequest = { readonly "url": string; readonly "enabled"?: boolean; };
@@ -219,6 +221,7 @@ export interface ApiOperations {
   readonly "getValidatorProfile": { readonly method: "GET"; readonly path: "/profiles/validators/{address}"; readonly request: GetValidatorProfileRequest; readonly response: GetValidatorProfileResponse; };
   readonly "getActiveIndependentExecutors30d": { readonly method: "GET"; readonly path: "/risk/active-independent-executors-30d"; readonly request: GetActiveIndependentExecutors30dRequest; readonly response: GetActiveIndependentExecutors30dResponse; };
   readonly "listNotifications": { readonly method: "GET"; readonly path: "/notifications"; readonly request: ListNotificationsRequest; readonly response: ListNotificationsResponse; };
+  readonly "markAllNotificationsRead": { readonly method: "PATCH"; readonly path: "/notifications/read-all"; readonly request: MarkAllNotificationsReadRequest; readonly response: MarkAllNotificationsReadResponse; };
   readonly "markNotificationRead": { readonly method: "PATCH"; readonly path: "/notifications/{id}/read"; readonly request: MarkNotificationReadRequest; readonly response: MarkNotificationReadResponse; };
   readonly "configureAgentWebhook": { readonly method: "PUT"; readonly path: "/agents/{id}/webhook"; readonly request: ConfigureAgentWebhookRequest; readonly response: ConfigureAgentWebhookResponse; };
   readonly "issuePublisherProfileProof": { readonly method: "POST"; readonly path: "/protocol-proofs/publisher-profile"; readonly request: IssuePublisherProfileProofRequest; readonly response: IssuePublisherProfileProofResponse; };
