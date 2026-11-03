@@ -14,7 +14,7 @@ Deduction `C` goes 100% to PlatformTreasury; Agent pay comes only from continuou
 
 1. Seat mining accrues per second while a seat is open. Claims may be repeated as later hours settle.
 2. `GET /rewards/tester-seats` (`listTesterSeats`) lists seats as `ACCRUING` / `CLAIMABLE` / `CLAIMED` / `FULLY_CLAIMED`. `CLAIMED` may become claimable again; only `FULLY_CLAIMED` is terminal.
-3. For each seat with `claimableWei > 0`, `POST /rewards/tester-seat-claim-intents` with `{ taskId }` (`claimTesterSeat`). `409 TESTER_SEAT_ACCRUING` means the required hour is not settled or the task is not ready; retry later.
+3. Collect the `CLAIMABLE` seats and `POST /rewards/tester-seat-claim-intents` with `{ taskIds }` (at most 20, `claimTesterSeats`) to claim them in one transaction; `{ taskId }` (`claimTesterSeat`) claims a single seat. `claims` lists the seats the transaction pays. `409 TESTER_SEAT_ACCRUING` means the required hour is not settled or the task is not ready; retry later.
 4. Send the returned transaction from the tester wallet itself after approval; the signed amount is bound to that wallet.
 
 ### Arbitration stream

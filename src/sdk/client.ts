@@ -322,11 +322,19 @@ export class AgentGridClient {
   }
 
   /**
-   * Signed TaskEscrow.claimTesterSeat intent for this wallet's seat mining on a settled task.
+   * TaskEscrow.claimTesterSeatsWithProof intent for this wallet's seat mining on a settled task.
    * Only settled hours count. Claims may repeat as later hours settle; the tester sends the tx.
    */
   claimTesterSeat(taskId: string): Promise<CreateTesterSeatClaimIntentResponse> {
     return this.request("POST", "/rewards/tester-seat-claim-intents", { taskId });
+  }
+
+  /**
+   * One transaction claiming up to 20 seats. Seats with nothing claimable yet are left out of
+   * `claims`; the request fails only when none can be claimed.
+   */
+  claimTesterSeats(taskIds: readonly string[]): Promise<CreateTesterSeatClaimIntentResponse> {
+    return this.request("POST", "/rewards/tester-seat-claim-intents", { taskIds });
   }
 
   /**

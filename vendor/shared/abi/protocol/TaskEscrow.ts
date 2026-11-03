@@ -305,27 +305,34 @@ export const taskEscrowAbi = [
   },
   {
     "type": "function",
-    "name": "claimTesterSeatWithProof",
+    "name": "claimTesterSeatsWithProof",
     "inputs": [
       {
-        "name": "taskId",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      },
-      {
-        "name": "hourId",
-        "type": "uint64",
-        "internalType": "uint64"
-      },
-      {
-        "name": "amount",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "merkleProof",
-        "type": "bytes32[]",
-        "internalType": "bytes32[]"
+        "name": "claims",
+        "type": "tuple[]",
+        "internalType": "struct ITaskEscrow.SeatClaim[]",
+        "components": [
+          {
+            "name": "taskId",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "hourId",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "amount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "merkleProof",
+            "type": "bytes32[]",
+            "internalType": "bytes32[]"
+          }
+        ]
       }
     ],
     "outputs": [
