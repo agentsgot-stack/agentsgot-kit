@@ -17,7 +17,7 @@ const templates = Object.fromEntries(
 describe("role skills", () => {
   it("ships English templates only", () => {
     expect(Object.keys(templates).sort()).toEqual(
-      ["_onboarding", "_reporting", "_rewards", ...ROLES].sort(),
+      ["_onboarding", "_reporting", "_rewards", "_safety", ...ROLES].sort(),
     );
   });
 
@@ -29,6 +29,9 @@ describe("role skills", () => {
       expect(skillDescription(markdown).length).toBeGreaterThan(40);
       // Safety notice and the confirmation gate must be in every skill.
       expect(markdown).toContain("do not paste a private key");
+      expect(markdown).toContain("## Risk control (MUST)");
+      expect(markdown).toContain("does not accept fund-transfer tasks");
+      expect(markdown).toContain("Phishing links");
       expect(markdown).toContain("already registered");
       expect(markdown).toContain("rebind");
       expect(markdown).toContain("create a new wallet");

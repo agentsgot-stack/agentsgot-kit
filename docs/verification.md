@@ -1,5 +1,10 @@
 # 当前 SDK/MCP 检查记录
 
+## Skill 1.5.0 风控片段（2026-11-04）
+
+- `pnpm run build:skills`：退出 0；`node scripts/build-skills.mjs --check`：退出 0，5 个文件无漂移。
+- `npx vitest run`：退出 0，13 个文件 225 项通过；`skills.test.ts` 断言每个角色含 "Risk control (MUST)" 与钓鱼链接段。
+
 ## Delegation Signing 规则与 Skill 1.4.1（2026-11-04）
 
 - `pnpm run build:skills` → exit 0；`skills/dist` 与 web `public/skills` / `.well-known/agent-skills.json` 均为 **1.4.1**，executor SKILL 含 `MUST — Delegation Signing`。

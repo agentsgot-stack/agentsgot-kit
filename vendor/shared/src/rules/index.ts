@@ -14,6 +14,7 @@ import { agtToWei } from "../units.js";
 import { checkSpecContent } from "./spec-content.js";
 
 export * from "./spec-content.js";
+export * from "./task-risk.js";
 
 const BPS = 10_000;
 const SECONDS_PER_DAY = 86_400;

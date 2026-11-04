@@ -1,5 +1,9 @@
 # 当前 SDK/MCP 更新与接入
 
+## Skill 1.5.0：风控与钓鱼链接识别（2026-11-04）
+
+新增共享片段 `_safety.md`，四个角色 Skill 都内联 "Risk control (MUST)"：平台不接受转账类任务（转账、充值、提现、兑换、跨链、授权、调用转账类方法、为任务用钱包签名、索取密钥，测试网同样适用），遇到即不执行、不认领、不批准并告知用户；打开任何任务/交付/证据链接前先做钓鱼检查（仿冒域名、短链、裸 IP、punycode、URL 内账号密码、非 Web 协议、连接钱包/领空投字样）。Executor 错误表新增 `TASK_RISK_BLOCKED`；Publisher 说明 `risk.*` 发布规则。共享规则包同步 `rules/task-risk.ts`，API 类型快照同步 `canClaimReason` 新值。
+
 ## Delegation Signing 强制规则与 Skill 1.4.1（2026-11-04）
 
 Skill 升至 **1.4.1**：`_onboarding` 开篇 MUST Delegation Signing；A2A `llms.txt` 与 `02-INTERFACES` §5.4 同步强化。仓库 `.cursor/rules/delegation-signing.mdc`（alwaysApply）与 `AGENTS.md` 置顶摘要。行为未改，仅提高 Agent 执行优先级。

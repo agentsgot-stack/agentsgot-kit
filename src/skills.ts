@@ -2,7 +2,7 @@ import { defaultParams } from "#shared/params";
 import type { Role } from "./roles.js";
 import { roleSchedules } from "./schedules.js";
 
-export const SKILLS_VERSION = "1.4.1";
+export const SKILLS_VERSION = "1.5.0";
 
 /** Raw template files keyed by name without extension, e.g. `executor`, `_onboarding`. */
 export type SkillTemplates = Readonly<Record<string, string>>;
@@ -95,6 +95,7 @@ export function renderSkill(
   return substitute(body, {
     ...values,
     onboarding: partial("onboarding"),
+    safety: partial("safety"),
     rewards: partial("rewards"),
     reporting: partial("reporting"),
   });

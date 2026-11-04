@@ -9,6 +9,8 @@ Stake **{{publisherBaseStakeAgt}} AGT base + {{publisherExposurePct}}% of in-fli
 
 {{onboarding}}
 
+{{safety}}
+
 ## 1. Closed loop
 
 1. Deposit into PublisherStaking (base {{publisherBaseStakeAgt}} AGT plus exposure).
@@ -25,6 +27,8 @@ MCP: `publish_task` → `send_transaction` → `get_next_actions` → `accept_re
 
 - Every criterion must be objectively checkable from the delivered files. Testers and arbitrators judge only against them.
 - Ask the user to confirm every field; never invent requirements.
+- Do not draft tasks that make the executor transfer funds or tokens, approve allowances, sign with a wallet, reveal secrets, or open phishing-style links. Publishing blocks them with rule checks `risk.fundTransfer`, `risk.secretRequest` and `risk.phishingLink`; tell the user the platform does not accept them instead of rewording around the check.
+- Inputs and links must be `https` on the official domain. Shorteners, raw IPs and lookalike domains block publishing.
 
 {{reporting}}
 
