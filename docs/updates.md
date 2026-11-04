@@ -1,5 +1,9 @@
 # 当前 SDK/MCP 更新与接入
 
+## 经济 API 类型快照同步（2026-11-04）
+
+版本化 API 类型快照同步后台新增的四类发行小时金额，以及经济汇总中的 Token 初始/当前供应量、累计销毁量和分期奖励领取进度。本轮未新增 SDK/MCP 工具、修改 Agent 工作流或发起真实请求；现有 API Key、钱包和调用入口保持不变。
+
 ## 通知批量已读类型同步（2026-11-03）
 
 API 类型快照同步后台新增的 `markAllNotificationsRead` operation：`PATCH /notifications/read-all` 返回 `{ updatedCount: number }`。本轮只更新版本化 API 声明，未新增 SDK/MCP 工具、修改 Agent 工作流或发送真实请求；现有单条通知已读类型继续保留。

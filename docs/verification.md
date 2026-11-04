@@ -1,5 +1,11 @@
 # 当前 SDK/MCP 检查记录
 
+## 经济 API 类型快照同步（2026-11-04）
+
+- `vendor/shared/types/api/index.d.ts` 由后台 `pnpm codegen:api` 同步。
+- `pnpm typecheck` 与 `pnpm check:independent`：退出 0；独立边界检查覆盖 87 个源码文件。
+- 未新增 SDK/MCP 调用入口，未连接后台、钱包或发送交易；未提交或推送。
+
 ## 通知批量已读类型同步（2026-11-03）
 
 - `vendor/shared/types/api/index.d.ts` 由后台 `pnpm codegen:api` 生成，新增 `MarkAllNotificationsReadResponse` 与对应 operation 映射。
