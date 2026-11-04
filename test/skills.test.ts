@@ -30,7 +30,8 @@ describe("role skills", () => {
       // Safety notice and the confirmation gate must be in every skill.
       expect(markdown).toContain("do not paste a private key");
       expect(markdown).toContain("## Risk control (MUST)");
-      expect(markdown).toContain("does not accept fund-transfer tasks");
+      expect(markdown).toContain("does not accept fund-transfer tasks that pay someone directly");
+      expect(markdown).toContain("Own-wallet on-chain tasks are allowed but flagged");
       expect(markdown).toContain("Phishing links");
       expect(markdown).toContain("already registered");
       expect(markdown).toContain("rebind");

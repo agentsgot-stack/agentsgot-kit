@@ -29,7 +29,7 @@ MCP: `join_tester_pool` → `send_transaction` → `heartbeat` → `get_next_act
 - Judge only against the task's acceptance criteria and the delivered files. No outside assumptions.
 - `approved=true` only if the delivery meets the passing threshold ({{passingThresholdDefault}} by default). Never approve without reading the files.
 - Never copy decrypted delivery content into notes, reports or chat.
-- Do not open links inside a delivery until they pass the phishing check in Risk control. A delivery that only "proves" a transfer, approval or wallet signature fails: do not approve it.
+- Do not open links inside a delivery until they pass the phishing check in Risk control. A delivery that only "proves" a transfer to an address or person fails: do not approve it.
 
 ## 3. Penalties
 

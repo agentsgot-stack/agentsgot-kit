@@ -30,22 +30,47 @@ interface Segment {
 	text: string;
 }
 
-/** Verbs that by themselves mean moving value; an amount, address or recipient makes them a transfer. */
-const STRONG_TRANSFER_VERB =
-	/转账|转入|转出|转给|转至|转到|转币|打款|打币|汇款|汇给|充值|充币|提币|提现|\b(?:transfer(?:s|red|ring)?|send(?:s|ing)?|deposit(?:s|ing)?|withdraw(?:s|ing)?|swap(?:s|ping)?|bridg(?:e|es|ing))\b/giu;
-/** Verbs that also describe rewards or permissions; only an address or recipient makes them a transfer. */
-const WEAK_TRANSFER_VERB =
-	/付款|支付|付给|发送|发币|授权|兑换|跨链|存入|空投|\b(?:pay(?:s|ing)?|approv(?:e|es|ing)|airdrop(?:s|ping)?|donat(?:e|es|ing)|tip(?:s|ping)?)\b/giu;
+/** Sending value to someone; with an amount, address or recipient this is a direct transfer. */
+const SEND_VERB =
+	/转账|转入|转出|转走|转给|转至|转到|转币|打款|打币|汇款|汇给|付给|\b(?:transfer(?:s|red|ring)?|send(?:s|ing)?)\b/giu;
+/** Paying or giving, which also describes rewards; only an address or recipient makes it a transfer. */
+const PAY_VERB =
+	/付款|支付|发送|发币|\b(?:pay(?:s|ing)?|donat(?:e|es|ing)|tip(?:s|ping)?)\b/giu;
+/** Nouns that only mean a transfer; asking for its transaction hash asks for the transfer itself. */
+const TRANSFER_NOUN =
+	/转账|汇款|打款|转币|打币|送金|振込|振り込み|송금|이체|virement|[üu]berweisung|перевод\s+(?:средств|токенов|монет)/giu;
+/** Token transfer methods; next to a wallet address they spell out a transfer through the contract. */
+const TOKEN_TRANSFER_METHOD =
+	/\b(?:safe)?transfer(?:From)?\b|\bsafeBatchTransferFrom\b|\btransferAndCall\b/giu;
+/**
+ * Function selectors of ERC-20/721/1155 transfers and spending approvals, as raw calldata:
+ * transfer, transferFrom, safeTransferFrom (×2), safeBatchTransferFrom, approve, setApprovalForAll,
+ * increaseAllowance, permit.
+ */
+const TRANSFER_SELECTOR =
+	/0x(?:a9059cbb|23b872dd|42842e0e|b88d4fde|2eb2c2d6|095ea7b3|a22cb465|39509351|d505accf)/iu;
+/** An approval call whose spender argument is a literal address: it hands spending to that address. */
+const APPROVE_TO_ADDRESS =
+	/\b(?:approve|increaseAllowance|setApprovalForAll|permit)\s*\(\s*["'`]?0x[0-9a-fA-F]{40}/giu;
+/**
+ * Moving value through a protocol with the executor's own wallet (swap, bridge, deposit, approve).
+ * Legitimate testnet tasks do this, so it only warns.
+ */
+const PROTOCOL_VERB =
+	/充值|充币|提币|提现|授权|兑换|跨链|存入|空投|\b(?:deposit(?:s|ing)?|withdraw(?:s|ing)?|swap(?:s|ping)?|bridg(?:e|es|ing)|approv(?:e|es|ing)|airdrop(?:s|ping)?)\b/giu;
 const WALLET_ADDRESS =
 	/0x[0-9a-fA-F]{40}(?![0-9a-fA-F])|\b[a-z0-9-]{3,}\.eth\b|\bT[1-9A-HJ-NP-Za-km-z]{33}\b|\bbc1[02-9ac-hj-np-z]{11,71}\b/u;
 const TOKEN_AMOUNT =
 	/\d+(?:\.\d+)?\s*(?:AGT|t?BNB|ETH|USDT|USDC|BUSD|DAI|BTC|WBNB|WETH|TRX|SOL|MATIC|POL|wei|gwei|个?代币|个?币)(?![A-Za-z])/iu;
 /**
- * Value-moving verbs in other languages. Scripts without spaces get no boundary; Latin and
+ * Send/transfer verbs in other languages. Scripts without spaces get no boundary; Latin and
  * Cyrillic stems must not continue a longer word on the left.
  */
-const INTL_TRANSFER_VERB =
-	/送金|振込|振り込|入金|出金|送付|송금|이체|입금|출금|전송|보내|تحويل|حوّل|أرسل|ارسل|إيداع|سحب|โอน|ฝาก|ถอน|भेज|ट्रांसफर|जमा\s*कर|(?<![\p{L}])(?:transfi[eé]r\p{L}*|transferi\p{L}*|transfira|transf[eé]r\p{L}*|virement|env[ií]a\p{L}*|envi[ae]\p{L}*|envoy\p{L}*|deposit[ae]\p{L}*|d[ée]pos\p{L}*|retir[ae]\p{L}*|sacar|saque|[üu]berweis\p{L}*|[üu]bertr[äa]g\p{L}*|einzahl\p{L}*|auszahl\p{L}*|sende\p{L}*|chuyển|gửi|nạp|rút|kirim\p{L}*|setor\p{L}*|tarik\p{L}*|g[öo]nder\p{L}*|yat[ıi]r\p{L}*|перев[еоa]\p{L}*|отправ\p{L}*|пополн\p{L}*|вывед\p{L}*|вывод\p{L}*|переказ\p{L}*|надіш\p{L}*)/iu;
+const INTL_SEND_VERB =
+	/送金|振込|振り込|送付|송금|이체|전송|보내|تحويل|حوّل|أرسل|ارسل|โอน|भेज|ट्रांसफर|(?<![\p{L}])(?:transfi[eé]r\p{L}*|transferi\p{L}*|transfira|transf[eé]r\p{L}*|virement|env[ií]a\p{L}*|envi[ae]\p{L}*|envoy\p{L}*|[üu]berweis\p{L}*|[üu]bertr[äa]g\p{L}*|sende\p{L}*|chuyển|gửi|kirim\p{L}*|g[öo]nder\p{L}*|перев[еоa]\p{L}*|отправ\p{L}*|переказ\p{L}*|надіш\p{L}*)/iu;
+/** Deposit/withdraw verbs in other languages; like `PROTOCOL_VERB` they only warn. */
+const INTL_PROTOCOL_VERB =
+	/入金|出金|입금|출금|إيداع|سحب|ฝาก|ถอน|जमा\s*कर|(?<![\p{L}])(?:deposit[ae]\p{L}*|d[ée]pos\p{L}*|retir[ae]\p{L}*|sacar|saque|einzahl\p{L}*|auszahl\p{L}*|nạp|rút|setor\p{L}*|tarik\p{L}*|yat[ıi]r\p{L}*|пополн\p{L}*|вывед\p{L}*|вывод\p{L}*)/iu;
 const RECIPIENT =
 	/收款地址|收款人|收款钱包|接收地址|目标地址|受取アドレス|受取人|宛先|送金先|수신\s*주소|받는\s*주소|수취인|\b(?:recipient|beneficiary|payee)\b|destinatari\p{L}*|b[ée]n[ée]ficiaire|empf[äa]nger|получател\p{L}*|địa\s+chỉ\s+nhận|người\s+nhận|penerima|al[ıi]c[ıi]|المستلم|ผู้รับ/iu;
 const TX_PROOF =
@@ -61,8 +86,16 @@ const CONTRACT_CALL = new RegExp(
 	`(?:调用|执行|发起|签名|签署|\\bcall\\b|\\binvoke\\b|\\bexecute\\b|\\bsign\\b)${SHORT_GAP}\\b(?:transferFrom|safeTransferFrom|transfer|approve|permit|setApprovalForAll|increaseAllowance|sendTransaction|eth_sendTransaction|eth_sign|personal_sign|signTypedData(?:_v4)?)\\b`,
 	"giu",
 );
+/**
+ * Calling a contract on chain. Even without a recipient in the text the contract may hard-code one,
+ * so this warns whenever the task is about a live chain.
+ */
+const CONTRACT_WORD =
+	/合约|\bcontracts?\b|コントラクト|컨트랙트|contrato|\bcontrat\b|vertrag|контракт|hợp\s+đồng|kontrak|sözleşme|عقد\s+ذكي|สัญญาอัจฉริยะ|कॉन्ट्रैक्ट/iu;
+const CALL_WORD =
+	/调用|执行|交互|触发|领取|铸造|\b(?:call|calls|calling|invoke|execute|interact|trigger|mint|claim)\b|呼び出|호출|llam[ae]\p{L}*|cham[ae]\p{L}*|appel\p{L}*|aufruf\p{L}*|вызов\p{L}*|вызв\p{L}*|gọi|panggil|çağır\p{L}*|استدعاء|เรียก|कॉल/iu;
 const CHAIN_CONTEXT =
-	/链上|主网|测试网|钱包|bscscan|etherscan|0x[0-9a-fA-F]{40}|\b(?:on-?chain|mainnet|testnet|bsc|bnb\s*chain|wallet|metamask)\b/iu;
+	/链上|主网|测试网|钱包|テストネット|メインネット|ウォレット|테스트넷|메인넷|지갑|bscscan|etherscan|0x[0-9a-fA-F]{40}|\b(?:on-?chain|mainnet|testnet|bsc|bnb\s*chain|wallet|metamask)\b/iu;
 /** Signing with the executor's own wallet, or producing a permit-style approval signature. */
 const SIGN_REQUEST = new RegExp(
 	`(?:钱包|小狐狸|\\bwallet\\b|\\bmetamask\\b)${GAP}(?:签名|签署|\\bsign\\b)|(?:签名|签署|\\bsign\\b)${GAP}(?:钱包|\\bwallet\\b)|(?:签名|签署|\\bsign\\b)${SHORT_GAP}(?:许可|\\bpermit\\b|\\btyped\\s*data\\b|\\beth_sign\\b)`,
@@ -267,25 +300,42 @@ function segments(content: TaskRiskContent): Segment[] {
 function fundTransferFields(
 	items: readonly Segment[],
 	content: TaskRiskContent,
-): Set<string> {
-	const fields = new Set<string>();
-	const strongVerb = (text: string) =>
-		affirmed(text, STRONG_TRANSFER_VERB) || INTL_TRANSFER_VERB.test(text);
-	const strongAnywhere = items.some(({ text }) => strongVerb(text));
+): { direct: Set<string>; other: Set<string> } {
+	const direct = new Set<string>();
+	const other = new Set<string>();
+	const transferNounAnywhere = items.some(({ text }) =>
+		affirmed(text, TRANSFER_NOUN),
+	);
 	const onChain = items.some(({ text }) => CHAIN_CONTEXT.test(text));
 	for (const { field, text } of items) {
 		const target = WALLET_ADDRESS.test(text) || RECIPIENT.test(text);
-		const transfer =
-			(strongVerb(text) && (target || TOKEN_AMOUNT.test(text))) ||
-			(affirmed(text, WEAK_TRANSFER_VERB) && target);
-		const proof = strongAnywhere && TX_PROOF.test(text);
-		const call = onChain && affirmed(text, CONTRACT_CALL);
+		const amount = TOKEN_AMOUNT.test(text);
+		const send = affirmed(text, SEND_VERB) || INTL_SEND_VERB.test(text);
+		const directTransfer =
+			(send && (target || amount)) ||
+			(affirmed(text, PAY_VERB) && target) ||
+			(transferNounAnywhere && TX_PROOF.test(text)) ||
+			(affirmed(text, TOKEN_TRANSFER_METHOD) && WALLET_ADDRESS.test(text)) ||
+			TRANSFER_SELECTOR.test(text) ||
+			affirmed(text, APPROVE_TO_ADDRESS);
+		if (directTransfer) {
+			direct.add(field);
+			continue;
+		}
+		const protocol =
+			(affirmed(text, PROTOCOL_VERB) || INTL_PROTOCOL_VERB.test(text)) &&
+			(target || amount);
+		const call =
+			onChain &&
+			(affirmed(text, CONTRACT_CALL) ||
+				affirmed(text, TOKEN_TRANSFER_METHOD) ||
+				(CONTRACT_WORD.test(text) && CALL_WORD.test(text)));
 		const sign = affirmed(text, SIGN_REQUEST) || INTL_SIGN_REQUEST.test(text);
-		if (transfer || proof || call || sign) fields.add(field);
+		if (protocol || call || sign) other.add(field);
 	}
 
-	// Language-independent: a wallet address next to a token amount or a required transaction hash
-	// is a transfer request in any language, so it blocks even when no verb is recognised.
+	// Language-independent hint: a wallet address next to a token amount or a required transaction
+	// hash may be a transfer in a language the verbs above miss. Swaps look the same, so it warns.
 	const txHashCheck = (content.criteria ?? []).some(({ machineCheck }) =>
 		TX_HASH_CHECK.test(machineCheck?.commandOrSchema ?? ""),
 	);
@@ -295,15 +345,17 @@ function fundTransferFields(
 	);
 	if (addressFields.length && (valueFields.length || txHashCheck)) {
 		for (const { field } of [...addressFields, ...valueFields])
-			fields.add(field);
-		if (txHashCheck) fields.add("criteria");
+			other.add(field);
+		if (txHashCheck) other.add("criteria");
 	}
-	return fields;
+	for (const field of direct) other.delete(field);
+	return { direct, other };
 }
 
 /**
- * Deterministic task risk control. A task may not make the executor move funds, approve or sign for
- * a wallet, hand over wallet secrets, or open a phishing link; these block publishing and claiming.
+ * Deterministic task risk control. Direct transfers to an address or recipient and wallet-secret
+ * requests block publishing and claiming; other wallet actions and suspicious links only warn and
+ * are left to the publisher and the executor.
  */
 export function checkTaskRisk(content: TaskRiskContent): RuleCheckResult[] {
 	const items = segments(content);
@@ -328,20 +380,18 @@ export function checkTaskRisk(content: TaskRiskContent): RuleCheckResult[] {
 			);
 		}
 	}
-	const linkLevel = blockedLinks.length
-		? "block"
-		: warnedLinks.length
-			? "warn"
-			: "ok";
 	const links = [...blockedLinks, ...warnedLinks];
+	const { direct, other } = transfer;
 	return [
 		{
 			id: "risk.fundTransfer",
-			level: transfer.size ? "block" : "ok",
-			message: transfer.size
-				? `Tasks may not ask the executor to transfer funds, approve tokens, or sign wallet transactions: ${[...transfer].join(", ")}`
-				: "No fund transfer or wallet action requested",
-			fields: [...transfer],
+			level: direct.size ? "block" : other.size ? "warn" : "ok",
+			message: direct.size
+				? `Tasks may not ask the executor to transfer funds to an address or recipient: ${[...direct].join(", ")}`
+				: other.size
+					? `Wallet or contract action requested; the contract may hard-code a recipient, so publisher and executor must check it: ${[...other].join(", ")}`
+					: "No fund transfer or wallet action requested",
+			fields: [...(direct.size ? direct : other)],
 		},
 		{
 			id: "risk.secretRequest",
@@ -352,14 +402,20 @@ export function checkTaskRisk(content: TaskRiskContent): RuleCheckResult[] {
 			fields: [...secret],
 		},
 		{
+			// Links are judged by the publisher and the executor; this only points them out.
 			id: "risk.phishingLink",
-			level: linkLevel,
+			level: links.length ? "warn" : "ok",
 			message: links.length
 				? `Suspicious links: ${links.join("; ")}`
 				: "No suspicious links",
 			fields: [...linkFields],
 			...(links.length
-				? { params: { links: links.slice(0, 5).join("; ") } }
+				? {
+						params: {
+							links: links.slice(0, 5).join("; "),
+							suspected: blockedLinks.length ? "phishing" : "risky",
+						},
+					}
 				: {}),
 		},
 	];
