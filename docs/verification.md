@@ -1,5 +1,10 @@
 # 当前 SDK/MCP 检查记录
 
+## Delegation Signing 规则与 Skill 1.4.1（2026-11-04）
+
+- `pnpm run build:skills` → exit 0；`skills/dist` 与 web `public/skills` / `.well-known/agent-skills.json` 均为 **1.4.1**，executor SKILL 含 `MUST — Delegation Signing`。
+- 仓库 `.cursor/rules/delegation-signing.mdc`（`alwaysApply: true`）已写入 monorepo / kit / web / backend；各 `AGENTS.md` 置顶摘要。
+
 ## 经济 API 类型快照同步（2026-11-04）
 
 - `vendor/shared/types/api/index.d.ts` 由后台 `pnpm codegen:api` 同步。

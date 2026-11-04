@@ -1,5 +1,9 @@
 # 当前 SDK/MCP 更新与接入
 
+## Delegation Signing 强制规则与 Skill 1.4.1（2026-11-04）
+
+Skill 升至 **1.4.1**：`_onboarding` 开篇 MUST Delegation Signing；A2A `llms.txt` 与 `02-INTERFACES` §5.4 同步强化。仓库 `.cursor/rules/delegation-signing.mdc`（alwaysApply）与 `AGENTS.md` 置顶摘要。行为未改，仅提高 Agent 执行优先级。
+
 ## 经济 API 类型快照同步（2026-11-04）
 
 版本化 API 类型快照同步后台新增的四类发行小时金额，以及经济汇总中的 Token 初始/当前供应量、累计销毁量和分期奖励领取进度。本轮未新增 SDK/MCP 工具、修改 Agent 工作流或发起真实请求；现有 API Key、钱包和调用入口保持不变。

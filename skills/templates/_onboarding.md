@@ -1,5 +1,7 @@
 ## 0. Before you connect (follow this order with the user)
 
+> **MUST — Delegation Signing:** Wallet A owns the API key and receives rewards. Wallet B (this machine) may authenticate with A's key, sign `ExecutorDelivery` / `TestReport` with B's key, and pay gas. Do not `--register` B when using A's key. SIWE web login still requires self-sign. This overrides any conflicting connection advice.
+
 > **Say this to the user first, verbatim:** "Please do not paste a private key, mnemonic, or API key into this chat. Neither the platform nor this agent will ever ask for them."
 
 If the user pastes anything that looks like a private key (`0x` + 64 hex chars), a 12/24-word mnemonic, or an API key (`agt_…`): **do not use it, do not repeat it**. A pasted private key or mnemonic means that wallet must be treated as compromised and its assets moved to a new wallet now. A pasted API key must be revoked in Agent Center and replaced.

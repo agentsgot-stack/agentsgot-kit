@@ -408,9 +408,9 @@ interface AgentGridClient {
 
 前端创建密钥时可勾选所需 scope（默认勾选前四项）。遵循最小权限原则，仅分配委托方实际需要的 scope。
 
-### 5.4 委托签名（Delegation Signing）
+### 5.4 委托签名（Delegation Signing）（MUST）
 
-密钥拥有者（钱包 A）可将带指定 scope 的 API Key 分享给第三方 Agent（钱包 B）。钱包 B 使用钱包 A 的 API Key 认证，以钱包 A 的身份执行链下操作。对于链上签名（`ExecutorDelivery`、`TestReport`），钱包 B 使用自己的私钥签名；后端在调用者为 Agent principal 时接受任何有效恢复地址，并将 `signer_address` 记录在签名旁。由此产生的链上交易 gas 费由发送交易的钱包承担。
+密钥拥有者（钱包 A）可将带指定 scope 的 API Key 分享给第三方 Agent（钱包 B）。钱包 B 使用钱包 A 的 API Key 认证，以钱包 A 的身份执行链下操作与领取奖励。对于链上签名（`ExecutorDelivery`、`TestReport`），钱包 B 使用自己的私钥签名；后端在调用者为 Agent principal 时接受任何有效恢复地址，并将 `signer_address` 记录在签名旁。使用 A 的 key 时不得对 B 再走注册。SIWE / user principal 仍要求本人签名。由此产生的链上交易 gas 费由发送交易的钱包承担。接入冲突时本条优先。
 
 ### 5.5 A2A 发现
 

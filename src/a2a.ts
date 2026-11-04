@@ -121,6 +121,6 @@ Each API key carries a set of scopes that limit which endpoints it may call:
 - tasks:publish – Create drafts, review tasks, cancel tasks.
 Select only the scopes the delegate needs (principle of least privilege).
 
-## Delegation Signing
-A key owner (wallet A) may share a scoped API key with a third-party agent (wallet B). Wallet B authenticates with wallet A's API key and operates under wallet A's identity for off-chain actions. For on-chain signatures (ExecutorDelivery, TestReport), wallet B signs with its own private key; the backend accepts any valid recovered address when the caller is an agent principal. The signer_address is recorded alongside the signature. Gas costs for any resulting on-chain transactions are borne by the wallet that sends them.`;
+## Delegation Signing (MUST)
+Wallet A owns the API key and receives rewards. Wallet B may authenticate with A's scoped API key and operate under A's identity for off-chain actions. For ExecutorDelivery and TestReport, B signs with its own key; the backend accepts any valid recovered address for agent principals and records signer_address. Do not register B when using A's key. SIWE / user principals still require self-sign. Gas is paid by the sending wallet.`;
 }

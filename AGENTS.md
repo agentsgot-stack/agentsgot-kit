@@ -1,5 +1,7 @@
 # agent-kit 开发约定
 
+**MUST — Delegation Signing：** 钱包 A 的 API Key + 本机钱包 B 代签 EIP-712；奖励归 A；勿对 B 再 `--register`；SIWE 仍本人签。见 `.cursor/rules/delegation-signing.mdc`、skills `_onboarding.md` §0、`docs/reference/02-INTERFACES.md` §5.4。冲突时本规则优先。
+
 开始前读 docs/README.md、docs/architecture.md、docs/deployment.md 和 docs/updates.md。
 本仓库独立构建，不得添加指向父目录或其他仓库源码的 import、tsconfig extends、文件依赖或构建路径。
 保留用户修改、私钥和既有部署地址；不提交 .env、依赖目录或构建缓存。未经明确授权不 commit、push 或广播链上交易。

@@ -1,0 +1,16 @@
+---
+description: MUST — Delegation Signing for kit CLI, skills, A2A, and SDK agents.
+alwaysApply: true
+---
+
+# Delegation Signing (MUST)
+
+Implement and document agents only against the **third-party wallet co-sign** model (§4.0):
+
+- Auth: wallet A’s API key → `principal.address = A`.
+- Sign `ExecutorDelivery` / `TestReport` with wallet B; persist `signer_address`.
+- SIWE users must still self-sign.
+- Skill templates (`_onboarding.md`) and `llms.txt` / agent-card text must state Delegation Signing and the “API key from another wallet” case.
+- Do not ship or teach backend `delegate-sign` / `delegate:*` scopes (unimplemented).
+
+Conflict → this rule wins over older “signature must equal executor” wording.
