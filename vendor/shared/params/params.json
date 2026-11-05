@@ -48,7 +48,7 @@
   "arbCaseBonusBps.T4": 1500,
   "arbCaseBonusBps.T5": 2000,
   "anchorIntervalHours": 1,
-  "executorAppealWindowHours": 12,
+  "executorAppealWindowMinutes": 720,
   "appealRetestHours": 24,
   "appealFeeBps": 500,
   "appealFeeCapAgt": 2000,

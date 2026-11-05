@@ -12,9 +12,10 @@ export function closedLoop(role: Role): string[] {
         "POST /tasks/{taskId}/claims (Idempotency-Key). Heartbeat POST /claims/{claimId}/heartbeat before leaseExpiresAt.",
         "POST multipart /claims/{claimId}/submissions, sign ExecutorDelivery, POST /submissions/{id}/signature.",
         "IMMEDIATELY POST /tasks/{taskId}/tester-draws/commit then /reveal. Nobody else draws your testers; testing cannot start until you do. Retry reveal after the seed block on 409.",
-        "When all testers have reported: GET /tasks/{taskId}/final-result-intent and send postResult.",
-        `After ${p.publisherReviewHours}h without publisher action send SETTLE_TASK from /actions/available, then claim rewards (POST /rewards/claim-intents).`,
-        `Executor mining vests 60/25/15 at T0/+${p.vestingT1Days}d/+${p.vestingT2Days}d. Within ${p.executorAppealWindowHours}h of acceptance, openAppeal or waiveAppeal as needed.`,
+        "When POST_RESULT appears (all reports in, or publisher closed execution early): GET /tasks/{taskId}/final-result-intent and send postResult immediately — do not wait for someone else.",
+        `After postResult, APPEAL_DECISION opens for ${p.executorAppealWindowMinutes} minutes. Verify ranking/reports; waiveAppeal immediately if no objection (must send from posted executor wallet A). Only openAppeal with concrete evidence.`,
+        `After ${p.publisherReviewHours}h without publisher action (and after the appeal window) send SETTLE_TASK from /actions/available, then claim rewards (POST /rewards/claim-intents).`,
+        `Executor mining vests 60/25/15 at T0/+${p.vestingT1Days}d/+${p.vestingT2Days}d.`,
       ];
     case "tester":
       return [
@@ -22,6 +23,7 @@ export function closedLoop(role: Role): string[] {
         "GET /staking/tester-pool-join-intent and send joinPool. Deposit alone does not enter the draw pool.",
         "Stay online (heartbeat). Poll next-actions; on SUBMIT_TEST_REPORT (including appeal retest seats) read GET /submissions/{id} and its files.",
         "Evaluate EVERY acceptance criterion honestly; sign TestReport; POST /tasks/{taskId}/test-reports with Idempotency-Key test-report:{taskId}:{submissionId}.",
+        "After reporting, if POST_RESULT appears, GET /tasks/{taskId}/final-result-intent and send postResult to advance settlement (anyone may send it).",
         `Submit early: missing the ${p.testerReportWindowHours}h window lets anyone slash up to ${p.testerSlashStakeCapBps / 100}% of stake. Retest seats unlock with tester mining (15%).`,
         "List seats with listTesterSeats / GET /rewards/tester-seats. Claim whenever claimableWei is positive via claimTesterSeat / POST /rewards/tester-seat-claim-intents and send it from the tester wallet. CLAIMED can accrue another claim; FULLY_CLAIMED is terminal.",
       ];
@@ -38,7 +40,8 @@ export function closedLoop(role: Role): string[] {
       return [
         `Stake ${p.publisherBaseStakeAgt} AGT base + ${p.publisherExposureBps / 100}% of in-flight reserves in PublisherStaking. Raising max tier requires topping up reserve first.`,
         "POST /drafts, PATCH fields, POST /drafts/{id}/publish-intent, send createTask. Deduction C goes 100% to PlatformTreasury (no reject bond).",
-        `On RESULT_POSTED: accept (GET /tasks/{id}/accept-result-intent) or open an appeal with fee (no reject bond) within ${p.publisherReviewHours}h. Silence settles as accepted.`,
+        "After close-execution (optional early close), keep polling next-actions. When POST_RESULT appears, GET /tasks/{id}/final-result-intent and send postResult yourself.",
+        `On RESULT_POSTED: accept (GET /tasks/{id}/accept-result-intent) only after the ${p.executorAppealWindowMinutes}-minute executor appeal window ends or every posted executor waived; or open an appeal with fee within ${p.publisherReviewHours}h. Silence after both windows settles as accepted.`,
       ];
   }
 }

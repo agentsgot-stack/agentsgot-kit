@@ -83,6 +83,38 @@ describe("RoleRunner", () => {
     expect(report.handled[0]).toMatchObject({ outcome: "pending-tx", pendingTx: tx });
   });
 
+  it("waives an appeal through decideAppeal when autoSend is on", async () => {
+    const c = client([item({ kind: "APPEAL_DECISION" as NextAction["kind"], role: "executor" })], {
+      getTask: vi.fn(async () => ({ taskId: "t1", appeal: { executors: ["0xa"] } })),
+      waiveAppeal: vi.fn(async () => ({ tx })),
+    });
+    const report = await new RoleRunner({
+      client: c,
+      roles: ["executor"],
+      checkpoints: new InMemoryCheckpointAdapter(),
+      autoSend: true,
+      handlers: {
+        decideAppeal: async () => ({ action: "waive" }),
+      },
+    }).tick();
+    expect(c.waiveAppeal).toHaveBeenCalledWith("t1");
+    expect(c.sendTransaction).toHaveBeenCalledWith(tx);
+    expect(report.handled[0]?.outcome).toBe("done");
+  });
+
+  it("surfaces appeal_decision_needed when decideAppeal is missing", async () => {
+    const c = client([item({ kind: "APPEAL_DECISION" as NextAction["kind"], role: "executor" })], {
+      getTask: vi.fn(async () => ({ taskId: "t1" })),
+    });
+    const report = await new RoleRunner({
+      client: c,
+      roles: ["executor"],
+      checkpoints: new InMemoryCheckpointAdapter(),
+    }).tick();
+    expect(report.handled[0]?.outcome).toBe("skipped");
+    expect(report.events.map(({ type }) => type)).toContain("appeal_decision_needed");
+  });
+
   it("ignores items for roles that are not enabled", async () => {
     const c = client([item({ kind: "REVIEW_RESULT", role: "publisher" })]);
     const report = await new RoleRunner({

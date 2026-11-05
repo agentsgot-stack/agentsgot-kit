@@ -33,7 +33,8 @@ export const TOOL_NEXT_STEPS: Record<string, string> = {
   publish_task: "Ask the user to approve, then send_transaction (createTask).",
   accept_result: "Ask the user to approve, then send_transaction.",
   review_task: "Ask the user to approve, then send_transaction.",
-  get_next_actions: "Execute items in order; each item names the request (and tool) to use.",
+  get_next_actions:
+    "Execute items in order; each item names the request (and tool) to use. APPEAL_DECISION → get_task, verify the posted result, then waive_appeal (no objection) or open_appeal (with statement). POST_RESULT from any related party → get_final_result → send_transaction.",
   get_eligibility:
     "Resolve each missing step (its request field names the call), then get_next_actions.",
   heartbeat: "get_next_actions.",

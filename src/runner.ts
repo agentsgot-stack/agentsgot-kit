@@ -40,6 +40,15 @@ export interface RoleHandlers {
     reason?: string;
     criteria?: string[];
   }>;
+  /**
+   * Executor: after postResult, decide whether to waive the appeal window or open an appeal.
+   * Waive must be sent from the posted executor wallet (wallet A); a delegated local signer
+   * cannot submit waiveAppeal on-chain.
+   */
+  decideAppeal?(input: {
+    task: GetTaskResponse;
+    address: string;
+  }): Promise<{ action: "waive" } | { action: "appeal"; statement: string }>;
 }
 
 export type Outcome = "done" | "pending-tx" | "skipped" | "error";
@@ -62,6 +71,7 @@ export type RunnerEventType =
   | "assigned_as_tester"
   | "report_submitted"
   | "result_posted"
+  | "appeal_decision_needed"
   | "review_required"
   | "arbitration_case"
   | "vote_committed"
@@ -166,7 +176,7 @@ export class RoleRunner {
       if (item.deadline && new Date(item.deadline).getTime() - now.getTime() < DEADLINE_WARNING_MS)
         this.event(report, item, "deadline_warning", `${item.kind} due ${item.deadline}`);
       try {
-        report.handled.push(await this.handle(item, report));
+        report.handled.push(await this.handle(item, report, next.address));
       } catch (error) {
         report.handled.push(this.result(item, "error", message(error)));
       }
@@ -245,7 +255,11 @@ export class RoleRunner {
     }
   }
 
-  private async handle(item: NextAction, report: TickReport): Promise<HandledAction> {
+  private async handle(
+    item: NextAction,
+    report: TickReport,
+    principalAddress: string,
+  ): Promise<HandledAction> {
     const { client, handlers = {} } = this.options;
     const taskId = item.taskId;
     const id = item.subject.id;
@@ -333,6 +347,37 @@ export class RoleRunner {
             return this.result(item, "skipped", `not yet postable: ${message(error)}`);
           throw error;
         }
+      }
+      case "APPEAL_DECISION": {
+        if (!taskId) return this.result(item, "skipped", "missing taskId");
+        const task = await client.getTask(taskId);
+        if (!handlers.decideAppeal) {
+          this.event(
+            report,
+            item,
+            "appeal_decision_needed",
+            "verify the posted result; waiveAppeal if no objection, else openAppeal",
+          );
+          return this.result(
+            item,
+            "skipped",
+            "no decideAppeal handler; verify the result and call waive_appeal or open_appeal",
+          );
+        }
+        const decision = await handlers.decideAppeal({
+          task,
+          address: principalAddress.toLowerCase(),
+        });
+        if (decision.action === "waive") {
+          const intent = await client.waiveAppeal(taskId);
+          return this.transact(item, report, intent.tx, "waiveAppeal");
+        }
+        const intent = await client.openAppeal(taskId, { statement: decision.statement });
+        this.event(report, item, "appeal_decision_needed", decision.statement);
+        this.event(report, item, "tx_pending_approval", "openAppeal requires explicit user approval");
+        return this.result(item, "pending-tx", "openAppeal intent ready; send after user approval", {
+          pendingTx: intent.tx,
+        });
       }
       case "REVIEW_RESULT": {
         if (!taskId) return this.result(item, "skipped", "missing taskId");
