@@ -139,6 +139,8 @@ export type CreateArbitrationStreamClaimIntentRequest = never;
 export type CreateArbitrationStreamClaimIntentResponse = { readonly "tx": { readonly "chainId": number; readonly "to": string; readonly "data": string; readonly "value": "0"; }; readonly "account": string; };
 export type ListTesterSeatsRequest = never;
 export type ListTesterSeatsResponse = { readonly "items": readonly ({ readonly "taskId": string; readonly "tester": string; readonly "status": "ACCRUING" | "CLAIMABLE" | "FULLY_CLAIMED"; readonly "accruedWei": string; readonly "claimedWei": string; readonly "claimableWei": string; readonly "seatEndEpoch": number; readonly "hourId": number | null; })[]; };
+export type ListExecutorPoolsRequest = never;
+export type ListExecutorPoolsResponse = { readonly "items": readonly ({ readonly "taskId": string; readonly "taskStatus": string; readonly "delivered": boolean; readonly "deliveries": number; readonly "poolWei": string; readonly "hourId": number | null; })[]; };
 export type CreateTesterSeatClaimIntentRequest = { readonly "taskId"?: string; readonly "taskIds"?: readonly (string)[]; };
 export type CreateTesterSeatClaimIntentResponse = { readonly "taskId": string; readonly "tester": string; readonly "amountWei": string; readonly "hourId": number; readonly "claims": readonly ({ readonly "taskId": string; readonly "amountWei": string; readonly "claimableWei": string; readonly "hourId": number; })[]; readonly "claimableWei": string; readonly "tx": { readonly "chainId": number; readonly "to": string; readonly "data": string; readonly "value": "0"; }; };
 export type GetDisputeRequest = never;
@@ -256,6 +258,7 @@ export interface ApiOperations {
   readonly "getRewardsBreakdown": { readonly method: "GET"; readonly path: "/rewards/breakdown"; readonly request: GetRewardsBreakdownRequest; readonly response: GetRewardsBreakdownResponse; };
   readonly "createArbitrationStreamClaimIntent": { readonly method: "POST"; readonly path: "/rewards/arbitration-stream-claim-intent"; readonly request: CreateArbitrationStreamClaimIntentRequest; readonly response: CreateArbitrationStreamClaimIntentResponse; };
   readonly "listTesterSeats": { readonly method: "GET"; readonly path: "/rewards/tester-seats"; readonly request: ListTesterSeatsRequest; readonly response: ListTesterSeatsResponse; };
+  readonly "listExecutorPools": { readonly method: "GET"; readonly path: "/rewards/executor-pools"; readonly request: ListExecutorPoolsRequest; readonly response: ListExecutorPoolsResponse; };
   readonly "createTesterSeatClaimIntent": { readonly method: "POST"; readonly path: "/rewards/tester-seat-claim-intents"; readonly request: CreateTesterSeatClaimIntentRequest; readonly response: CreateTesterSeatClaimIntentResponse; };
   readonly "getDispute": { readonly method: "GET"; readonly path: "/disputes/{id}"; readonly request: GetDisputeRequest; readonly response: GetDisputeResponse; };
   readonly "listArbitratorCases": { readonly method: "GET"; readonly path: "/arbitrator/cases"; readonly request: ListArbitratorCasesRequest; readonly response: ListArbitratorCasesResponse; };
