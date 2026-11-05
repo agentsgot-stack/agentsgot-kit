@@ -6,9 +6,8 @@ import type {
   ConfigureAgentWebhookResponse,
   ConfirmArbitrationSeatResponse,
   CreateArbitrationStreamClaimIntentResponse,
-  CreateTesterSeatClaimIntentResponse,
-  ListTesterSeatsResponse,
   CreateArbitrationVoteIntentResponse,
+  CreateExecutorShareClaimIntentResponse,
   CreateFallbackReportIntentResponse,
   CreateRewardClaimIntentResponse,
   CreateSignedTestReportResponse,
@@ -17,6 +16,7 @@ import type {
   CreateTaskClaimResponse,
   CreateTaskReviewResponse,
   CreateTaskSubmissionResponse,
+  CreateTesterSeatClaimIntentResponse,
   GetAcceptResultIntentResponse,
   GetAgentEligibilityResponse,
   GetAgentNextActionsResponse,
@@ -32,10 +32,12 @@ import type {
   HeartbeatTaskClaimResponse,
   ListArbitratorCasesResponse,
   ListAvailableTriggerActionsResponse,
+  ListExecutorSharesResponse,
   ListNotificationsResponse,
   ListRewardTranchesResponse,
   ListTasksResponse,
   ListTaskTestReportsResponse,
+  ListTesterSeatsResponse,
   RegisterAgentOffchainResponse,
   RevealTesterDrawResponse,
   SignExecutorDeliveryResponse,
@@ -335,6 +337,23 @@ export class AgentGridClient {
    */
   claimTesterSeats(taskIds: readonly string[]): Promise<CreateTesterSeatClaimIntentResponse> {
     return this.request("POST", "/rewards/tester-seat-claim-intents", { taskIds });
+  }
+
+  /** This wallet's leaves in posted executor roots: POSTED, CLAIMABLE (needs vesting) or CLAIMED. */
+  listExecutorShares(): Promise<ListExecutorSharesResponse> {
+    return this.request("GET", "/rewards/executor-shares");
+  }
+
+  /**
+   * TaskEscrow.claimExecutorShares intent for a settled task (≤ 50 leaves). Creates the vesting
+   * schedules that `createRewardClaim` later pays out. Anyone may send it; rewards go to each
+   * executor.
+   */
+  vestExecutorShares(
+    taskId: string,
+    includeOthers = false,
+  ): Promise<CreateExecutorShareClaimIntentResponse> {
+    return this.request("POST", "/rewards/executor-share-claim-intents", { taskId, includeOthers });
   }
 
   /**

@@ -374,10 +374,20 @@ export class RoleRunner {
         }
         const intent = await client.openAppeal(taskId, { statement: decision.statement });
         this.event(report, item, "appeal_decision_needed", decision.statement);
-        this.event(report, item, "tx_pending_approval", "openAppeal requires explicit user approval");
-        return this.result(item, "pending-tx", "openAppeal intent ready; send after user approval", {
-          pendingTx: intent.tx,
-        });
+        this.event(
+          report,
+          item,
+          "tx_pending_approval",
+          "openAppeal requires explicit user approval",
+        );
+        return this.result(
+          item,
+          "pending-tx",
+          "openAppeal intent ready; send after user approval",
+          {
+            pendingTx: intent.tx,
+          },
+        );
       }
       case "REVIEW_RESULT": {
         if (!taskId) return this.result(item, "skipped", "missing taskId");

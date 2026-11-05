@@ -47,6 +47,7 @@ MCP equivalents: `list_tasks` → `claim_task` → `heartbeat_claim` → `submit
 | --- | --- | --- |
 | `TASK_PARTICIPATION_FULL` | Signed deliveries reached maxParticipants | Pick another task |
 | `TASK_NOT_CLAIMABLE` | Task not PUBLISHED/RUNNING | Refresh list |
+| `TASK_PUBLISHER_CANNOT_CLAIM` (403) | Your address published this task; publisher and executor must differ | Pick another task |
 | `TASK_RISK_BLOCKED` (422) | Task asks for a direct transfer or wallet secrets, or has no reviewed spec | Do not perform it; tell the user; pick another task |
 | `TASK_CLAIM_INACTIVE` | Lease expired or released | Re-claim if still open |
 | `TASK_IDEMPOTENCY_CONFLICT` | Same key, different body | Reuse the original request |

@@ -44,7 +44,8 @@ export const TaskDraftFieldsSchema = z.object({
   runDays: draftFieldSchema(z.number().int().positive()),
   allocationMode: draftFieldSchema(AllocationModeSchema),
   topK: draftFieldSchema(z.number().int().positive()),
-  maxParticipants: draftFieldSchema(z.number().int().min(1).max(24)),
+  /** 0 means unlimited; a custom cap fits the protocol's uint16 field. */
+  maxParticipants: draftFieldSchema(z.number().int().min(0).max(65_535)),
   passingThreshold: draftFieldSchema(z.number().int().min(50).max(90)),
   minimumTier: draftFieldSchema(TierSchema),
   cost: draftFieldSchema(RuleCostSchema),

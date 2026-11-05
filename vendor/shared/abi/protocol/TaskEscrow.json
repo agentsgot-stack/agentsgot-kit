@@ -131,6 +131,43 @@
   },
   {
     "type": "function",
+    "name": "amendSpec",
+    "inputs": [
+      {
+        "name": "taskId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "newSpecHash",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "amendedAtOf",
+    "inputs": [
+      {
+        "name": "taskId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "arbitrationCourt",
     "inputs": [],
     "outputs": [
@@ -207,13 +244,13 @@
     "name": "cancel",
     "inputs": [
       {
-        "name": "taskId",
+        "name": "",
         "type": "bytes32",
         "internalType": "bytes32"
       }
     ],
     "outputs": [],
-    "stateMutability": "nonpayable"
+    "stateMutability": "pure"
   },
   {
     "type": "function",
@@ -281,7 +318,7 @@
   },
   {
     "type": "function",
-    "name": "claimReward",
+    "name": "claimExecutorShares",
     "inputs": [
       {
         "name": "taskId",
@@ -289,14 +326,31 @@
         "internalType": "bytes32"
       },
       {
-        "name": "scheduleIds",
-        "type": "uint256[]",
-        "internalType": "uint256[]"
+        "name": "claims",
+        "type": "tuple[]",
+        "internalType": "struct ITaskEscrow.ShareClaim[]",
+        "components": [
+          {
+            "name": "executor",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "share",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "proof",
+            "type": "bytes32[]",
+            "internalType": "bytes32[]"
+          }
+        ]
       }
     ],
     "outputs": [
       {
-        "name": "amount",
+        "name": "paid",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -438,6 +492,30 @@
         "name": "",
         "type": "address",
         "internalType": "contract IEmissionController"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "executorShareClaimed",
+    "inputs": [
+      {
+        "name": "taskId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "executor",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
       }
     ],
     "stateMutability": "view"
@@ -632,6 +710,16 @@
         "name": "caseProof",
         "type": "bytes",
         "internalType": "bytes"
+      },
+      {
+        "name": "share",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "proof",
+        "type": "bytes32[]",
+        "internalType": "bytes32[]"
       }
     ],
     "outputs": [
@@ -719,7 +807,7 @@
   },
   {
     "type": "function",
-    "name": "postResult",
+    "name": "postResultRoot",
     "inputs": [
       {
         "name": "proof",
@@ -806,17 +894,27 @@
       {
         "name": "payees",
         "type": "tuple",
-        "internalType": "struct ITaskEscrow.Payees",
+        "internalType": "struct ITaskEscrow.RootPayees",
         "components": [
           {
-            "name": "executors",
-            "type": "address[]",
-            "internalType": "address[]"
+            "name": "executorsRoot",
+            "type": "bytes32",
+            "internalType": "bytes32"
           },
           {
-            "name": "shares",
-            "type": "uint256[]",
-            "internalType": "uint256[]"
+            "name": "executorCount",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "totalShares",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "primaryExecutor",
+            "type": "address",
+            "internalType": "address"
           },
           {
             "name": "testers",
@@ -924,6 +1022,62 @@
   },
   {
     "type": "function",
+    "name": "rootResultOf",
+    "inputs": [
+      {
+        "name": "taskId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "tuple",
+        "internalType": "struct ITaskEscrow.RootResult",
+        "components": [
+          {
+            "name": "executorsRoot",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "primaryExecutor",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "executorCount",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "waiveCount",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "awardBps",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "settledAt",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "poolPi",
+            "type": "uint256",
+            "internalType": "uint256"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "settleNoSubmission",
     "inputs": [
       {
@@ -1011,6 +1165,25 @@
     ],
     "outputs": [],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "specHashOf",
+    "inputs": [
+      {
+        "name": "taskId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -1183,6 +1356,16 @@
         "name": "taskId",
         "type": "bytes32",
         "internalType": "bytes32"
+      },
+      {
+        "name": "share",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "proof",
+        "type": "bytes32[]",
+        "internalType": "bytes32[]"
       }
     ],
     "outputs": [],
@@ -1384,6 +1567,37 @@
         "type": "uint16",
         "indexed": false,
         "internalType": "uint16"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "ExecutorShareClaimed",
+    "inputs": [
+      {
+        "name": "taskId",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "executor",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "burned",
+        "type": "bool",
+        "indexed": false,
+        "internalType": "bool"
       }
     ],
     "anonymous": false
@@ -1651,6 +1865,37 @@
   },
   {
     "type": "event",
+    "name": "TaskSpecAmended",
+    "inputs": [
+      {
+        "name": "taskId",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "previousSpecHash",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "newSpecHash",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "amendedAt",
+        "type": "uint64",
+        "indexed": false,
+        "internalType": "uint64"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "TesterSeatClaimed",
     "inputs": [
       {
@@ -1742,6 +1987,11 @@
   },
   {
     "type": "error",
+    "name": "CancellationDisabled",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "CourtUnavailable",
     "inputs": []
   },
@@ -1803,12 +2053,17 @@
   },
   {
     "type": "error",
-    "name": "InvalidTransition",
+    "name": "InvalidShareProof",
     "inputs": []
   },
   {
     "type": "error",
-    "name": "InvalidVoucherWindow",
+    "name": "InvalidSpecHash",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidTransition",
     "inputs": []
   },
   {
@@ -1819,6 +2074,11 @@
   {
     "type": "error",
     "name": "NotPostedExecutor",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NothingToClaim",
     "inputs": []
   },
   {
@@ -1841,6 +2101,11 @@
         "internalType": "address"
       }
     ]
+  },
+  {
+    "type": "error",
+    "name": "SpecAlreadyAmended",
+    "inputs": []
   },
   {
     "type": "error",

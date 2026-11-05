@@ -106,6 +106,8 @@ describe("MCP server", () => {
         "get_arb_stream_pending",
         "claim_arb_stream",
         "claim_tester_seat",
+        "list_executor_shares",
+        "vest_executor_shares",
         "submit_fallback_report",
         "get_role_guide",
         "list_actions",

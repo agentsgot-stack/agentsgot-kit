@@ -15,7 +15,6 @@ import {
   computeAppealBond,
   computeAppealFee,
   computeArbitratorWeight,
-  computeAssessmentFee,
   computeCaseFee,
   computeCaseLock,
   computeCurrentTier,
@@ -35,12 +34,14 @@ import {
   formatWeiAsAgt,
   parseAgtToWei,
   qualifiedValidatorRoles,
+  resolveParticipantLimit,
   snapshotDailyFees,
   splitCaseFee,
   splitEmission,
   splitOverturnPenalty,
   TaskTemplate,
   Tier,
+  UNLIMITED_PARTICIPANTS,
   testerPairDecay,
   testerSeatShare,
   tierBaseQuota,
@@ -130,18 +131,13 @@ describe("reserve and deduction", () => {
 
 });
 
-describe("assessment fee", () => {
-  it("computes base fee = 5% of current daily fee", () => {
-    expect(computeAssessmentFee(1, Tier.T1, Tier.T1, defaultParams)).toBe(15n * AGT);
-    expect(computeAssessmentFee(1, Tier.T2, Tier.T2, defaultParams)).toBe(100n * AGT);
-  });
-
-  it("doubles after every N accepted", () => {
-    const fee1 = computeAssessmentFee(1, Tier.T1, Tier.T1, defaultParams);
-    const fee4 = computeAssessmentFee(4, Tier.T1, Tier.T1, defaultParams);
-    const fee7 = computeAssessmentFee(7, Tier.T1, Tier.T1, defaultParams);
-    expect(fee4).toBe(fee1 * 2n);
-    expect(fee7).toBe(fee1 * 4n);
+describe("participant limit", () => {
+  it("treats 0 as unlimited and accepts large custom caps", () => {
+    expect(resolveParticipantLimit(UNLIMITED_PARTICIPANTS, defaultParams)).toBeNull();
+    expect(resolveParticipantLimit(500, defaultParams)).toBe(500);
+    expect(resolveParticipantLimit(undefined, defaultParams)).toBe(9);
+    expect(() => resolveParticipantLimit(65_536, defaultParams)).toThrow(RangeError);
+    expect(() => resolveParticipantLimit(1.5, defaultParams)).toThrow(RangeError);
   });
 });
 

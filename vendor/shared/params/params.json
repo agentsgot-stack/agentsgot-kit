@@ -26,7 +26,7 @@
   "participantsDefault": 9,
   "participantsMin": 1,
   "participantsWarning": 12,
-  "participantsMax": 24,
+  "participantsMax": 65535,
   "deductionExecBps": 6500,
   "deductionTestBps": 1500,
   "deductionRevBps": 1000,

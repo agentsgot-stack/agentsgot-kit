@@ -95,12 +95,21 @@ export function participantLimits(params: Params): ParticipantLimits {
   };
 }
 
-/** Resolves the publisher's cap independently of task tier. */
-export function resolveParticipantLimit(value: number | null | undefined, params: Params): number {
+/** `maxParticipants` value that removes the cap; the task then closes only by deadline or early close. */
+export const UNLIMITED_PARTICIPANTS = 0;
+
+/** Resolves the publisher's cap independently of task tier; `null` means unlimited. */
+export function resolveParticipantLimit(
+  value: number | null | undefined,
+  params: Params,
+): number | null {
   const limits = participantLimits(params);
   const resolved = value ?? limits.default;
+  if (resolved === UNLIMITED_PARTICIPANTS) return null;
   if (!Number.isInteger(resolved) || resolved < limits.min || resolved > limits.max) {
-    throw new RangeError(`maxParticipants must be an integer in [${limits.min}, ${limits.max}]`);
+    throw new RangeError(
+      `maxParticipants must be ${UNLIMITED_PARTICIPANTS} (unlimited) or an integer in [${limits.min}, ${limits.max}]`,
+    );
   }
   return resolved;
 }
@@ -193,26 +202,6 @@ export function computeSegmentedDeduction(
     total += (dailyFee(seg.tier, params, fees) * seg.seconds) / BigInt(SECONDS_PER_DAY);
   }
   return total;
-}
-
-// ---------------------------------------------------------------------------
-// Assessment fee (§4.5)
-// ---------------------------------------------------------------------------
-
-export function computeAssessmentFee(
-  acceptedIndex: number,
-  currentTier: Tier,
-  lockedTier: Tier,
-  params: Params,
-  fees?: TaskDailyFees,
-): bigint {
-  if (!Number.isInteger(acceptedIndex) || acceptedIndex < 1)
-    throw new RangeError("acceptedIndex must be a positive integer");
-  const N = tierBaseQuota(lockedTier, params);
-  const baseBps = parameter(params, "assessmentFeeBaseBps");
-  const fee = dailyFee(currentTier, params, fees);
-  const doublings = Math.floor((acceptedIndex - 1) / N);
-  return bpsDown(fee, baseBps) * BigInt(2 ** doublings);
 }
 
 // ---------------------------------------------------------------------------
@@ -1062,28 +1051,28 @@ export function checkDraft(draft: TaskDraft, params: Params): RuleCheckResult[] 
 
     const limits = participantLimits(params);
     const participantLimit = draft.fields.maxParticipants.value;
+    const unlimited = participantLimit === UNLIMITED_PARTICIPANTS;
     const participantLimitOk =
       participantLimit !== null &&
       Number.isInteger(participantLimit) &&
-      participantLimit >= limits.min &&
-      participantLimit <= limits.max;
+      (unlimited || (participantLimit >= limits.min && participantLimit <= limits.max));
+    const heavy = unlimited || (participantLimit ?? 0) > limits.warning;
     results.push({
       id: "participants.range",
-      level: participantLimitOk
-        ? participantLimit > limits.warning
-          ? "warn"
-          : "ok"
-        : "block",
+      level: participantLimitOk ? (heavy ? "warn" : "ok") : "block",
       message: participantLimitOk
-        ? participantLimit > limits.warning
-          ? `Participant cap ${participantLimit} may increase testing cost and latency`
-          : `Participant cap ${participantLimit} is supported`
-        : `Participant cap must be between ${limits.min} and ${limits.max}`,
+        ? unlimited
+          ? "Participant cap is unlimited; testing cost grows with every delivery"
+          : heavy
+            ? `Participant cap ${participantLimit} may increase testing cost and latency`
+            : `Participant cap ${participantLimit} is supported`
+        : `Participant cap must be ${UNLIMITED_PARTICIPANTS} (unlimited) or between ${limits.min} and ${limits.max}`,
       fields: ["maxParticipants"],
       params: {
         default: String(limits.default),
         warning: String(limits.warning),
         maximum: String(limits.max),
+        unlimited: String(unlimited),
       },
     });
   }

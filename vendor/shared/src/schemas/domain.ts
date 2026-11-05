@@ -62,7 +62,8 @@ export const TaskSpecSchema = z
     runDays: z.number().int().positive(),
     allocationMode: AllocationModeSchema,
     topK: z.number().int().positive().optional(),
-    maxParticipants: z.number().int().min(1).max(24).optional(),
+    /** 0 means unlimited; a custom cap fits the protocol's uint16 field. */
+    maxParticipants: z.number().int().min(0).max(65_535).optional(),
     passingThreshold: z.number().int().min(50).max(90).default(60),
     criticReportHash: Hex32Schema.optional(),
   })

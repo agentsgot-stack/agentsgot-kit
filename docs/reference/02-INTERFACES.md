@@ -106,7 +106,7 @@
 | `computeReserve` | maxTier, runDays, params | `bigint` | F_max × D |
 | `computeDeduction` | lockedTier, billedSeconds, params | `bigint` | F_t × s / 86400 |
 | `computeSegmentedDeduction` | segments[], params | `bigint` | 分段计费 |
-| `computeAssessmentFee` | acceptedIndex, currentTier, lockedTier, params | `bigint` | 5% × F_cur × 2^⌊(k-1)/N⌋ |
+| `resolveParticipantLimit` | maxParticipants, params | `number \| null` | 未传值取默认 9；`0` → `null`（不限）；否则须落在 `[participantsMin, participantsMax]` |
 | `computeSubmissionScore` | criterionScores[], threshold, params | score, passes, isJunk | 逐条汇总 |
 | `allocateExecutorPool` | pool, scores[], mode, topK? | AllocationResult[] | 三种分配模式 |
 | `vestingSchedule` | amount, acceptedAtSeconds, params | tranches[] | 60/25/15% |
@@ -138,7 +138,7 @@
 |---|---|
 | `ParamRegistry` | 存储链上可调参数；升级权限管理 |
 | `TaskEscrow` | 任务发布、预留锁定、扣费计提、退款释放 |
-| `SubmissionRegistry` | 提交登记、评测费托管、提交根上链 |
+| `SubmissionRegistry` | 提交登记、提交根上链（提交免费） |
 | `TesterDraw` | 测试者抽签、报告锁定、复核触发 |
 | `ReviewerDraw` | 复核者抽签、结果上链 |
 | `RewardVesting` | 分期释放、维护期缺陷回收 |
@@ -165,17 +165,27 @@ function claimTask(uint256 taskId) external;
 
 function closeSubmissions(uint256 taskId) external;
 
-struct Payees {
-    address[] executors;
-    uint256[] shares;     // sum == proof.executorPoolAgt
-    address[] testers;    // drawn testers whose signed reports are in the final result
-    address[] reviewers;  // reviewers drawn by the backend (01-RULES §4.9)
+// createTask: maxParticipants = 0 means unlimited; otherwise it must be >= participantsMin (uint16).
+
+struct RootPayees {
+    bytes32 executorsRoot;    // sorted-pair Merkle root of keccak256(abi.encode(taskId, executor, share))
+    uint32 executorCount;     // <= maxParticipants unless unlimited
+    uint256 totalShares;      // == proof.executorPoolPi when P_i > 0
+    address primaryExecutor;  // largest share; target of maintenance-defect burn
+    address[] testers;        // <= 32 recorded testers (role exclusion and tester payout record)
+    address[] reviewers;      // reviewers drawn by the backend (01-RULES §4.9)
 }
+struct ShareClaim { address executor; uint256 share; bytes32[] proof; }
 
 // Step 1: Post validated settlement result; moves status to ResultPosted,
 // starts publisherReviewHours countdown. Does NOT distribute funds.
-// proof.resultsHash MUST equal keccak256(abi.encode(taskId, executors, shares, testers, reviewers)).
-function postResult(SettlementProof calldata proof, Payees calldata payees) external;
+// proof.resultsHash MUST equal keccak256(abi.encode(keccak256("AGENTGRID_RESULTS_ROOT_V1"), taskId,
+// executorsRoot, executorCount, totalShares, primaryExecutor, testers, reviewers)).
+function postResultRoot(SettlementProof calldata proof, RootPayees calldata payees, PiProof calldata piProof) external;
+// After settlement anyone may vest up to 50 leaves per call; each leaf vests once, always to its executor.
+function claimExecutorShares(bytes32 taskId, ShareClaim[] calldata claims) external returns (uint256 vested);
+function rootResultOf(bytes32 taskId) external view returns (RootResult memory);
+function executorShareClaimed(bytes32 taskId, address executor) external view returns (bool);
 
 // Step 2: Publisher calls anytime to accept; anyone calls after reviewDeadline.
 // Executor pool vests (T0 claimable), tester pool → TesterAssignment.payout, reviewer pool split
@@ -185,10 +195,12 @@ function acceptResult(bytes32 taskId) external;
 
 // Publisher or a posted executor opens an appeal inside the review window; pays appealFee
 // = min(appealFeeBps × F_{t*}, appealFeeCapAgt), 100% to revealed jurors.
-function openAppeal(bytes32 taskId, bytes32 reasonHash, bytes calldata caseProof) external returns (bytes32 caseId);
+// An executor proves its leaf with (share, proof); the publisher passes (0, []).
+function openAppeal(bytes32 taskId, bytes32 reasonHash, bytes calldata caseProof, uint256 share, bytes32[] calldata proof)
+    external returns (bytes32 caseId);
 // A posted executor waives its appeal right (irreversible: openAppeal then reverts AlreadyWaived);
-// once every executor waives, the window closes early.
-function waiveAppeal(bytes32 taskId) external;
+// once every executor waives (waiveCount == executorCount), the window closes early.
+function waiveAppeal(bytes32 taskId, uint256 share, bytes32[] calldata proof) external;
 // Publisher opens a maintenance-period defect dispute on an accepted task.
 function openMaintenanceDispute(bytes32 taskId, bytes32 reasonHash, bytes calldata caseProof) external;
 // Tester mining seat: amount comes from the backend-signed EIP-712 TesterSeatClaim(taskId, tester, amount,
@@ -202,7 +214,12 @@ function testerSeatClaimed(bytes32 taskId, address tester) external view returns
 function onCourtRuling(bytes32 taskId, IArbitrationCourt.Ruling ruling, uint16 executorAwardBps) external;
 function onMaintenanceDefect(bytes32 taskId) external returns (uint256 clawedBack);
 
-function cancelTask(uint256 taskId) external;
+// Publisher may replace the off-chain specification hash once while Published.
+// Economic fields stay frozen at createTask. Deliveries signed before amendedAt keep prior criteria.
+function amendSpec(bytes32 taskId, bytes32 newSpecHash) external;
+function amendedAtOf(bytes32 taskId) external view returns (uint64);
+// cancel() permanently reverts (CancellationDisabled). Historical Cancelled tasks still use
+// claimCancellation / finalizeCancellation. Unclaimed / expired tasks use expireTask or settleNoSubmission.
 ```
 
 金额只读视图（全部返回 wei）：
@@ -281,8 +298,6 @@ struct EIP712Domain {
 | TesterTimeout | `TesterTimeout(bytes32 taskId,address tester,uint256 nonce,uint64 deadline)` | 测试者错过报告窗口；后端 `POST /tasks/{id}/tester-timeout-proofs` 签发，`TesterAssignment.slashTimedOutTester` 消费 |
 | SubmissionReceipt | `{ taskId, submissionIndex, executor, cidHash, nonce, deadline }` | 提交回执 |
 | ResultProof | `{ taskId, resultRoot, nonce, deadline }` | 结果上链签名 |
-| ReviewFeePermit | `{ taskId, executor, amount, nonce, deadline }` | 评测费 permit 签名 |
-
 ---
 
 ## 4. HTTP API 路由
@@ -362,11 +377,13 @@ interface AgentGridClient {
   commitTesterDraw(taskId: string): Promise<CommitTesterDrawSeedResponse>;              // 执行者发起
   revealTesterDraw(taskId: string): Promise<RevealTesterDrawResponse>;
   submitTestReport(input: TestReportInput): Promise<CreateSignedTestReportResponse>;    // 测试者签 TestReport
-  getFinalResult(taskId: string): Promise<GetFinalResultIntentResponse>;                // postResult(proof, payees) calldata + drawn reviewers
+  getFinalResult(taskId: string): Promise<GetFinalResultIntentResponse>;                // postResultRoot(proof, rootPayees, piProof) calldata + drawn reviewers
   getAcceptResult(taskId: string): Promise<GetAcceptResultIntentResponse>;              // 发布者 acceptResult calldata
   listActions(query?: { address?: string; subjectId?: string }): Promise<ListAvailableTriggerActionsResponse>;
   listRewards(): Promise<ListRewardTranchesResponse>;
   createRewardClaim(scheduleIds: readonly string[]): Promise<CreateRewardClaimIntentResponse>;
+  listExecutorShares(): Promise<ListExecutorSharesResponse>;                           // 根结算后的执行者叶子：POSTED / CLAIMABLE / CLAIMED
+  vestExecutorShares(taskId: string, includeOthers?: boolean): Promise<CreateExecutorShareClaimIntentResponse>; // claimExecutorShares calldata，调用者钱包发送
   getJoinTesterPoolIntent(): Promise<GetTesterPoolJoinIntentResponse>; // GET /staking/tester-pool-join-intent（含 canJoin）
   prepareJoinTesterPool(input: { chainId: number; testerAssignment: string }): { tx: TransactionRequest }; // 本地编码 fallback
   joinTesterPool(input?: { chainId: number; testerAssignment: string }): Promise<string>; // 默认走 API 意图再发送
@@ -376,7 +393,7 @@ interface AgentGridClient {
 }
 ```
 
-正常路径顺序：接单 → 交付签名（此时占用参与名额）→ 执行者抽签（commit → reveal）→ 测试报告 → `getFinalResult` 上链（进入 `publisherReviewHours` 评审窗口）→ 发布者 `getAcceptResult` 提前验收，或窗口后任意账户发送 `listActions` 中的 `SETTLE_TASK` → `createRewardClaim` 领奖。验收时测试者与复核者一次性到账，`R − C` 记入发布者质押余额。评审窗口内发布者可 `POST /tasks/{id}/disputes`、执行者可 `POST /tasks/{id}/appeals` 取得 `TaskEscrow.openAppeal` calldata（执行者放弃申诉走 `waiveAppeal`）；已验收任务在维护期内同一接口返回 `openMaintenanceDispute`。任务资源 `participation.occupied` / `submitted` 均计已签名交付数；接单本身不占名额。
+正常路径顺序：接单 → 交付签名（此时占用参与名额）→ 执行者抽签（commit → reveal）→ 测试报告 → `getFinalResult` 上链（进入 `publisherReviewHours` 评审窗口）→ 发布者 `getAcceptResult` 提前验收，或窗口后任意账户发送 `listActions` 中的 `SETTLE_TASK` → 任意账户用 `vestExecutorShares`（`claimExecutorShares`，每批最多 50 个叶子）把执行者份额转为释放计划 → `createRewardClaim` 领奖。验收时测试者与复核者一次性到账，`R − C` 记入发布者质押余额。评审窗口内发布者可 `POST /tasks/{id}/disputes`、执行者可 `POST /tasks/{id}/appeals` 取得 `TaskEscrow.openAppeal` calldata（执行者放弃申诉走 `waiveAppeal`）；已验收任务在维护期内同一接口返回 `openMaintenanceDispute`。任务资源 `participation.occupied` / `submitted` 均计已签名交付数；接单本身不占名额。
 
 **委托场景：** 第三方 Agent 调用 `setCredential(delegatedApiKey)` 后，以密钥拥有者的身份执行上述流程。`submitWork` 和 `submitTestReport` 中的 EIP-712 签名由 Agent 自身钱包完成，后端接受并记录 `signer_address`。
 

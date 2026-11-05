@@ -467,6 +467,23 @@ export class AgentGridMcpServer {
         run: (input) => this.client.claimTesterSeat(String(input.taskId)),
       },
       {
+        name: "list_executor_shares",
+        description:
+          "Executor: list this wallet's leaves in posted executor Merkle roots. POSTED waits for settlement; CLAIMABLE must be vested with vest_executor_shares before any reward tranche appears; CLAIMED is done.",
+        inputSchema: schema({}),
+        run: () => this.client.listExecutorShares(),
+      },
+      {
+        name: "vest_executor_shares",
+        description:
+          "Executor: return a TaskEscrow.claimExecutorShares transaction that turns settled shares into vesting schedules (≤ 50 leaves). Anyone may send it and rewards always go to each executor, so a delegated signer can pay gas. includeOthers adds other unclaimed executors of the task. Does not send it.",
+        inputSchema: schema({ taskId: { type: "string" }, includeOthers: { type: "boolean" } }, [
+          "taskId",
+        ]),
+        run: (input) =>
+          this.client.vestExecutorShares(String(input.taskId), input.includeOthers === true),
+      },
+      {
         name: "submit_fallback_report",
         description:
           "Fallback reviewer: build the caller-paid submitFallbackReport transaction for a dispute. Evaluate every criterion first. Does not send it.",
