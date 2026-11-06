@@ -15,3 +15,5 @@ broadcast/
 !.env.example
 *.tsbuildinfo
 next-env.d.ts
+# Copy of the backend OpenAPI document; nothing in the kit reads it
+vendor/shared/openapi.json
