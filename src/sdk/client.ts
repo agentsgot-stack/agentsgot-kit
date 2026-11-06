@@ -25,6 +25,7 @@ import type {
   GetCancellationCompensationIntentResponse,
   GetDisputeResponse,
   GetFinalResultIntentResponse,
+  GetPublisherReadinessResponse,
   GetRewardsBreakdownResponse,
   GetTaskResponse,
   GetTesterPoolJoinIntentResponse,
@@ -44,7 +45,13 @@ import type {
   VerifySiweResponse,
   WaiveTaskAppealResponse,
 } from "#shared/api";
-import type { BinaryResponse, HttpPort, TransactionRequest, WalletPort } from "../ports.js";
+import {
+  AgentGridError,
+  type BinaryResponse,
+  type HttpPort,
+  type TransactionRequest,
+  type WalletPort,
+} from "../ports.js";
 import { bytesToBase64 } from "./base64.js";
 
 export interface JoinTesterPoolInput {
@@ -123,6 +130,18 @@ export class AgentGridClient {
 
   setCredential(credential: string): void {
     this.credential = credential;
+  }
+
+  /**
+   * A separate client acting as the local wallet itself via its own SIWE session, leaving this
+   * client's credential untouched. Use when the local wallet publishes under its own identity.
+   */
+  async signInAsWallet(
+    buildMessage: (input: { nonce: string; address: string }) => string,
+  ): Promise<AgentGridClient> {
+    const session = new AgentGridClient({ http: this.options.http, wallet: this.options.wallet });
+    await session.authenticate(buildMessage);
+    return session;
   }
 
   async authenticate(buildMessage: (input: { nonce: string; address: string }) => string) {
@@ -414,7 +433,35 @@ export class AgentGridClient {
   }
 
   sendTransaction(transaction: TransactionRequest): Promise<string> {
+    const wallet = this.options.wallet.address;
+    if (transaction.from && transaction.from.toLowerCase() !== wallet.toLowerCase()) {
+      return Promise.reject(
+        new AgentGridError(
+          409,
+          "TX_SENDER_MISMATCH",
+          `This transaction must be sent by ${transaction.from}, but the local wallet is ${wallet}. Sending it from here would act as a different account; ask the owner of ${transaction.from} to sign it in their own wallet.`,
+          false,
+          { from: transaction.from, wallet },
+        ),
+      );
+    }
     return this.options.wallet.sendTransaction(transaction);
+  }
+
+  /**
+   * Public on-chain read: can a task be published for `address` now (its stake after reserve, gas)?
+   * With `operator`, also reports that wallet's publish grant from `address` and checks the
+   * operator's gas instead, since it sends createTaskFor.
+   */
+  getPublisherReadiness(
+    address: string,
+    reserveWei?: string,
+    operator?: string,
+  ): Promise<GetPublisherReadinessResponse> {
+    return this.request("GET", `/staking/publisher-readiness/${address}`, undefined, undefined, {
+      ...(reserveWei === undefined ? {} : { reserveWei }),
+      ...(operator === undefined ? {} : { operator }),
+    });
   }
 
   listNotifications(
@@ -529,7 +576,11 @@ export class AgentGridClient {
     return this.request("POST", `/tasks/${taskId}/reviews`, input);
   }
 
-  async publishTask(spec: TaskSpec): Promise<unknown> {
+  /**
+   * Draft, confirm and quote a publish intent for this client's principal. With `operator`, the
+   * quote is createTaskFor(principal, …) to be sent by that wallet under its publish grant.
+   */
+  async publishTask(spec: TaskSpec, options: { operator?: string } = {}): Promise<unknown> {
     const draft = await this.request<{ id: string; version: number }>("POST", "/drafts");
     const now = new Date().toISOString();
     const fields = {
@@ -561,7 +612,10 @@ export class AgentGridClient {
       { fields },
       { "if-match": String(draft.version) },
     );
-    return this.request("POST", `/drafts/${draft.id}/publish-intent`, { version: patched.version });
+    return this.request("POST", `/drafts/${draft.id}/publish-intent`, {
+      version: patched.version,
+      ...(options.operator === undefined ? {} : { operator: options.operator }),
+    });
   }
 
   private request<T>(

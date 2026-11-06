@@ -358,6 +358,26 @@ describe("AgentGridClient", () => {
     expect(wallet.sentTransactions).toEqual([tx]);
   });
 
+  it("refuses a transaction that must come from another wallet", async () => {
+    const { client, wallet } = clientWith(() => ({}));
+    await client.sendTransaction({ ...tx, from: wallet.address });
+    await expect(
+      client.sendTransaction({ ...tx, from: `0x${"a".repeat(40)}` }),
+    ).rejects.toMatchObject({ code: "TX_SENDER_MISMATCH" });
+    expect(wallet.sentTransactions).toHaveLength(1);
+  });
+
+  it("signs the local wallet into a separate session without touching the key", async () => {
+    const { client, http } = clientWith((request) =>
+      request.path === "/auth/nonce" ? { nonce: "n" } : { sessionToken: "ags_wallet" },
+    );
+    const session = await client.signInAsWallet(({ nonce }) => `sign ${nonce}`);
+    await session.getNextActions();
+    await client.getNextActions();
+    expect(http.requests.at(-2)?.token).toBe("ags_wallet");
+    expect(http.requests.at(-1)?.token).toBe("key");
+  });
+
   it("lists notifications with cursor filters", async () => {
     const { client, http } = clientWith(() => ({ items: [], nextCursor: null, hasMore: false }));
     await client.listNotifications({ unread: true, limit: 10 });

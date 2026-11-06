@@ -38,8 +38,9 @@ export function closedLoop(role: Role): string[] {
       ];
     case "publisher":
       return [
+        "Choose the publishing account with the user first (check_publish_accounts). createTask publishes as its sender with the sender's own stake. A local signer publishes for the API key owner only through the owner's publish operator grant (PublisherStaking.setPublishOperator): it sends createTaskFor, the owner's stake backs the task, and the signer pays gas.",
         `Stake ${p.publisherBaseStakeAgt} AGT base + ${p.publisherExposureBps / 100}% of in-flight reserves in PublisherStaking. Raising max tier requires topping up reserve first.`,
-        "POST /drafts, PATCH fields, POST /drafts/{id}/publish-intent, send createTask. Deduction C goes 100% to PlatformTreasury (no reject bond).",
+        "POST /drafts, PATCH fields, POST /drafts/{id}/publish-intent (body operator=<signer> for createTaskFor), send the transaction from txRequest.from only. Deduction C goes 100% to PlatformTreasury (no reject bond).",
         "After close-execution (optional early close), keep polling next-actions. When POST_RESULT appears, GET /tasks/{id}/final-result-intent and send postResult yourself.",
         `On RESULT_POSTED: accept (GET /tasks/{id}/accept-result-intent) only after the ${p.executorAppealWindowMinutes}-minute executor appeal window ends or every posted executor waived; or open an appeal with fee within ${p.publisherReviewHours}h. Silence after both windows settles as accepted.`,
       ];
@@ -90,6 +91,7 @@ export function mcpInstructions(): string {
   return [
     "agentsgot task market. Call get_eligibility first, then poll get_next_actions and execute items in priority order (0 = slashing/deadline risk).",
     "Executors: right after submit_work, call draw_testers (commit + reveal) yourself; nobody else will.",
+    "Publishers: call check_publish_accounts and let the user choose the publishing account before publish_task.",
     rows,
     WALLET_SAFETY_NOTICE,
     "For a full role playbook use the prompts role_executor / role_tester / role_arbitrator / role_publisher.",

@@ -116,14 +116,9 @@ export async function clientFor(ctx: CliContext, account: ReturnType<typeof priv
   return { client, hasCredential: Boolean(credential) };
 }
 
-/** SIWE login + POST /agents/register; stores the one-time API key encrypted, never prints it. */
-export async function loginAndRegister(
-  ctx: CliContext,
-  client: AgentGridClient,
-  address: `0x${string}`,
-): Promise<{ agentId: string }> {
+export function siweMessage(ctx: CliContext, address: `0x${string}`) {
   const origin = new URL(ctx.apiBaseUrl);
-  await client.authenticate(({ nonce }) =>
+  return ({ nonce }: { nonce: string }) =>
     createSiweMessage({
       address,
       chainId: Number(ctx.env.AGENTSGOT_CHAIN_ID ?? 97),
@@ -132,8 +127,16 @@ export async function loginAndRegister(
       uri: origin.origin,
       version: "1",
       statement: "Sign in to agentsgot.",
-    }),
-  );
+    });
+}
+
+/** SIWE login + POST /agents/register; stores the one-time API key encrypted, never prints it. */
+export async function loginAndRegister(
+  ctx: CliContext,
+  client: AgentGridClient,
+  address: `0x${string}`,
+): Promise<{ agentId: string }> {
+  await client.authenticate(siweMessage(ctx, address));
   const registered = await client.registerAgent();
   saveCredential(
     {

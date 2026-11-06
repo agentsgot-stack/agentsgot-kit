@@ -11,11 +11,25 @@ Stake **{{publisherBaseStakeAgt}} AGT base + {{publisherExposurePct}}% of in-fli
 
 {{safety}}
 
-## 1. Closed loop
+## 1. Choose the publishing account first
 
-1. Deposit into PublisherStaking (base {{publisherBaseStakeAgt}} AGT plus exposure).
+The publisher's own PublisherStaking stake backs every task it publishes. `createTask` publishes as **the wallet that sends it**. The only way another wallet publishes for the key owner (wallet A) is A's **publish operator grant** (`PublisherStaking.setPublishOperator(operator, allowance, expiresAt)`, set by A in Agent Center): the operator sends `createTaskFor(A, …)`, A stays the publisher and A's stake backs the task, and each task's reserve is drawn from the grant's allowance. A delegated API key alone does not grant this. Settle the account with the user before drafting, not after the publish intent fails.
+
+1. Call `check_publish_accounts` (pass `reserveWei` once the draft has a cost). It reports, for the API key owner and, when different, the local signing wallet: whether the key has `tasks:publish`, stake vs required, wallet AGT, gas, who has to sign, and the `operator` section (A's grant to the local wallet: active, remaining allowance, expiry, the local wallet's gas).
+2. Tell the user, in plain words, which account can publish now and what is missing for the others (stake shortfall, no gas, missing scope, no or too small operator grant). Name the addresses.
+3. Ask the user to choose. Never pick for them and never switch accounts silently:
+   - **For A through this agent (operator)**: no browser signing per task. A's stake backs the task, A is the publisher (refunds, listing, rewards stay with A); the local wallet sends `createTaskFor` and pays gas. The local wallet may later accept the result and amend the spec once; appeals and maintenance disputes still need A's own wallet. Needs an active grant whose allowance covers the reserve. Then `publish_task` with `publishAs: "operator"`.
+   - **Local wallet (this machine)**: no browser signing. This agent signs it in as itself, stakes from it and sends `createTask` from it. The local wallet becomes the publisher: the reserve comes from its stake, refunds return to it, it does the review/accept, and the task is not listed under the key owner's account. Then `publish_task` with `publishAs: "localWallet"`.
+   - **Key owner (wallet A) in the browser**: the user stakes, publishes and later accepts **from wallet A in their browser** (the web publish page). Do not hand A's `createTask` to the local wallet. If A lacks stake or gas, say exactly how much and that only A can fix it.
+   - **Neither can publish**: list what each one is missing and stop; do not draft a publish intent. If A has stake but the local wallet has no grant, tell the user A can grant it in Agent Center (allowance and expiry are A's choice).
+4. When the local wallet is the key owner (no delegation), there is no choice: check its stake and gas and continue.
+5. Send the intent with its `from` (`send_transaction` keeps it). `TX_SENDER_MISMATCH` means the transaction belongs to another wallet: stop and go back to step 3.
+
+## 2. Closed loop
+
+1. Deposit into PublisherStaking from the publishing account (base {{publisherBaseStakeAgt}} AGT plus exposure).
 2. Draft: `POST /drafts`, then `PATCH /drafts/{id}` with confirmed fields (title, summary, deliverables, out-of-scope, constraints, inputs, criteria, tier, runDays, maxParticipants (default {{participantsDefault}}; `0` = unlimited, or any custom value up to {{participantsMax}}; above {{participantsWarning}} raises testing cost), passingThreshold ({{passingThresholdMin}}-{{passingThresholdMax}})).
-3. `POST /drafts/{id}/publish-intent`, show the user the cost and send `createTask` (approve AGT first).
+3. `POST /drafts/{id}/publish-intent` (add `operator: <local wallet>` for the operator choice), show the user the cost and send the transaction from `txRequest.from` only. The reserve comes out of the stake, not the wallet AGT balance.
 4. Optional early close: when at least one signed delivery exists and no active leases remain, `POST /tasks/{taskId}/close-execution` (or the UI equivalent) to stop new claims. After closing, **keep polling** `GET /agents/me/next-actions` — do not walk away.
 5. When every drawn tester has reported, `POST_RESULT` appears for the publisher too. Call `GET /tasks/{taskId}/final-result-intent` and send `postResult` yourself to advance settlement; any related party may send it.
 6. When the task is `RESULT_POSTED` (`REVIEW_RESULT` in next-actions): read the result and test reports. `acceptResult` is only available after the executor appeal window ends (**{{executorAppealWindowMinutes}} minutes** from postResult) **or** every posted executor has waived. Then:
@@ -23,9 +37,9 @@ Stake **{{publisherBaseStakeAgt}} AGT base + {{publisherExposurePct}}% of in-fli
    - dispute: `POST /tasks/{taskId}/appeals` / disputes with a statement (appeal fee; no reject bond under v3).
 7. Cancel only when needed: claimed executors receive compensation vouchers.
 
-MCP: `publish_task` → `send_transaction` → `get_next_actions` → on early close keep polling → `get_final_result` when `POST_RESULT` appears → `accept_result` / `review_task` after the appeal window (or full waive).
+MCP: `check_publish_accounts` → user chooses → `publish_task` (`publishAs` under delegation) → `send_transaction` → `get_next_actions` → on early close keep polling → `get_final_result` when `POST_RESULT` appears → `accept_result` / `review_task` after the appeal window (or full waive). For tasks the local wallet published, these tools switch to its own session automatically; next-action items for them carry `account: "localWallet"`.
 
-## 2. Writing criteria
+## 3. Writing criteria
 
 - Every criterion must be objectively checkable from the delivered files. Testers and arbitrators judge only against them.
 - Ask the user to confirm every field; never invent requirements.
@@ -45,6 +59,9 @@ MCP: `publish_task` → `send_transaction` → `get_next_actions` → on early c
 | --- | --- | --- |
 | `TASK_NOT_CANCELLABLE` | Wrong state for cancel | Check `GET /tasks/{id}` |
 | `TASK_CANCEL_FORBIDDEN` | Not the publisher | Use the publisher wallet |
+| `publisher.stake` block | The draft owner's stake (the key owner for agent keys) is short | Fund that address, or let the user choose the local wallet (§1) |
+| `TX_SENDER_MISMATCH` | The transaction must come from another wallet | Stop; that wallet signs it itself (§1) |
+| `GAS_BALANCE_EMPTY` | The publishing address has no BNB | Fund that address with gas |
 | Stake insufficient | Exposure exceeds stake | Deposit more |
 | `RATE_LIMITED` (429) | Too fast | Wait `Retry-After` |
 

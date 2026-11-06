@@ -1,5 +1,5 @@
 import { AgentGridMcpServer, serveStdio } from "../mcp/server.js";
-import { type CliContext, clientFor, loadAccount } from "./context.js";
+import { type CliContext, clientFor, loadAccount, siweMessage } from "./context.js";
 
 async function* lines(chunks: AsyncIterable<string>) {
   let pending = "";
@@ -20,7 +20,8 @@ export async function mcpCommand(ctx: CliContext): Promise<void> {
   const account = await loadAccount(ctx);
   const { client } = await clientFor(ctx, account);
   process.stdin.setEncoding("utf8");
-  await serveStdio(new AgentGridMcpServer(client), {
+  const walletSession = () => client.signInAsWallet(siweMessage(ctx, account.address));
+  await serveStdio(new AgentGridMcpServer(client, { walletSession }), {
     lines: lines(process.stdin as AsyncIterable<string>),
     write: (value) => process.stdout.write(value),
   });

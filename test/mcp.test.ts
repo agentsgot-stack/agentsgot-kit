@@ -3,11 +3,33 @@ import { defaultParams } from "#shared/params";
 import { AgentGridMcpServer, serveStdio } from "../src/mcp/server.js";
 import type { AgentGridClient } from "../src/sdk/client.js";
 
+const LOCAL = `0x${"1".repeat(40)}`;
+const OWNER = `0x${"a".repeat(40)}`;
+
+function readiness(address: string, ready: boolean) {
+  return {
+    address,
+    stakeWei: ready ? "1000" : "0",
+    inFlightReserveWei: "0",
+    requiredStakeWei: "1000",
+    walletAgtWei: "0",
+    gasWei: ready ? "1" : "0",
+    ready,
+    missing: ready ? [] : [{ code: "GAS_BALANCE_EMPTY", description: "no gas" }],
+  };
+}
+
 function server() {
   const client = {
+    walletAddress: LOCAL,
+    getEligibility: vi.fn(async () => ({
+      address: LOCAL,
+      roles: { publisher: { missing: [] } },
+    })),
     listTasks: vi.fn(async () => ({ items: [], nextCursor: null, hasMore: false })),
     getTask: vi.fn(async (taskId: string) => ({
       taskId,
+      publisher: OWNER,
       settlement: {
         deliveries: [
           {
@@ -80,6 +102,7 @@ describe("MCP server", () => {
         "submit_work",
         "claim_rewards",
         "join_tester_pool",
+        "check_publish_accounts",
         "publish_task",
         "accept_result",
         "get_next_actions",
@@ -280,6 +303,136 @@ describe("MCP server", () => {
     await call(mcp, "publish_task", input);
     expect(client.publishTask).toHaveBeenCalledOnce();
   });
+  describe("publishing under a delegated key", () => {
+    function delegated(local: { ready: boolean; operator?: boolean }) {
+      const { client } = server();
+      const session = {
+        publishTask: vi.fn(async () => ({ id: "local-intent" })),
+        getAcceptResult: vi.fn(async () => ({ tx: { to: "0x9" } })),
+        getNextActions: vi.fn(async () => ({
+          address: LOCAL,
+          asOf: "now",
+          items: [{ kind: "REVIEW_RESULT", priority: 1, deadline: null }],
+        })),
+      } as unknown as AgentGridClient;
+      Object.assign(client, {
+        getEligibility: vi.fn(async () => ({
+          address: OWNER,
+          roles: { publisher: { missing: [] } },
+        })),
+        getPublisherReadiness: vi.fn(
+          async (address: string, _reserve?: string, operator?: string) =>
+            operator
+              ? {
+                  ...readiness(address, Boolean(local.operator)),
+                  operator: { address: operator, active: Boolean(local.operator) },
+                }
+              : readiness(address, address === LOCAL ? local.ready : false),
+        ),
+        getNextActions: vi.fn(async () => ({ address: OWNER, asOf: "now", items: [] })),
+      });
+      const walletSession = vi.fn(async () => session);
+      return {
+        client,
+        session,
+        walletSession,
+        mcp: new AgentGridMcpServer(client, { walletSession }),
+      };
+    }
+
+    it("reports both accounts and recommends the local wallet when only it can publish", async () => {
+      const { mcp } = delegated({ ready: true });
+      const result = await call(mcp, "check_publish_accounts", { reserveWei: "10" });
+      expect(result).toMatchObject({
+        result: {
+          structuredContent: {
+            delegated: true,
+            recommendation: "localWallet",
+            keyOwner: { address: OWNER, canPublish: false, hasPublishScope: true },
+            localWallet: { address: LOCAL, canPublish: true },
+          },
+        },
+      });
+    });
+
+    it("recommends publishing for the key owner when it granted the local wallet", async () => {
+      const { client, mcp } = delegated({ ready: true, operator: true });
+      const result = await call(mcp, "check_publish_accounts", { reserveWei: "10" });
+      expect(result).toMatchObject({
+        result: {
+          structuredContent: {
+            recommendation: "operator",
+            operator: { address: OWNER, canPublish: true, operator: { address: LOCAL } },
+            localWallet: { canPublish: true },
+          },
+        },
+      });
+      expect(client.getPublisherReadiness).toHaveBeenCalledWith(OWNER, "10", LOCAL);
+      expect(
+        (result?.result as { structuredContent: { next: string } }).structuredContent.next,
+      ).toContain("publishAs=localWallet");
+    });
+
+    it("explains how to grant the local wallet when no account can publish", async () => {
+      const { mcp } = delegated({ ready: false });
+      const result = await call(mcp, "check_publish_accounts", {});
+      const content = (
+        result?.result as { structuredContent: { recommendation: string; next: string } }
+      ).structuredContent;
+      expect(content.recommendation).toBe("none");
+      expect(content.next).toContain("setPublishOperator");
+    });
+
+    it("publishes for the key owner with the local wallet as operator", async () => {
+      const { client, walletSession, mcp } = delegated({ ready: false, operator: true });
+      await call(mcp, "publish_task", {
+        specification: {},
+        idempotencyKey: "op",
+        publishAs: "operator",
+      });
+      expect(client.publishTask).toHaveBeenCalledWith({}, { operator: LOCAL });
+      expect(walletSession).not.toHaveBeenCalled();
+    });
+
+    it("requires an explicit publishAs and refuses keyOwner from the local signer", async () => {
+      const { client, mcp } = delegated({ ready: true });
+      const spec = { specification: {}, idempotencyKey: "p" };
+      for (const args of [spec, { ...spec, publishAs: "keyOwner" }]) {
+        const result = await call(mcp, "publish_task", args);
+        expect(result?.result).toMatchObject({ isError: true });
+      }
+      expect(client.publishTask).not.toHaveBeenCalled();
+    });
+
+    it("publishes as the local wallet through its own session", async () => {
+      const { client, session, walletSession, mcp } = delegated({ ready: true });
+      const result = await call(mcp, "publish_task", {
+        specification: {},
+        idempotencyKey: "p",
+        publishAs: "localWallet",
+      });
+      expect(result).toMatchObject({ result: { structuredContent: { id: "local-intent" } } });
+      expect(walletSession).toHaveBeenCalledOnce();
+      expect(session.publishTask).toHaveBeenCalledOnce();
+      expect(client.publishTask).not.toHaveBeenCalled();
+    });
+
+    it("routes publisher actions and next actions for local-wallet tasks", async () => {
+      const { client, session, mcp } = delegated({ ready: true });
+      vi.mocked(client.getTask).mockResolvedValueOnce({ publisher: LOCAL } as never);
+      await call(mcp, "accept_result", { taskId: "t" });
+      expect(session.getAcceptResult).toHaveBeenCalledWith("t");
+      expect(client.getAcceptResult).not.toHaveBeenCalled();
+
+      vi.mocked(client.listTasks).mockResolvedValueOnce({ items: [{}] } as never);
+      expect(await call(mcp, "get_next_actions")).toMatchObject({
+        result: {
+          structuredContent: { items: [{ kind: "REVIEW_RESULT", account: "localWallet" }] },
+        },
+      });
+    });
+  });
+
   it("accept_result returns the acceptance transaction and does not send", async () => {
     const { client, mcp } = server();
     expect(await call(mcp, "accept_result", { taskId: "task" })).toMatchObject({

@@ -31,7 +31,10 @@ export const TOOL_NEXT_STEPS: Record<string, string> = {
   join_tester_pool: "If canJoin, ask the user to approve and send_transaction; then heartbeat.",
   join_arbitrator_pool:
     "If canJoin, ask the user to approve and send_transaction; then list_arbitrator_cases.",
-  publish_task: "Ask the user to approve, then send_transaction (createTask).",
+  check_publish_accounts:
+    "Tell the user which account can publish and what each choice means; get their explicit choice before publish_task.",
+  publish_task:
+    "Ask the user to approve, then send_transaction with the returned txRequest (keeps its from).",
   accept_result: "Ask the user to approve, then send_transaction.",
   review_task: "Ask the user to approve, then send_transaction.",
   get_next_actions:
@@ -78,11 +81,23 @@ function object(input: unknown): Record<string, unknown> {
   return input as Record<string, unknown>;
 }
 
+export interface AgentGridMcpServerOptions {
+  /** SIWE-signs the local wallet into its own session; enables publishing as the local wallet. */
+  walletSession?: () => Promise<AgentGridClient>;
+}
+
+type PublishAs = "keyOwner" | "operator" | "localWallet";
+
 export class AgentGridMcpServer {
   private readonly tools: Tool[];
   private readonly publishIntents = new Map<string, Promise<unknown>>();
+  private keyOwner: Promise<string> | undefined;
+  private walletClient: Promise<AgentGridClient> | undefined;
 
-  constructor(private readonly client: AgentGridClient) {
+  constructor(
+    private readonly client: AgentGridClient,
+    private readonly options: AgentGridMcpServerOptions = {},
+  ) {
     const schema = (properties: Record<string, unknown>, required: string[] = []) => ({
       type: "object",
       properties,
@@ -204,34 +219,54 @@ export class AgentGridMcpServer {
         },
       },
       {
+        name: "check_publish_accounts",
+        description:
+          "Call before publish_task. The publisher's PublisherStaking stake backs every task it publishes. Reports, for the API key owner and (when different) the local signing wallet: publish scope, stake vs required, wallet AGT, gas, who has to sign, and whether the key owner granted the local wallet a publish operator allowance (operator: the local wallet sends createTaskFor for the owner and pays gas, the owner's stake backs the task). Pass reserveWei from the draft cost to include the new task.",
+        inputSchema: schema({ reserveWei: { type: "string" } }),
+        run: (input) =>
+          this.publishAccounts(
+            input.reserveWei === undefined ? undefined : String(input.reserveWei),
+          ),
+      },
+      {
         name: "publish_task",
-        description: "Build a TaskSpec V4 publish intent. Requires scope tasks:publish.",
+        description:
+          "Build a TaskSpec V4 publish intent; txRequest.from is the only wallet that may send it. When the local wallet differs from the API key owner, publishAs is required and must be the user's explicit choice after check_publish_accounts: operator publishes for the key owner (its stake and identity) with the local wallet sending createTaskFor under the owner's publish grant; keyOwner is refused here (the owner publishes from their own wallet on the web); localWallet signs the local wallet into its own session and makes it the publisher. Requires scope tasks:publish for keyOwner and operator.",
         inputSchema: schema(
-          { specification: { type: "object" }, idempotencyKey: { type: "string" } },
+          {
+            specification: { type: "object" },
+            idempotencyKey: { type: "string" },
+            publishAs: { type: "string", enum: ["operator", "keyOwner", "localWallet"] },
+          },
           ["specification", "idempotencyKey"],
         ),
         run: (input) => {
           const key = String(input.idempotencyKey);
           const existing = this.publishIntents.get(key);
           if (existing) return existing;
-          const created = this.client.publishTask(input.specification as TaskSpec);
+          const created = this.publish(
+            input.publishAs as PublishAs | undefined,
+            input.specification as TaskSpec,
+          );
           this.publishIntents.set(key, created);
+          created.catch(() => this.publishIntents.delete(key));
           return created;
         },
       },
       {
         name: "accept_result",
         description:
-          "Return the publisher's caller-paid acceptance transaction for a posted result without sending it. Requires scope tasks:publish.",
+          "Return the publisher's caller-paid acceptance transaction for a posted result without sending it. Uses the local wallet's own session when it is the task's publisher. A local wallet holding the publisher's active publish operator grant may send it like the publisher; any other sender has to wait for the review window to end. Requires scope tasks:publish.",
         inputSchema: schema({ taskId: { type: "string" } }, ["taskId"]),
-        run: (input) => this.client.getAcceptResult(String(input.taskId)),
+        run: async (input) =>
+          (await this.publisherClient(String(input.taskId))).getAcceptResult(String(input.taskId)),
       },
       {
         name: "get_next_actions",
         description:
-          "Every pending duty for this wallet across roles (claim heartbeat, sign delivery, tester draw commit/reveal, test reports, postResult, publisher review, arbitration confirm/commit/reveal, reward claims, triggers), sorted by priority then deadline. Each item names the exact request to make. Poll every few minutes.",
+          "Every pending duty for this wallet across roles (claim heartbeat, sign delivery, tester draw commit/reveal, test reports, postResult, publisher review, arbitration confirm/commit/reveal, reward claims, triggers), sorted by priority then deadline. Each item names the exact request to make. Tasks the local wallet published under its own identity are merged in with account=localWallet. Poll every few minutes.",
         inputSchema: schema({}),
-        run: () => this.client.getNextActions(),
+        run: () => this.nextActions(),
       },
       {
         name: "get_eligibility",
@@ -333,8 +368,8 @@ export class AgentGridMcpServer {
           },
           ["taskId", "accept"],
         ),
-        run: (input) =>
-          this.client.reviewTask(String(input.taskId), {
+        run: async (input) =>
+          (await this.publisherClient(String(input.taskId))).reviewTask(String(input.taskId), {
             accept: Boolean(input.accept),
             ...(input.reason === undefined ? {} : { reason: String(input.reason) }),
             ...(input.criteria === undefined ? {} : { criteria: input.criteria as string[] }),
@@ -395,10 +430,11 @@ export class AgentGridMcpServer {
       {
         name: "send_transaction",
         description:
-          "Send a caller-paid transaction intent ({chainId,to,data,value}) from the local wallet. Only call after the user approved on-chain actions for this session.",
+          "Send a caller-paid transaction intent ({chainId,from?,to,data,value}) from the local wallet. Always pass from when the intent has one: a mismatch with the local wallet is refused (TX_SENDER_MISMATCH) because that account must sign in its own wallet. Only call after the user approved on-chain actions for this session.",
         inputSchema: schema(
           {
             chainId: { type: "integer" },
+            from: { type: "string" },
             to: { type: "string" },
             data: { type: "string" },
             value: { type: "string" },
@@ -408,6 +444,7 @@ export class AgentGridMcpServer {
         run: async (input) => ({
           txHash: await this.client.sendTransaction({
             chainId: Number(input.chainId),
+            ...(input.from === undefined ? {} : { from: String(input.from) }),
             to: String(input.to),
             data: String(input.data),
             value: String(input.value),
@@ -449,7 +486,7 @@ export class AgentGridMcpServer {
       {
         name: "open_appeal",
         description:
-          "Build a caller-paid TaskEscrow.openAppeal intent plus the appeal-fee approval. Does not send it.",
+          "Build a caller-paid TaskEscrow.openAppeal intent plus the appeal-fee approval. Does not send it. The sender pays the fee and must be a posted executor or the task publisher itself; a publish operator cannot appeal for the publisher.",
         inputSchema: schema(
           {
             taskId: { type: "string" },
@@ -550,6 +587,136 @@ export class AgentGridMcpServer {
           }),
       },
     ];
+  }
+
+  /** The API key owner (principal); differs from the local wallet under delegation. */
+  private ownerAddress(): Promise<string> {
+    this.keyOwner ??= this.client
+      .getEligibility()
+      .then(({ address }) => address.toLowerCase())
+      .catch((error: unknown) => {
+        this.keyOwner = undefined;
+        throw error;
+      });
+    return this.keyOwner;
+  }
+
+  private localWalletClient(): Promise<AgentGridClient> {
+    const factory = this.options.walletSession;
+    if (!factory)
+      return Promise.reject(
+        new Error(
+          "This host cannot sign the local wallet into its own session; publish from the key owner's wallet instead.",
+        ),
+      );
+    this.walletClient ??= factory().catch((error: unknown) => {
+      this.walletClient = undefined;
+      throw error;
+    });
+    return this.walletClient;
+  }
+
+  private async publish(publishAs: PublishAs | undefined, spec: TaskSpec): Promise<unknown> {
+    const local = this.client.walletAddress.toLowerCase();
+    const owner = await this.ownerAddress();
+    if (owner === local) return this.client.publishTask(spec);
+    if (publishAs === "operator") return this.client.publishTask(spec, { operator: local });
+    if (publishAs === "localWallet") return (await this.localWalletClient()).publishTask(spec);
+    if (publishAs === "keyOwner")
+      throw new Error(
+        `Only ${owner} can send createTask as the key owner, and this agent only holds ${local}. Ask the user to publish from ${owner} on the web publish page, or choose publishAs=operator if check_publish_accounts shows ${owner} granted ${local} a publish operator allowance.`,
+      );
+    throw new Error(
+      `The local wallet ${local} is not the API key owner ${owner}. Run check_publish_accounts, tell the user which account can publish, and pass publishAs with their explicit choice.`,
+    );
+  }
+
+  /** Publisher-only calls must come from the task's publisher identity. */
+  private async publisherClient(taskId: string): Promise<AgentGridClient> {
+    const local = this.client.walletAddress.toLowerCase();
+    const task = await this.client.getTask(taskId);
+    if (task.publisher.toLowerCase() !== local) return this.client;
+    return (await this.ownerAddress()) === local ? this.client : this.localWalletClient();
+  }
+
+  private async nextActions() {
+    const own = await this.client.getNextActions();
+    const local = this.client.walletAddress.toLowerCase();
+    if (own.address.toLowerCase() === local || !this.options.walletSession) return own;
+    const published = await this.client.listTasks({ publisher: local, limit: 1 });
+    if (!published.items.length) return own;
+    const mine = await (await this.localWalletClient()).getNextActions();
+    const items = [
+      ...own.items,
+      ...mine.items.map((item) => ({ ...item, account: "localWallet" as const })),
+    ].sort(
+      (left, right) =>
+        left.priority - right.priority ||
+        (left.deadline ?? "\uffff").localeCompare(right.deadline ?? "\uffff"),
+    );
+    return { ...own, items };
+  }
+
+  private async publishAccounts(reserveWei: string | undefined) {
+    const eligibility = await this.client.getEligibility();
+    const owner = eligibility.address.toLowerCase();
+    this.keyOwner ??= Promise.resolve(owner);
+    const local = this.client.walletAddress.toLowerCase();
+    const delegated = owner !== local;
+    const hasPublishScope = !eligibility.roles.publisher.missing.some(
+      ({ code }) => code === "SCOPE_MISSING",
+    );
+    const [ownerState, operatorState, localState] = await Promise.all([
+      this.client.getPublisherReadiness(owner, reserveWei),
+      delegated ? this.client.getPublisherReadiness(owner, reserveWei, local) : null,
+      delegated ? this.client.getPublisherReadiness(local, reserveWei) : null,
+    ]);
+    const keyOwner = {
+      ...ownerState,
+      hasPublishScope,
+      canPublish: ownerState.ready && hasPublishScope,
+      signer: delegated
+        ? "the user, from the key owner's own wallet on the web publish page"
+        : "this agent (local wallet)",
+    };
+    const localWallet = localState && {
+      ...localState,
+      canPublish: localState.ready && Boolean(this.options.walletSession),
+      signer: "this agent (local wallet), under the local wallet's own sign-in",
+      consequences:
+        "The local wallet becomes the publisher: the reserve comes from its stake, refunds return to it, it reviews and accepts the result, and the task is not listed under the key owner's account.",
+    };
+    const operator = operatorState && {
+      ...operatorState,
+      hasPublishScope,
+      canPublish: operatorState.ready && hasPublishScope,
+      signer: `this agent (local wallet), sending createTaskFor for ${owner}`,
+      consequences: `${owner} stays the publisher: the reserve comes from its stake and is drawn from its grant allowance, refunds return to it and the task is listed under its account. The local wallet only signs and pays gas; it may accept the result and amend the spec once, but appeals and maintenance disputes still need ${owner}'s own wallet.`,
+      grant: operatorState.operator?.active
+        ? "Active. The key owner can change or revoke it in Agent Center (PublisherStaking.setPublishOperator)."
+        : `Not granted. ${owner} can authorize ${local} in Agent Center → publish operator (PublisherStaking.setPublishOperator(${local}, allowance, expiresAt)); after that this agent publishes for it without browser signing per task.`,
+    };
+    const ready = [
+      operator?.canPublish && "operator",
+      localWallet?.canPublish && "localWallet",
+      keyOwner.canPublish && "keyOwner",
+    ].filter(Boolean) as PublishAs[];
+    const recommendation: PublishAs | "none" = ready[0] ?? "none";
+    const options: Record<PublishAs, string> = {
+      operator: `for the key owner ${owner} through this agent (publishAs=operator; the owner's stake, no browser signing)`,
+      localWallet: `as the local wallet ${local} (publishAs=localWallet; its own stake and identity, consequences above)`,
+      keyOwner: `from the key owner's own wallet ${owner} on the web publish page (the user signs there)`,
+    };
+    const next = !delegated
+      ? keyOwner.canPublish
+        ? "publish_task, then send_transaction after the user approves."
+        : "Report each missing item and the address to fund; do not publish yet."
+      : recommendation === "none"
+        ? `Neither account can publish yet: report each missing item (stake shortfall, gas, publish scope, operator grant) and which address it applies to. ${operator?.grant ?? ""}`.trim()
+        : recommendation === "keyOwner" && ready.length === 1
+          ? `Only the key owner ${owner} can publish, from its own wallet on the web publish page. ${operator?.grant ?? ""}`.trim()
+          : `Ask the user to choose: ${ready.map((choice) => options[choice]).join("; or ")}. Pass publishAs with their answer.`;
+    return { delegated, keyOwner, operator, localWallet, recommendation, next };
   }
 
   async handle(request: JsonRpcRequest): Promise<Record<string, unknown> | null> {

@@ -22,6 +22,8 @@ export interface HttpPort {
 
 export interface TransactionRequest {
   chainId: number;
+  /** Address that must send it (e.g. createTask makes msg.sender the publisher). */
+  from?: string;
   to: string;
   data: string;
   value: string;

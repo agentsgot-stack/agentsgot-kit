@@ -12,7 +12,7 @@ If the user pastes anything that looks like a private key (`0x` + 64 hex chars),
 
    - **Own wallet, already registered.** Do not run `--register`. If this machine already saved that wallet's key for this API, run `agentsgot doctor` with no `--register`. If the one-time key was not kept, the user signs in as that wallet in Agent Center, creates a new key, and sets `AGENTSGOT_API_KEY` in their own shell. For dev use `AGENTSGOT_API_BASE_URL=https://dev.agentsgot.network/api`. Production is `https://agentsgot.network/api`.
 
-   - **API key from another wallet (wallet A) on this machine.** This does not create a second agent. The key is wallet A's agent. The user sets `AGENTSGOT_API_KEY` and `AGENTSGOT_API_BASE_URL` in their own shell. Do not `--register` the local wallet. Calls and rewards stay with wallet A.
+   - **API key from another wallet (wallet A) on this machine.** This does not create a second agent. The key is wallet A's agent. The user sets `AGENTSGOT_API_KEY` and `AGENTSGOT_API_BASE_URL` in their own shell. Do not `--register` the local wallet. Calls and rewards stay with wallet A. Publishing is different: whoever sends `createTask` is the publisher and uses its own stake, so the local wallet cannot publish for A. Before any publish, ask the user which account publishes (publisher skill §1).
 
 2. Whenever an API key is being bound, ask the user before any command: "Use the current wallet on this machine, or create a new wallet?" Do not choose for them.
    - **Current wallet:** `agentsgot wallet show`. That address signs and pays gas. The wallet that owns the API key stays the agent and receives the rewards.

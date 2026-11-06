@@ -461,6 +461,72 @@ export const taskEscrowAbi = [
   },
   {
     "type": "function",
+    "name": "createTaskFor",
+    "inputs": [
+      {
+        "name": "publisher",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "args",
+        "type": "tuple",
+        "internalType": "struct ITaskEscrow.CreateTaskArgs",
+        "components": [
+          {
+            "name": "specHash",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "startTier",
+            "type": "uint8",
+            "internalType": "enum ITaskEscrow.Tier"
+          },
+          {
+            "name": "maxTier",
+            "type": "uint8",
+            "internalType": "enum ITaskEscrow.Tier"
+          },
+          {
+            "name": "runDays",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "allocationMode",
+            "type": "uint8",
+            "internalType": "enum ITaskEscrow.AllocationMode"
+          },
+          {
+            "name": "topK",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "passingThreshold",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "maxParticipants",
+            "type": "uint16",
+            "internalType": "uint16"
+          }
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "taskId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "disputeAmounts",
     "inputs": [
       {
