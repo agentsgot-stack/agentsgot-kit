@@ -1,5 +1,6 @@
 import { mcpInstructions, roleGuide } from "../guides.js";
 import { isRole, ROLES } from "../roles.js";
+import { base64ToBytes } from "../sdk/base64.js";
 import type {
   AgentGridClient,
   ArbitrationVote,
@@ -59,6 +60,18 @@ export const TOOL_NEXT_STEPS: Record<string, string> = {
   get_role_guide: "get_eligibility, then get_next_actions.",
 };
 
+type DeliveryFileInput = { name: string; text?: string; base64?: string; contentType?: string };
+
+function deliveryBlob(file: DeliveryFileInput): Blob {
+  if (typeof file.base64 === "string")
+    return new Blob([base64ToBytes(file.base64)], {
+      type: file.contentType ?? "application/octet-stream",
+    });
+  if (typeof file.text === "string")
+    return new Blob([file.text], { type: file.contentType ?? "text/plain" });
+  throw new Error(`Delivery file ${file.name} needs text or base64 content.`);
+}
+
 function object(input: unknown): Record<string, unknown> {
   if (typeof input !== "object" || input === null || Array.isArray(input))
     throw new Error("Tool input must be an object.");
@@ -108,20 +121,32 @@ export class AgentGridMcpServer {
       {
         name: "submit_work",
         description:
-          "Upload work and return its CID and delivery signature status. Requires scope work:submit. A delegated agent signs the ExecutorDelivery typed data with its own wallet; the backend records the signer_address.",
+          "Upload work and return its CID and delivery signature status. Requires scope work:submit. Each file needs a relative path name (src/index.ts; no leading /, no ..) and either text or base64 content (zip, images). Limits are in get_task → viewer.submissionLimits. A delegated agent signs the ExecutorDelivery typed data with its own wallet; the backend records the signer_address.",
         inputSchema: schema(
           {
             claimId: { type: "string" },
-            files: { type: "array" },
+            files: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  name: { type: "string", description: "Relative path, e.g. src/index.ts" },
+                  text: { type: "string", description: "UTF-8 content" },
+                  base64: { type: "string", description: "Binary content, e.g. delivery.zip" },
+                  contentType: { type: "string" },
+                },
+                required: ["name"],
+              },
+            },
             evidence: { type: "string" },
             idempotencyKey: { type: "string" },
           },
           ["claimId", "files", "idempotencyKey"],
         ),
         run: async (input) => {
-          const files = (input.files as { name: string; text: string }[]).map((file) => ({
+          const files = (input.files as DeliveryFileInput[]).map((file) => ({
             name: file.name,
-            content: new Blob([file.text], { type: "text/plain" }),
+            content: deliveryBlob(file),
           }));
           const result = await this.client.submitWork({
             claimId: String(input.claimId),
@@ -399,7 +424,7 @@ export class AgentGridMcpServer {
       {
         name: "get_submission_file",
         description:
-          "Read one delivery file by index. Only the executor, drawn testers and case jurors may read it. Never paste decrypted contents into reports.",
+          "Read one delivery file by index (names may be relative paths such as src/index.ts). Returns encoding utf8 with the text, or base64 for binary files such as a zip: decode and unpack it in a scratch directory. Only the executor, drawn testers and case jurors may read it. Never paste decrypted contents into reports.",
         inputSchema: schema(
           { submissionId: { type: "string" }, index: { type: "integer", minimum: 0 } },
           ["submissionId", "index"],

@@ -7,6 +7,13 @@ export interface HttpRequest {
   headers?: Readonly<Record<string, string>>;
   query?: Readonly<Record<string, string | number | boolean | undefined>>;
   body?: unknown;
+  /** Resolve a successful response as raw bytes (`BinaryResponse`) instead of text or JSON. */
+  binary?: boolean;
+}
+
+export interface BinaryResponse {
+  contentType: string;
+  data: Uint8Array;
 }
 
 export interface HttpPort {
@@ -74,6 +81,13 @@ export class FetchHttpAdapter implements HttpPort {
       headers,
       ...(body === undefined ? {} : { body }),
     });
+    if (input.binary && response.ok) {
+      const binary: BinaryResponse = {
+        contentType: response.headers.get("content-type") ?? "application/octet-stream",
+        data: new Uint8Array(await response.arrayBuffer()),
+      };
+      return binary as T;
+    }
     const text = await response.text();
     const parsed =
       text && response.headers.get("content-type")?.includes("json")

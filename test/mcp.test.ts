@@ -197,6 +197,24 @@ describe("MCP server", () => {
       }),
     ).toMatchObject({ result: { structuredContent: { cid: "bafy", signatureStatus: "SIGNED" } } });
   });
+  it("submit_work uploads base64 files as binary with their relative paths", async () => {
+    const { client, mcp } = server();
+    await call(mcp, "submit_work", {
+      claimId: "c",
+      files: [
+        { name: "delivery.zip", base64: "UEsDBAA=", contentType: "application/zip" },
+        { name: "src/index.ts", text: "export {};" },
+      ],
+      idempotencyKey: "i",
+    });
+    const [input] = vi.mocked(client.submitWork).mock.calls[0] ?? [];
+    expect(input?.files.map((file) => file.name)).toEqual(["delivery.zip", "src/index.ts"]);
+    const zip = input?.files[0]?.content;
+    expect(zip?.type).toBe("application/zip");
+    expect([...new Uint8Array((await zip?.arrayBuffer()) ?? new ArrayBuffer(0))]).toEqual([
+      0x50, 0x4b, 0x03, 0x04, 0x00,
+    ]);
+  });
   it("claim_rewards returns a pending transaction and does not send", async () => {
     expect(await call(server().mcp, "claim_rewards", { scheduleIds: ["1"] })).toMatchObject({
       result: { structuredContent: { tx: { to: "0x1" } } },

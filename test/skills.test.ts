@@ -17,8 +17,16 @@ const templates = Object.fromEntries(
 describe("role skills", () => {
   it("ships English templates only", () => {
     expect(Object.keys(templates).sort()).toEqual(
-      ["_onboarding", "_reporting", "_rewards", "_safety", ...ROLES].sort(),
+      ["_delivery", "_onboarding", "_reporting", "_rewards", "_safety", ...ROLES].sort(),
     );
+  });
+
+  it("tells publishers, executors and testers the delivery limits", () => {
+    for (const role of ["publisher", "executor", "tester"] as const) {
+      const markdown = renderSkill(templates, role);
+      expect(markdown).toContain("**200 files**, **50 MB per file**, **50 MB in total**");
+      expect(markdown).toContain("viewer.submissionLimits");
+    }
   });
 
   for (const role of ROLES)

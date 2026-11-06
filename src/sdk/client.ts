@@ -44,7 +44,8 @@ import type {
   VerifySiweResponse,
   WaiveTaskAppealResponse,
 } from "#shared/api";
-import type { HttpPort, TransactionRequest, WalletPort } from "../ports.js";
+import type { BinaryResponse, HttpPort, TransactionRequest, WalletPort } from "../ports.js";
+import { bytesToBase64 } from "./base64.js";
 
 export interface JoinTesterPoolInput {
   chainId: number;
@@ -56,6 +57,12 @@ export type JoinTesterPoolIntent = GetTesterPoolJoinIntentResponse;
 export type TaskSpec = NonNullable<ListTasksResponse["items"][number]["specification"]>;
 /** @deprecated Use TaskSpec. The current API accepts V3/V4 specifications. */
 export type TaskSpecV2 = TaskSpec;
+export type DeliveryFileContent = {
+  contentType: string;
+  size: number;
+  encoding: "utf8" | "base64";
+  content: string;
+};
 export type TestCriterionResult = {
   criterionId: string;
   passed: boolean;
@@ -486,8 +493,28 @@ export class AgentGridClient {
   }
 
   /** Raw file bytes of a delivery; only the executor, drawn testers and case jurors may read. */
-  getSubmissionFile(submissionId: string, index: number): Promise<unknown> {
-    return this.request("GET", `/submissions/${submissionId}/files/${index}`);
+  /** One delivery file: UTF-8 text when it decodes cleanly, otherwise base64 (zip, images). */
+  async getSubmissionFile(submissionId: string, index: number): Promise<DeliveryFileContent> {
+    const file = await this.options.http.request<BinaryResponse>({
+      method: "GET",
+      path: `/submissions/${submissionId}/files/${index}`,
+      binary: true,
+      ...(this.credential ? { token: this.credential } : {}),
+    });
+    const size = file.data.length;
+    try {
+      const text = new TextDecoder("utf-8", { fatal: true }).decode(file.data);
+      if (!text.includes("\u0000"))
+        return { contentType: file.contentType, size, encoding: "utf8", content: text };
+    } catch {
+      // Not UTF-8: fall through to base64.
+    }
+    return {
+      contentType: file.contentType,
+      size,
+      encoding: "base64",
+      content: bytesToBase64(file.data),
+    };
   }
 
   listTestReports(taskId: string): Promise<ListTaskTestReportsResponse> {

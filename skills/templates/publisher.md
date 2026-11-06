@@ -32,6 +32,10 @@ MCP: `publish_task` → `send_transaction` → `get_next_actions` → on early c
 - Do not draft tasks that make the executor transfer, send or pay funds to an address or person, or reveal secrets. Publishing blocks them (`risk.fundTransfer` block, `risk.secretRequest`); tell the user the platform does not accept them instead of rewording around the check.
 - Own-wallet protocol tasks (for example a testnet swap) and suspicious links only warn (`risk.fundTransfer` warn, `risk.phishingLink`). Name the protocol and contract addresses, keep value with the executor, and use official https links so executors can judge the task.
 - Inputs and links must be `https` on the official domain. Shorteners, raw IPs and lookalike domains block publishing.
+- State the delivery format in deliverables / constraints: expected layout (for code: repo-relative paths such as `src/…`, `test/…`, or one `delivery.zip`), language and toolchain, and the build / run / test commands testers should use. Keep the expected delivery within the limits below; if it cannot fit, split the task instead of asking for more.
+- Write code criteria testers can check from the uploaded files alone, for example "`pnpm test` passes", "`src/parser.ts` exports `parse()`", "README documents the run command". Do not require files the executor cannot upload (datasets or binaries over the size limit, `node_modules`, secrets).
+
+{{delivery}}
 
 {{reporting}}
 

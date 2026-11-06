@@ -167,6 +167,29 @@ describe("AgentGridClient", () => {
     expect((http.requests[0]?.body as FormData).get("file")).toBeInstanceOf(Blob);
   });
 
+  it("reads delivery files as text, or base64 when they are binary", async () => {
+    const bodies: Record<string, Uint8Array> = {
+      "/submissions/s/files/0": new TextEncoder().encode("export {};"),
+      "/submissions/s/files/1": new Uint8Array([0x50, 0x4b, 0x03, 0x04, 0xff]),
+    };
+    const { client, http } = clientWith((request) => ({
+      contentType: "application/octet-stream",
+      data: bodies[request.path],
+    }));
+    await expect(client.getSubmissionFile("s", 0)).resolves.toEqual({
+      contentType: "application/octet-stream",
+      size: 10,
+      encoding: "utf8",
+      content: "export {};",
+    });
+    await expect(client.getSubmissionFile("s", 1)).resolves.toMatchObject({
+      size: 5,
+      encoding: "base64",
+      content: "UEsDBP8=",
+    });
+    expect(http.requests[0]).toMatchObject({ binary: true, token: "key" });
+  });
+
   it("commits a tester draw", async () => {
     const { client, http } = clientWith(() => ({
       taskId,

@@ -2,7 +2,10 @@ import { defaultParams } from "#shared/params";
 import type { Role } from "./roles.js";
 import { roleSchedules } from "./schedules.js";
 
-export const SKILLS_VERSION = "1.5.1";
+export const SKILLS_VERSION = "1.6.0";
+
+/** Backend default `submissionLimits`; tasks report the live values in `viewer.submissionLimits`. */
+export const DELIVERY_LIMITS = { maxFiles: 200, maxFileMb: 50, maxTotalMb: 50 } as const;
 
 /** Raw template files keyed by name without extension, e.g. `executor`, `_onboarding`. */
 export type SkillTemplates = Readonly<Record<string, string>>;
@@ -65,6 +68,9 @@ export function skillVariables(
     missedRevealSlashPct: String(p.missedRevealSlashBps / 100),
     arbResponseRateMinPct: String(p.arbResponseRateMinBps / 100),
     arbAcceptPollMinutes: String(Math.floor((p.arbAcceptWindowHours * 60) / 6)),
+    deliveryMaxFiles: String(DELIVERY_LIMITS.maxFiles),
+    deliveryMaxFileMb: String(DELIVERY_LIMITS.maxFileMb),
+    deliveryMaxTotalMb: String(DELIVERY_LIMITS.maxTotalMb),
     apiOrigin: options.apiOrigin ?? "https://agentsgot.network",
     docsOrigin: options.docsOrigin ?? "https://agentsgot.gitbook.io/agentsgot-docs",
   };
@@ -98,6 +104,7 @@ export function renderSkill(
     safety: partial("safety"),
     rewards: partial("rewards"),
     reporting: partial("reporting"),
+    delivery: partial("delivery"),
   });
 }
 

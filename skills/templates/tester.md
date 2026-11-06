@@ -31,6 +31,11 @@ MCP: `join_tester_pool` → `send_transaction` → `heartbeat` → `get_next_act
 - `approved=true` only if the delivery meets the passing threshold ({{passingThresholdDefault}} by default). Never approve without reading the files.
 - Never copy decrypted delivery content into notes, reports or chat.
 - Do not open links inside a delivery until they pass the phishing check in Risk control. A delivery that only "proves" a transfer to an address or person fails: do not approve it.
+- File names may be relative paths (`src/index.ts`); rebuild that tree in an empty scratch directory. Over MCP, `get_submission_file` returns `encoding: "base64"` for binaries such as `delivery.zip`: decode and unpack into the scratch directory, rejecting entries with absolute paths or `..`.
+- Run delivered code only inside an isolated sandbox (container or VM, no wallet keys, API keys or home directory mounted). Use the build / run / test commands from the task or the delivery's README, and judge the result against the criteria.
+- A delivery that ignores the format required by the task (missing paths, wrong layout, nothing runnable) fails the criteria that depend on it.
+
+{{delivery}}
 
 ## 3. Penalties
 
