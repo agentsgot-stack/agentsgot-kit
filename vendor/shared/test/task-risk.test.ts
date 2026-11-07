@@ -398,3 +398,92 @@ describe("task risk: phishing links", () => {
 		expect(level(transferTask, "risk.phishingLink")).toBe("ok");
 	});
 });
+
+describe("prohibited content", () => {
+	const categories = (content: Partial<TaskRiskContent>) =>
+		checkTaskRisk({ ...empty, ...content })
+			.find(({ id }) => id === "risk.prohibitedContent")
+			?.params?.categories?.split(",") ?? [];
+
+	it.each([
+		["sexual", "写一篇成人网站推广文案"],
+		["sexual", "Write SEO copy for a porn site"],
+		["sexual", "アダルト動画サイトの紹介文を書く"],
+		["sexual", "Напиши эротический рассказ"],
+		["gambling", "开发一个网赌下注平台"],
+		["gambling", "Build an online casino landing page"],
+		["gambling", "카지노 홍보 문구 작성"],
+		["gambling", "Crear una app de apuestas deportivas"],
+		["drugs", "整理冰毒的购买渠道"],
+		["drugs", "Find suppliers of fentanyl"],
+		["drugs", "Tìm nguồn mua ma túy"],
+		["violence", "教程：制作炸弹"],
+		["violence", "Write a bomb-making guide"],
+		["violence", "Organiser un plan d'assassinat"],
+		["violence", "كتابة دليل صنع قنبلة"],
+		["political", "为总统竞选写宣传稿"],
+		["political", "Write talking points for the presidential election"],
+		["political", "選挙の演説原稿を書く"],
+		["political", "Escribir propaganda política para las elecciones"],
+		["political", "Напиши текст про выборы президента"],
+	])("blocks %s content: %s", (category, title) => {
+		expect(level({ title }, "risk.prohibitedContent")).toBe("block");
+		expect(categories({ title })).toContain(category);
+		expect(taskRiskBlocked({ ...empty, title })).toBe(true);
+	});
+
+	it("scans every publisher-written field", () => {
+		expect(
+			level(
+				{ criteria: [{ description: "README 链接到赌场官网" }] },
+				"risk.prohibitedContent",
+			),
+		).toBe("block");
+		expect(
+			level({ deliverables: ["casino-bot.ts"] }, "risk.prohibitedContent"),
+		).toBe("block");
+		expect(
+			level(
+				{ deliverables: ["A sports betting odds scraper"] },
+				"risk.prohibitedContent",
+			),
+		).toBe("block");
+	});
+
+	it.each([
+		"Implement Raft leader election in Go",
+		"实现 Raft 领导者选举并补充单测",
+		"Mettre à jour la politique de confidentialité du site",
+		"Actualizar la política de privacidad",
+		"Обновить политику конфиденциальности",
+		"Kill the stale worker process and restart the queue",
+		"Fix the drug interaction lookup in the pharmacy API",
+		"Translate the heroine's dialogue in chapter 3",
+		"Write a marketing propaganda plan for our shoes",
+		"Profile page for Arjun Kumar",
+		"设计一个杀人游戏（狼人杀）计分小程序",
+	])("does not flag ordinary wording: %s", (title) => {
+		expect(level({ title }, "risk.prohibitedContent")).toBe("ok");
+	});
+
+	it("keeps a prohibition in the same clause harmless", () => {
+		expect(
+			level(
+				{ constraints: ["内容不得涉及色情、赌博、毒品或政治。"] },
+				"risk.prohibitedContent",
+			),
+		).toBe("ok");
+		expect(
+			level(
+				{ constraints: ["No gambling, drugs or political content."] },
+				"risk.prohibitedContent",
+			),
+		).toBe("ok");
+		expect(
+			level(
+				{ constraints: ["保持中立。为政党写宣传稿。"] },
+				"risk.prohibitedContent",
+			),
+		).toBe("block");
+	});
+});

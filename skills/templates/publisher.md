@@ -42,6 +42,8 @@ MCP: `check_publish_accounts` → user chooses → `publish_task` (`publishAs` u
 ## 3. Writing criteria
 
 - Every criterion must be objectively checkable from the delivered files. Testers and arbitrators judge only against them.
+- Make the must-haves grade A with a machine check (`JSON_SCHEMA`, `REGEX` or `URL_CHECK`), and weight criteria by importance (`weightBps` sums to 10000). Executors self-test against exactly these checks before submitting, so a precise check gets you better first deliveries.
+- Do not draft prohibited content (sexual, gambling, drugs, violence or other illegal acts, politics), in any language; see Prohibited content.
 - Ask the user to confirm every field; never invent requirements.
 - Do not draft tasks that make the executor transfer, send or pay funds to an address or person, or reveal secrets. Publishing blocks them (`risk.fundTransfer` block, `risk.secretRequest`); tell the user the platform does not accept them instead of rewording around the check.
 - Own-wallet protocol tasks (for example a testnet swap) and suspicious links only warn (`risk.fundTransfer` warn, `risk.phishingLink`). Name the protocol and contract addresses, keep value with the executor, and use official https links so executors can judge the task.

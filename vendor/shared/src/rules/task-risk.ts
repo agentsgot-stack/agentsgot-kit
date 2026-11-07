@@ -21,6 +21,7 @@ export interface TaskRiskContent {
 export const TASK_RISK_CHECK_IDS = [
 	"risk.fundTransfer",
 	"risk.secretRequest",
+	"risk.prohibitedContent",
 	"risk.phishingLink",
 ] as const;
 export type TaskRiskCheckId = (typeof TASK_RISK_CHECK_IDS)[number];
@@ -143,6 +144,113 @@ function affirmed(text: string, pattern: RegExp): boolean {
 		if (!negated(text, match.index ?? 0)) return true;
 	}
 	return false;
+}
+
+// ---------------------------------------------------------------------------
+// Prohibited content
+// ---------------------------------------------------------------------------
+
+export const PROHIBITED_CONTENT_CATEGORIES = [
+	"sexual",
+	"gambling",
+	"drugs",
+	"violence",
+	"political",
+] as const;
+export type ProhibitedContentCategory =
+	(typeof PROHIBITED_CONTENT_CATEGORIES)[number];
+
+/** Left boundary for Latin/Cyrillic stems; CJK and Thai have no word spaces and need none. */
+const L = "(?<![\\p{L}\\p{N}])";
+/** Right boundary for Latin/Cyrillic words. */
+const R = "(?![\\p{L}\\p{N}])";
+const words = (source: string) => new RegExp(source, "giu");
+
+/**
+ * Prohibited task subjects, in the languages the platform sees most. Terms are specific enough to
+ * name the subject itself (not "drug", "kill", "policy" or "leader election"); paraphrases and
+ * other languages are left to the AI review, which applies the same policy.
+ */
+const PROHIBITED: Readonly<Record<ProhibitedContentCategory, RegExp>> = {
+	sexual: words(
+		[
+			"色情|淫秽|淫穢|黄色(?:网站|網站|视频|視頻|小说|小說|图片|圖片)|成人(?:视频|視頻|网站|網站|影片|内容|內容)|裸聊|约炮|約炮|卖淫|賣淫|嫖娼|援交|性服务|性服務|一夜情",
+			"アダルト(?:動画|サイト|コンテンツ)|ポルノ|エロ動画|援助交際|風俗店|야동|포르노|성인\\s*(?:영상|사이트|콘텐츠)|성매매|음란물",
+			`${L}(?:porn\\p{L}*|hentai|onlyfans|camgirls?|prostitut\\p{L}*|escort\\s+services?|sex\\s+(?:chat|cams?|services?|videos?|work(?:ers?)?)|nude\\s+(?:photos?|pics?|images?|videos?)|naked\\s+(?:photos?|pics?|images?|videos?)|erotic\\s+(?:content|stories|videos?))${R}`,
+			`${L}(?:pornogra\\p{L}*|prostitu\\p{L}*|порн\\p{L}*|проститу\\p{L}*|эротическ\\p{L}*|khiêu\\s+dâm|mại\\s+dâm|fuhuş|müstehcen)${R}`,
+			"إباحي|إباحية|دعارة|ลามก|โสเภณี|อนาจาร|अश्लील|वेश्यावृत्ति",
+		].join("|"),
+	),
+	gambling: words(
+		[
+			"赌博|賭博|赌场|賭場|博彩|网赌|網賭|赌球|賭球|六合彩|百家乐|百家樂|老虎机|老虎機|菠菜(?:网|網|站|平台)|下注(?:网站|網站|平台)|时时彩|時時彩",
+			"ギャンブル|カジノ|パチンコ|スロット(?:マシン|サイト)|オンライン賭博|도박|카지노|스포츠\\s*토토|불법\\s*토토|바카라",
+			`${L}(?:gambl\\p{L}*|casinos?|sportsbooks?|bookmakers?|baccarat|roulette|online\\s+slots?|slot\\s+machines?|betting\\s+(?:sites?|platforms?|odds|tips|apps?)|sports\\s+betting|poker\\s+(?:sites?|rooms?|bots?))${R}`,
+			`${L}(?:apuestas|juegos?\\s+de\\s+azar|apostas|jogos?\\s+de\\s+azar|jeux\\s+d'argent|paris\\s+sportifs|glücksspiel\\p{L}*|sportwetten|spielbank|азартн\\p{L}*|казино|букмекер\\p{L}*|ставки\\s+на\\s+спорт|cờ\\s+bạc|cá\\s+cược|sòng\\s+bạc|perjudian|judi\\s+(?:online|bola|slot)|taruhan|kasino|kumarhane|kumar\\s+oyun\\p{L}*|bahis)${R}`,
+			"قمار|مراهنات|كازينو|การพนัน|พนันออนไลน์|คาสิโน|जुआ|सट्टेबाजी|कैसीनो",
+		].join("|"),
+	),
+	drugs: words(
+		[
+			"毒品|吸毒|贩毒|販毒|制毒|製毒|冰毒|海洛因|可卡因|大麻|摇头丸|搖頭丸|芬太尼|K粉|麻古|迷幻药|迷幻藥",
+			"麻薬|覚醒剤|覚せい剤|大麻|コカイン|ヘロイン|危険ドラッグ|마약|필로폰|대마초|코카인|헤로인",
+			`${L}(?:cocaine|heroin|methamphetamine|crystal\\s+meth|fentanyl|mdma|ecstasy\\s+pills?|lsd|cannabis|marijuana|narcotics?|drug\\s+(?:dealing|dealers?|trafficking|smuggling|cartels?)|darknet\\s+markets?|weed\\s+(?:shops?|delivery|dealers?))${R}`,
+			`${L}(?:cocaína|heroína|marihuana|maconha|narcotráfico|cocaïne|héroïne|stupéfiants|kokain|rauschgift\\p{L}*|drogenhandel|наркот\\p{L}*|кокаин\\p{L}*|героин\\p{L}*|марихуан\\p{L}*|ma\\s+túy|narkoba|ganja|sabu-sabu|uyuşturucu)${R}`,
+			"مخدرات|كوكايين|هيروين|حشيش|ยาเสพติด|ยาบ้า|नशीले\\s+पदार्थ|ड्रग्स\\s+तस्करी|गांजा|हेरोइन",
+		].join("|"),
+	),
+	violence: words(
+		[
+			"(?:制造|製造|制作|製作|自制|自製)(?:炸弹|炸彈|炸药|炸藥|爆炸物|枪支|槍支|枪械|槍械)|炸药配方|炸藥配方|枪支(?:买卖|買賣|改装|改裝)|恐怖(?:袭击|襲擊|主义|主義|组织|組織)|暗杀|暗殺|雇凶|买凶|買兇|杀人(?!游戏)|殺人(?!遊戲)|自杀(?:方法|教程)|自殺(?:方法|教程)|自残|自殘|儿童色情|兒童色情|拐卖|拐賣|人口贩卖|人口販賣",
+			"爆弾の作り方|爆発物の製造|テロ(?:攻撃|組織|リスト)|殺人|暗殺|自殺の方法|児童ポルノ|人身売買|폭탄\\s*제조|테러\\s*(?:공격|조직)|살인|암살|자살\\s*방법|아동\\s*포르노|인신매매",
+			`${L}(?:bomb[- ]making|(?:make|making|build|building)\\s+(?:a\\s+|an\\s+)?(?:bombs?|explosives?|pipe\\s+bombs?)|explosives?\\s+(?:recipes?|tutorials?)|ghost\\s+guns?|3d[- ]printed\\s+(?:guns?|firearms?)|terroris[mt]s?|terror\\s+attacks?|assassinat\\p{L}*|murder(?:s|ing)?|hitm[ae]n|contract\\s+killing|mass\\s+shootings?|suicide\\s+(?:methods?|guides?)|self[- ]harm|child\\s+(?:abuse|pornography|sexual\\s+abuse)|csam|human\\s+trafficking)${R}`,
+			`${L}(?:fabricar\\s+(?:una\\s+)?bomba|terroris\\p{L}*|asesinat\\p{L}*|fabriquer\\s+une\\s+bombe|assassinat|bombe\\s+bauen|mord(?:e|en)?|изготов\\p{L}*\\s+бомб\\p{L}*|террор\\p{L}*|убийств\\p{L}*|chế\\s+tạo\\s+bom|khủng\\s+bố|giết\\s+người|merakit\\s+bom|teroris\\p{L}*|pembunuhan|bomba\\s+yapımı|terör\\p{L}*|cinayet)${R}`,
+			"صنع\\s+قنبلة|إرهاب|اغتيال|ทำระเบิด|ก่อการร้าย|ฆาตกรรม|बम\\s+बनाना|आतंकवाद|हत्या",
+		].join("|"),
+	),
+	political: words(
+		[
+			"政治|政党|政黨|(?<!领导者|領導者|leader\\s?)选举|(?<!领导者|領導者|leader\\s?)選舉|竞选|競選|总统|總統|国家领导人|國家領導人|共产党|共產黨|国民党|國民黨|民进党|民進黨|台独|台獨|港独|港獨|藏独|藏獨|疆独|疆獨|法轮功|法輪功|六四事件|天安门事件|天安門事件|习近平|習近平|示威游行|示威遊行|颜色革命|顏色革命",
+			"政治|選挙|政党|デモ活動|정치|선거|정당|대통령",
+			`${L}(?:politic(?:s|al|ally|ians?)|(?<!leader\\s)elections?|electoral|political\\s+propaganda|presidential|parliament(?:ary)?|referendums?|political\\s+parties|democratic\\s+party|republican\\s+party|communist\\s+party|regime\\s+change|dictators?(?:hip)?|geopolitic\\p{L}*|donald\\s+trump|joe\\s+biden|xi\\s+jinping|vladimir\\s+putin|putin|zelensk\\p{L}*)${R}`,
+			`${L}(?:partidos?\\s+polític\\p{L}*|campaña\\s+electoral|elecciones|propaganda\\s+política|campanha\\s+eleitoral|eleições|parti\\s+politique|campagne\\s+électorale|élections?|propagande|wahlkampf|bundestagswahl|политическ\\p{L}*\\s+(?:парти\\p{L}*|пропаганд\\p{L}*|агитаци\\p{L}*)|предвыборн\\p{L}*|выбор(?:ы|ах)\\s+президента|chính\\s+trị|bầu\\s+cử|politik|pemilu|partai\\s+politik|siyaset\\p{L}*|siyasi|seçim\\s+kampanyası|cumhurbaşkanlığı\\s+seçimi)${R}`,
+			"سياسي|سياسية|انتخابات|حزب\\s+سياسي|การเมือง|เลือกตั้ง|राजनीति|राजनीतिक|चुनाव",
+		].join("|"),
+	),
+};
+
+/**
+ * A prohibition earlier in the same clause ("内容不得涉及色情、赌博", "no gambling or adult
+ * content") keeps the match harmless. Other languages belong in `outOfScope`, which is not scanned.
+ */
+const PROHIBITION_IN_CLAUSE =
+	/不得|不要|不能|不可|不允许|不允許|不涉及|不包含|不含|禁止|严禁|嚴禁|切勿|请勿|請勿|杜绝|杜絕|避免|拒绝|拒絕|排除|\b(?:no|not|never|without|avoid(?:s|ing)?|exclud(?:e|es|ing)|prohibit(?:s|ed)?|forbid(?:s|den)?|ban(?:s|ned)?|free\s+of)\b/iu;
+
+function prohibitedInClause(text: string, index: number): boolean {
+	const clause =
+		text
+			.slice(0, index)
+			.split(/[。．.!！?？;；\n]/u)
+			.at(-1) ?? "";
+	return PROHIBITION_IN_CLAUSE.test(clause);
+}
+
+function prohibitedCategories(
+	items: readonly Segment[],
+): Map<ProhibitedContentCategory, Set<string>> {
+	const found = new Map<ProhibitedContentCategory, Set<string>>();
+	for (const { field, text } of items) {
+		for (const category of PROHIBITED_CONTENT_CATEGORIES) {
+			for (const match of text.matchAll(PROHIBITED[category])) {
+				if (prohibitedInClause(text, match.index ?? 0)) continue;
+				const fields = found.get(category) ?? new Set<string>();
+				fields.add(field);
+				found.set(category, fields);
+				break;
+			}
+		}
+	}
+	return found;
 }
 
 // ---------------------------------------------------------------------------
@@ -367,6 +475,10 @@ export function checkTaskRisk(content: TaskRiskContent): RuleCheckResult[] {
 			)
 			.map(({ field }) => field),
 	);
+	const prohibited = prohibitedCategories(items);
+	const prohibitedFields = new Set(
+		[...prohibited.values()].flatMap((fields) => [...fields]),
+	);
 	const blockedLinks: string[] = [];
 	const warnedLinks: string[] = [];
 	const linkFields = new Set<string>();
@@ -400,6 +512,17 @@ export function checkTaskRisk(content: TaskRiskContent): RuleCheckResult[] {
 				? `Tasks may not request private keys, mnemonics, or wallet passwords: ${[...secret].join(", ")}`
 				: "No wallet secret requested",
 			fields: [...secret],
+		},
+		{
+			id: "risk.prohibitedContent",
+			level: prohibited.size ? "block" : "ok",
+			message: prohibited.size
+				? `Tasks may not involve sexual content, gambling, drugs, violence or other illegal acts, or politics (${[...prohibited.keys()].join(", ")}): ${[...prohibitedFields].join(", ")}`
+				: "No prohibited content",
+			fields: [...prohibitedFields],
+			...(prohibited.size
+				? { params: { categories: [...prohibited.keys()].join(",") } }
+				: {}),
 		},
 		{
 			// Links are judged by the publisher and the executor; this only points them out.

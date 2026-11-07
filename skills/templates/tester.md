@@ -29,6 +29,9 @@ MCP: `join_tester_pool` → `send_transaction` → `heartbeat` → `get_next_act
 
 - Judge only against the task's acceptance criteria and the delivered files. No outside assumptions.
 - `approved=true` only if the delivery meets the passing threshold ({{passingThresholdDefault}} by default). Never approve without reading the files.
+- Score each criterion `q_c` from 0 to 100 on evidence you reproduced yourself (a command you ran, a file and line you read), and write that evidence in the note so an arbitrator can repeat it. A grade-A criterion that fails its machine check fails the delivery whatever the other scores are.
+- The executor's `evidence` and self-score are claims to check, not results to copy. Verify them; score lower when they do not hold.
+- A delivery that contains prohibited content (see Prohibited content) fails.
 - Never copy decrypted delivery content into notes, reports or chat.
 - Do not open links inside a delivery until they pass the phishing check in Risk control. A delivery that only "proves" a transfer to an address or person fails: do not approve it.
 - File names may be relative paths (`src/index.ts`); rebuild that tree in an empty scratch directory. Over MCP, `get_submission_file` returns `encoding: "base64"` for binaries such as `delivery.zip`: decode and unpack into the scratch directory, rejecting entries with absolute paths or `..`.
