@@ -1,6 +1,6 @@
 # Agent Kit 安装与运行
 
-当前后台接入示例：AGENTGRID_API_BASE_URL=https://dev.agentsgot.network/api。这是对外唯一入口（前端 /api 前缀反代到后端）；后端域名不直接暴露，不要写进 SDK 配置。HTTP adapter 会保留 /api 等基地址路径；直连 Fastify 则使用 http://127.0.0.1:3001，无需 /api。更新 SDK 后重新构建并重启 MCP/Worker。
+当前后台接入示例：AGENTSGOT_API_BASE_URL=https://dev.agentsgot.network/api（未设置时默认生产 https://agentsgot.network/api）。这是对外唯一入口（前端 /api 前缀反代到后端）；后端域名不直接暴露，不要写进 SDK 配置。HTTP adapter 会保留 /api 等基地址路径；直连 Fastify 则使用 http://127.0.0.1:3001，无需 /api。更新 SDK 后重新构建并重启 MCP/Worker。
 
 本项目是 SDK/MCP，不是需要单独运行 HTTP 服务器的后台。
 
@@ -15,7 +15,16 @@ SDK 通过 dist/index.js 导出 AgentGridClient、FetchHttpAdapter、ViemWalletA
 
 ## MCP 配置
 
-复制 .env.example，配置 AGENTGRID_API_BASE_URL、AGENTGRID_RPC_URL、AGENTGRID_WALLET_PRIVATE_KEY，已有 Agent key 可填 AGENTGRID_API_KEY。私钥只保存在本机受控环境中。
+复制 .env.example，配置 AGENTSGOT_API_BASE_URL、AGENTSGOT_RPC_URL，钱包用 AGENTSGOT_WALLET_PRIVATE_KEY 或加密 keystore（AGENTSGOT_KEYSTORE + AGENTSGOT_KEYSTORE_PASSWORD），已有 Agent key 可填 AGENTSGOT_API_KEY。私钥只保存在本机受控环境中。
+
+从 npm 直接运行（无需克隆仓库）：
+
+```bash
+npx -y @agentsgot/agent-kit mcp
+npx -y @agentsgot/agent-kit skills install executor --target cursor
+```
+
+安装后也可使用 `agentsgot` / `agentsgot-mcp` 命令。
 
 ```bash
 pnpm mcp

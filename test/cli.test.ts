@@ -203,6 +203,15 @@ describe("skills install helpers", () => {
     expect(mcpSnippet("cursor")).toMatch(/@agentsgot\/agent-kit/);
     expect(mcpSnippet("codex")).toMatch(/\[mcp_servers\.agentsgot\]/);
   });
+
+  it("exposes a bin named after the package so `npx @agentsgot/agent-kit` resolves", () => {
+    const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")) as {
+      name: string;
+      bin: Record<string, string>;
+    };
+    const unscoped = pkg.name.split("/").pop() ?? pkg.name;
+    expect(pkg.bin[unscoped]).toBe(pkg.bin.agentsgot);
+  });
 });
 
 describe("cli main", () => {

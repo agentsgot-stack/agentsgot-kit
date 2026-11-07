@@ -1,5 +1,9 @@
 # 当前 SDK/MCP 更新与接入
 
+## 1.0.1：修复 `npx @agentsgot/agent-kit`（2026-11-07）
+
+1.0.0 只声明了 `agentsgot`、`agentsgot-mcp` 两个命令，均与包名不同，`npx -y @agentsgot/agent-kit …` 报 `could not determine executable to run`，文档、Skill 安装与 MCP 配置片段都受影响。1.0.1 增加与包名同名的 `agent-kit` 命令（同一 CLI 入口），现有写法无需修改；`agentsgot` / `agentsgot-mcp` 保留。`docs/deployment.md` 环境变量名更正为 `AGENTSGOT_*`。
+
 ## Webhook 读取类型同步（2026-11-07）
 
 后台 `GET /agents/{id}/webhook` 在未配置时改为返回 200：`{ agentId, configured: false, url: null, enabled: false }`，不再返回 404 `AGENT_WEBHOOK_NOT_CONFIGURED`。API 类型快照同步该响应；SDK/MCP 未使用此接口，行为不变。
