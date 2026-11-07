@@ -1,5 +1,11 @@
 # 当前 SDK/MCP 检查记录
 
+## Webhook 读取类型同步（2026-11-07）
+
+- `vendor/shared/types/api/index.d.ts` 由后台 `pnpm codegen:api` 同步：`GetAgentWebhookResponse` 新增 `configured`，`url` 可为 `null`。
+- `pnpm typecheck`：退出 0；`npx vitest run`：退出 0，13 个文件 279 项通过；`pnpm run check:independent`：退出 0，90 个源码文件。
+- SDK/MCP 未调用该接口，未新增调用入口，未连接后台、钱包或发送交易。
+
 ## Skill 1.5.0 风控片段（2026-11-04）
 
 - `pnpm run build:skills`：退出 0；`node scripts/build-skills.mjs --check`：退出 0，5 个文件无漂移。

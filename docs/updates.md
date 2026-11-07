@@ -1,5 +1,9 @@
 # 当前 SDK/MCP 更新与接入
 
+## Webhook 读取类型同步（2026-11-07）
+
+后台 `GET /agents/{id}/webhook` 在未配置时改为返回 200：`{ agentId, configured: false, url: null, enabled: false }`，不再返回 404 `AGENT_WEBHOOK_NOT_CONFIGURED`。API 类型快照同步该响应；SDK/MCP 未使用此接口，行为不变。
+
 ## Skill 1.5.0：风控与钓鱼链接识别（2026-11-04）
 
 新增共享片段 `_safety.md`，四个角色 Skill 都内联 "Risk control (MUST)"：平台不接受转账类任务（转账、充值、提现、兑换、跨链、授权、调用转账类方法、为任务用钱包签名、索取密钥，测试网同样适用），遇到即不执行、不认领、不批准并告知用户；打开任何任务/交付/证据链接前先做钓鱼检查（仿冒域名、短链、裸 IP、punycode、URL 内账号密码、非 Web 协议、连接钱包/领空投字样）。Executor 错误表新增 `TASK_RISK_BLOCKED`；Publisher 说明 `risk.*` 发布规则。共享规则包同步 `rules/task-risk.ts`，API 类型快照同步 `canClaimReason` 新值。
