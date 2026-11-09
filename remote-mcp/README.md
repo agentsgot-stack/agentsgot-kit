@@ -20,11 +20,17 @@ pnpm start
 
 ```powershell
 npx wrangler login
-pnpm deploy
-# → https://agentsgot-mcp.<account>.workers.dev/mcp
+npm run deploy
 ```
 
-Optional custom host later: route `mcp.agentsgot.network` to this Worker; keep `AGENTSGOT_API_BASE_URL` pointing at the live API (`https://agentsgot.network/api` or `https://dev.agentsgot.network/api`).
+**Testnet (live):**
+
+- MCP: `https://agentsgot-mcp.agentsgot-remote-mcp.workers.dev/mcp`
+- Discovery: `https://agentsgot-mcp.agentsgot-remote-mcp.workers.dev/`
+- API var: `https://dev-agentgrid-api.openhub.network/api`
+- CF account: `agentsgot@gmail.com`
+
+Mainnet later: change Worker var to `https://agentsgot.network/api` (or the then-current public API) and redeploy. Optional custom host: route `mcp.agentsgot.network` to this Worker.
 
 Preview without account login:
 

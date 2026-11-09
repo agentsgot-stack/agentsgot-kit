@@ -1,12 +1,20 @@
 # 当前 SDK/MCP 检查记录
 
+## remote-mcp Worker 测网部署（2026-11-09）
+
+- `wrangler login`：`agentsgot@gmail.com`（Account `Agentsgot@gmail.com's Account`）。
+- `wrangler deploy`：Worker `agentsgot-mcp` 已上线。
+  - Discovery：`https://agentsgot-mcp.agentsgot-remote-mcp.workers.dev/`
+  - MCP：`https://agentsgot-mcp.agentsgot-remote-mcp.workers.dev/mcp`
+  - `AGENTSGOT_API_BASE_URL=https://dev-agentgrid-api.openhub.network/api`
+- 远端 `GET /`（Cursor WebFetch）返回预期 JSON；本机 curl 经本地代理时 TLS 失败（`--noproxy` 仍偶发），以平台侧可达为准。
+- 骨架阶段本地 `wrangler dev` 烟测曾通过（`initialize` / `get_role_guide`）。
+
 ## remote-mcp Worker 骨架（2026-11-09）
 
 - 新增 `remote-mcp/`：Cloudflare Workers + `createMcpHandler`（Streamable HTTP `/mcp`），只读/指引工具；Bearer `agt_…` 调 agentsgot API；不托管私钥。
 - `npm install`（该目录独立 npm，非 kit pnpm workspace）：退出 0。
-- `npx wrangler dev --port 8788`：Ready；`GET /` 返回 JSON；`initialize` 与 `tools/call get_role_guide` 返回 SSE `event: message`。
-- 未执行 `wrangler login` / `deploy`（本机 Cloudflare 未登录）；未推送公开仓。
-- 目录侧：官方 Registry `io.github.agentsgot-stack/agentsgot@1.0.4` active；PulseMCP 新提交暂停；Glama / SkillsMP / skills.pub 公开页仍未收录。
+- 目录侧：官方 Registry active；PulseMCP 提交暂停；Glama / SkillsMP / skills.pub 仍待收录。
 
 ## Webhook 读取类型同步（2026-11-07）
 

@@ -91,7 +91,7 @@ Dify / n8n Cloud / Arcade / Coze / MCP Market “connect” expect a **remote HT
 
 1. Keep stdio for Cursor / Claude Desktop / local agents (`npx -y @agentsgot/agent-kit mcp`) — full tools + wallet B signing.
 2. Deploy the read/intent Worker in [`remote-mcp/`](../remote-mcp/) to **Cloudflare Workers** (Streamable HTTP at `/mcp`). Pass `Authorization: Bearer agt_…`. No hosted private keys; signing stays on the local kit.
-3. Do **not** require a separate Vercel deploy — main site already runs on Cloudflare; remote MCP should too. `dev.agentsgot.network` → mainnet is env (RPC/contracts/AGT), not domain-only swap.
+3. Do **not** require a separate Vercel deploy — main site already runs on Cloudflare; remote MCP should too. Testnet API today: `https://dev-agentgrid-api.openhub.network/api`. Mainnet later is env swap (API base + RPC/contracts/AGT), not a second backend.
 
 ```powershell
 cd remote-mcp
@@ -128,6 +128,6 @@ Identity for catalog work: **`@agentsgot-stack` / agentsgot** (GitHub active). C
 
 | Item | Why blocked | When to start |
 | --- | --- | --- |
-| MCP Market connect | Needs hosted Streamable HTTP URL | After agentsgot CF `remote-mcp` deploy |
-| Arcade / n8n / Coze / Dify | Same remote MCP dependency | Same |
-| Cloudflare `wrangler deploy` | Explicitly deferred | When ready: `cd remote-mcp` → `wrangler login` → `npm run deploy` |
+| MCP Market connect | Remote MCP is live (testnet) | Connect with URL below |
+| Arcade / n8n / Coze / Dify | Same | Paste the same `/mcp` URL |
+| Cloudflare `remote-mcp` | **Deployed** (testnet) | `https://agentsgot-mcp.agentsgot-remote-mcp.workers.dev/mcp` → API `https://dev-agentgrid-api.openhub.network/api` |
