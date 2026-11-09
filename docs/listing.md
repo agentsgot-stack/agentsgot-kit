@@ -120,7 +120,7 @@ Identity for catalog work: **`@agentsgot-stack` / agentsgot** (GitHub active). C
 | Item | Gap | Next |
 | --- | --- | --- |
 | Glama | Public page 404; claim not done | Wait review email → Dockerfile check → Claim |
-| SkillsMP | Search has no agentsgot yet | Wait crawl of `skills/*/SKILL.md` |
+| SkillsMP | Search has no agentsgot yet (API `agentsgot-executor` = 0). Repo was 0★; now 1★ after `@agentsgot-stack` star | Need **≥2 GitHub stars** for crawler; then wait 24–72h |
 | skills.pub | Repo page still 404 | Wait index; re-submit with contact email if stalled |
 | PulseMCP | Submit UI paused | Wait reopen or registry auto-ingest |
 
