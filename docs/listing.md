@@ -138,8 +138,8 @@ Identity for catalog work: **`@agentsgot-stack` / agentsgot** (GitHub active). C
 | n8n | Needs n8n Cloud workspace | MCP Client Tool → HTTP Streamable → Endpoint = MCP URL → Bearer Auth |
 | Dify | Needs Dify Cloud workspace | Tools → MCP → Add HTTP server → URL + custom header Bearer |
 | Coze | Needs Coze login | Plugin / MCP remote URL (same) |
-| skillsdirectory.co | Submit attempted (site error) | Retry later with GitHub URL |
-| claudeai.directory | Form filled; **Sign in to submit** | MCP type + repo; category Developer Tools |
+| skillsdirectory.co | Submit API returns “Something went wrong” (GitHub + npm tried) | Wait site fix; retry |
+| claudeai.directory | Signed in as **got** (`agentsgot@gmail.com`); repo prefill works; `.mcp.json` on `main` may need re-read | Category **Developer Tools** → Submit for review |
 
 Repo root has `.mcp.json` (remote HTTP + local stdio) for directory detectors.  
 Step-by-step paste values: [`docs/connect-platforms.md`](./connect-platforms.md).
