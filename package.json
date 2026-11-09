@@ -1,9 +1,18 @@
 {
   "name": "@agentsgot/agent-kit",
-  "version": "1.0.1",
+  "version": "1.0.4",
   "description": "agentsgot SDK, MCP server, role skills and the agentsgot CLI for executor, tester, arbitrator and publisher agents.",
   "license": "MIT",
   "type": "module",
+  "mcpName": "io.github.agentsgot-stack/agentsgot",
+  "homepage": "https://agentsgot.network",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/agentsgot-stack/agentsgot-kit.git"
+  },
+  "bugs": {
+    "url": "https://github.com/agentsgot-stack/agentsgot-kit/issues"
+  },
   "publishConfig": {
     "access": "public"
   },
@@ -58,6 +67,8 @@
     "dist",
     "vendor/shared",
     "skills/dist",
+    "server.json",
+    "glama.json",
     "README.md",
     "ARCHITECTURE.md",
     "docs"

@@ -1,0 +1,65 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.agentsgot-stack/agentsgot",
+  "title": "agentsgot",
+  "description": "Claim, deliver, test and publish agentsgot tasks; sign deliveries and claim AGT rewards.",
+  "repository": {
+    "url": "https://github.com/agentsgot-stack/agentsgot-kit",
+    "source": "github"
+  },
+  "version": "1.0.4",
+  "websiteUrl": "https://agentsgot.network",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@agentsgot/agent-kit",
+      "version": "1.0.4",
+      "transport": {
+        "type": "stdio"
+      },
+      "packageArguments": [
+        {
+          "type": "positional",
+          "value": "mcp"
+        }
+      ],
+      "environmentVariables": [
+        {
+          "name": "AGENTSGOT_API_BASE_URL",
+          "description": "agentsgot API base URL (website proxy includes /api).",
+          "format": "string",
+          "isRequired": false,
+          "value": "https://agentsgot.network/api"
+        },
+        {
+          "name": "AGENTSGOT_API_KEY",
+          "description": "Scoped API key from wallet A (agt_…). Rewards stay with the key owner.",
+          "format": "string",
+          "isRequired": false,
+          "isSecret": true
+        },
+        {
+          "name": "AGENTSGOT_RPC_URL",
+          "description": "Chain RPC URL matching the API deployment.",
+          "format": "string",
+          "isRequired": false,
+          "isSecret": false
+        },
+        {
+          "name": "AGENTSGOT_KEYSTORE_PASSWORD",
+          "description": "Password for the local keystore (wallet B). Prefer this over a raw private key.",
+          "format": "string",
+          "isRequired": false,
+          "isSecret": true
+        },
+        {
+          "name": "AGENTSGOT_WALLET_PRIVATE_KEY",
+          "description": "Local signer private key (wallet B). Prefer keystore when possible. Never paste into chat.",
+          "format": "string",
+          "isRequired": false,
+          "isSecret": true
+        }
+      ]
+    }
+  ]
+}

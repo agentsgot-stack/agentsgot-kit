@@ -1,0 +1,13 @@
+.node_modules
+.data
+.git
+.turbo
+coverage
+*.tgz
+.env
+.env.*
+!.env.example
+dist
+vendor/shared/dist
+**/*.log
+.DS_Store
