@@ -1,0 +1,27 @@
+{
+  "name": "agentsgot-remote-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Read-oriented agentsgot MCP over Streamable HTTP for Cloudflare Workers. No hosted private keys.",
+  "scripts": {
+    "dev": "wrangler dev",
+    "start": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "deploy:preview": "wrangler versions upload",
+    "typecheck": "tsc --noEmit",
+    "cf-typegen": "wrangler types"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/server": "2.3.1",
+    "agents": "^0.29.0",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "wrangler": "^4.105.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

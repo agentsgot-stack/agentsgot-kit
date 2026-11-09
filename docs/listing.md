@@ -87,19 +87,47 @@ Or: `clawhub sync --root ./skills/dist --all`
 
 ## Hosted platforms (not directory listings)
 
-Dify / n8n Cloud / Arcade / Coze / MCP Market “connect” expect a **remote HTTP MCP**. This package only speaks **stdio** today. Options:
+Dify / n8n Cloud / Arcade / Coze / MCP Market “connect” expect a **remote HTTP MCP**.
 
-1. Keep stdio for Cursor / Claude Desktop / local agents.
-2. Later add a read-only or intent-only streamable-http surface (no hosted private keys), then submit those URLs.
+1. Keep stdio for Cursor / Claude Desktop / local agents (`npx -y @agentsgot/agent-kit mcp`) — full tools + wallet B signing.
+2. Deploy the read/intent Worker in [`remote-mcp/`](../remote-mcp/) to **Cloudflare Workers** (Streamable HTTP at `/mcp`). Pass `Authorization: Bearer agt_…`. No hosted private keys; signing stays on the local kit.
+3. Do **not** require a separate Vercel deploy — main site already runs on Cloudflare; remote MCP should too. `dev.agentsgot.network` → mainnet is env (RPC/contracts/AGT), not domain-only swap.
 
-Vercel (`vercel.com/new?teamSlug=agentsgot`) is for deploying that remote surface, not for catalog metadata.
+```powershell
+cd remote-mcp
+npm install
+npx wrangler login
+npm run deploy
+# → https://agentsgot-mcp.<account>.workers.dev/mcp
+```
 
-## Checklist
+## Status (2026-11-09)
 
-- [ ] GitHub repo `agentsgot-stack/agentsgot-kit` public
-- [ ] npm `@agentsgot/agent-kit@1.0.4` published with `mcpName`
-- [ ] `mcp-publisher publish` succeeded
-- [ ] mcp.so / PulseMCP / MCP Market forms submitted
-- [ ] Glama claimed + release
-- [ ] ClawHub four skills published
-- [ ] skills.pub repo submitted (SkillsMP usually auto-indexes)
+Identity for catalog work: **`@agentsgot-stack` / agentsgot** (GitHub active). Cloudflare Worker deploy is **deferred** this round.
+
+### Done
+
+- [x] GitHub `agentsgot-stack/agentsgot-kit` public
+- [x] npm `@agentsgot/agent-kit@1.0.4` + `mcpName` / official Registry `io.github.agentsgot-stack/agentsgot` active
+- [x] ClawHub four skills under `@agentsgot-stack` (maintain only)
+- [x] Glama Add Server submitted (not public yet)
+- [x] skills.pub repo URL submitted (listing page not live yet)
+- [x] `remote-mcp/` scaffold + local Streamable HTTP smoke (`GET /`, `initialize`, `get_role_guide`)
+- [x] mcp.so / Vercel / goat / agentkit / OpenAI·Claude plugin dirs: **out of scope** (paid / duplicate host / not a catalog target / low priority)
+
+### Incomplete (can follow without CF)
+
+| Item | Gap | Next |
+| --- | --- | --- |
+| Glama | Public page 404; claim not done | Wait review email → Dockerfile check → Claim |
+| SkillsMP | Search has no agentsgot yet | Wait crawl of `skills/*/SKILL.md` |
+| skills.pub | Repo page still 404 | Wait index; re-submit with contact email if stalled |
+| PulseMCP | Submit UI paused | Wait reopen or registry auto-ingest |
+
+### Not started (blocked; CF deferred)
+
+| Item | Why blocked | When to start |
+| --- | --- | --- |
+| MCP Market connect | Needs hosted Streamable HTTP URL | After agentsgot CF `remote-mcp` deploy |
+| Arcade / n8n / Coze / Dify | Same remote MCP dependency | Same |
+| Cloudflare `wrangler deploy` | Explicitly deferred | When ready: `cd remote-mcp` → `wrangler login` → `npm run deploy` |

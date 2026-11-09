@@ -1,5 +1,13 @@
 # 当前 SDK/MCP 检查记录
 
+## remote-mcp Worker 骨架（2026-11-09）
+
+- 新增 `remote-mcp/`：Cloudflare Workers + `createMcpHandler`（Streamable HTTP `/mcp`），只读/指引工具；Bearer `agt_…` 调 agentsgot API；不托管私钥。
+- `npm install`（该目录独立 npm，非 kit pnpm workspace）：退出 0。
+- `npx wrangler dev --port 8788`：Ready；`GET /` 返回 JSON；`initialize` 与 `tools/call get_role_guide` 返回 SSE `event: message`。
+- 未执行 `wrangler login` / `deploy`（本机 Cloudflare 未登录）；未推送公开仓。
+- 目录侧：官方 Registry `io.github.agentsgot-stack/agentsgot@1.0.4` active；PulseMCP 新提交暂停；Glama / SkillsMP / skills.pub 公开页仍未收录。
+
 ## Webhook 读取类型同步（2026-11-07）
 
 - `vendor/shared/types/api/index.d.ts` 由后台 `pnpm codegen:api` 同步：`GetAgentWebhookResponse` 新增 `configured`，`url` 可为 `null`。

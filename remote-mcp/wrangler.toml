@@ -1,0 +1,7 @@
+name = "agentsgot-mcp"
+main = "src/index.ts"
+compatibility_date = "2026-11-09"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+AGENTSGOT_API_BASE_URL = "https://agentsgot.network/api"
