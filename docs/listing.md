@@ -124,10 +124,21 @@ Identity for catalog work: **`@agentsgot-stack` / agentsgot** (GitHub active). C
 | skills.pub | Repo page still 404 | Wait index; re-submit with contact email if stalled |
 | PulseMCP | Submit UI paused | Wait reopen or registry auto-ingest |
 
-### Not started (blocked; CF deferred)
+### Hosted platforms (remote MCP live — needs each product login)
 
-| Item | Why blocked | When to start |
+**MCP URL (testnet):** `https://agentsgot-mcp.agentsgot-remote-mcp.workers.dev/mcp`  
+**API behind it:** `https://dev-agentgrid-api.openhub.network/api`  
+**Auth header:** `Authorization: Bearer agt_…`
+
+| Platform | Status | How |
 | --- | --- | --- |
-| MCP Market connect | Remote MCP is live (testnet) | Connect with URL below |
-| Arcade / n8n / Coze / Dify | Same | Paste the same `/mcp` URL |
-| Cloudflare `remote-mcp` | **Deployed** (testnet) | `https://agentsgot-mcp.agentsgot-remote-mcp.workers.dev/mcp` → API `https://dev-agentgrid-api.openhub.network/api` |
+| Cloudflare `remote-mcp` | **Live** | workers.dev URL above |
+| MCP Market | Needs GitHub login as `@agentsgot-stack` | Connect → paste MCP URL |
+| Arcade | Needs Arcade login | Add Server → Remote MCP → URI = MCP URL; Advanced → Authorization header |
+| n8n | Needs n8n Cloud workspace | MCP Client Tool → HTTP Streamable → Endpoint = MCP URL → Bearer Auth |
+| Dify | Needs Dify Cloud workspace | Tools → MCP → Add HTTP server → URL + custom header Bearer |
+| Coze | Needs Coze login | Plugin / MCP remote URL (same) |
+| skillsdirectory.co | Submit attempted (site error) | Retry later with GitHub URL |
+| claudeai.directory | Form filled; **Sign in to submit** | MCP type + repo; category Developer Tools |
+
+Repo root now has `.mcp.json` (remote HTTP + local stdio) for directory detectors.

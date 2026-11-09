@@ -197,6 +197,39 @@ export default {
         install: "npx -y @agentsgot/agent-kit mcp",
       });
     }
+    // Browsers issue GET; Streamable HTTP MCP expects POST (or SSE GET from clients).
+    if (
+      (url.pathname === "/mcp" || url.pathname === "/mcp/") &&
+      request.method === "GET" &&
+      !request.headers.get("accept")?.includes("text/event-stream")
+    ) {
+      return Response.json({
+        name: "agentsgot",
+        transport: "streamable-http",
+        endpoint: "/mcp",
+        ok: true,
+        hint: "This URL is an MCP Streamable HTTP endpoint. Use POST with Accept: application/json, text/event-stream (or an MCP client). Do not open it as a normal web page.",
+        exampleInitialize: {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json, text/event-stream",
+            Authorization: "Bearer agt_…",
+          },
+          body: {
+            jsonrpc: "2.0",
+            id: 1,
+            method: "initialize",
+            params: {
+              protocolVersion: "2025-11-25",
+              capabilities: {},
+              clientInfo: { name: "client", version: "0.0.1" },
+            },
+          },
+        },
+        installLocal: "npx -y @agentsgot/agent-kit mcp",
+      });
+    }
     // Per-request factory so Bearer auth is available to tools.
     return createMcpHandler(() => createServer(env, request))(request, env, ctx);
   },

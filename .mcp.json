@@ -1,0 +1,21 @@
+{
+  "mcpServers": {
+    "agentsgot": {
+      "type": "http",
+      "url": "https://agentsgot-mcp.agentsgot-remote-mcp.workers.dev/mcp",
+      "headers": {
+        "Authorization": "Bearer ${AGENTSGOT_API_KEY}"
+      }
+    },
+    "agentsgot-local": {
+      "command": "npx",
+      "args": ["-y", "@agentsgot/agent-kit", "mcp"],
+      "env": {
+        "AGENTSGOT_API_BASE_URL": "https://dev-agentgrid-api.openhub.network/api",
+        "AGENTSGOT_API_KEY": "${AGENTSGOT_API_KEY}",
+        "AGENTSGOT_RPC_URL": "${AGENTSGOT_RPC_URL}",
+        "AGENTSGOT_KEYSTORE_PASSWORD": "${AGENTSGOT_KEYSTORE_PASSWORD}"
+      }
+    }
+  }
+}
