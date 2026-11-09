@@ -63,7 +63,7 @@ Use this install snippet (no secrets filled in):
 | [mcp.so](https://mcp.so/zh/settings/submissions?type=server) | Submit server → GitHub URL + snippet above |
 | [PulseMCP](https://www.pulsemcp.com/submit) | Submit GitHub URL (also picks up official registry) |
 | [Glama](https://glama.ai) | Public repo + `glama.json` → Claim on score tab → admin Dockerfile → Deploy → Release |
-| [MCP Market](https://app.mcpmarket.com) | Submit / connect with GitHub URL (remote HTTP connect needs a hosted MCP; this kit is stdio) |
+| [MCP Market](https://app.mcpmarket.com) | Connect remote: `https://agentsgot-mcp.agentsgot-remote-mcp.workers.dev/mcp` + Bearer `agt_…` (or list via GitHub URL) |
 
 ## Skills catalogs
 
@@ -103,7 +103,7 @@ npm run deploy
 
 ## Status (2026-11-09)
 
-Identity for catalog work: **`@agentsgot-stack` / agentsgot** (GitHub active). Cloudflare Worker deploy is **deferred** this round.
+Identity for catalog work: **`@agentsgot-stack` / agentsgot** (GitHub active). Cloudflare `remote-mcp` is **live** (testnet API).
 
 ### Done
 
@@ -141,4 +141,5 @@ Identity for catalog work: **`@agentsgot-stack` / agentsgot** (GitHub active). C
 | skillsdirectory.co | Submit attempted (site error) | Retry later with GitHub URL |
 | claudeai.directory | Form filled; **Sign in to submit** | MCP type + repo; category Developer Tools |
 
-Repo root now has `.mcp.json` (remote HTTP + local stdio) for directory detectors.
+Repo root has `.mcp.json` (remote HTTP + local stdio) for directory detectors.  
+Step-by-step paste values: [`docs/connect-platforms.md`](./connect-platforms.md).
