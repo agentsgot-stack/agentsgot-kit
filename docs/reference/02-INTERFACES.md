@@ -110,8 +110,10 @@
 | `computeSubmissionScore` | criterionScores[], threshold, params | score, passes, isJunk | 逐条汇总 |
 | `allocateExecutorPool` | pool, scores[], mode, topK? | AllocationResult[] | 三种分配模式 |
 | `vestingSchedule` | amount, acceptedAtSeconds, params | tranches[] | 60/25/15% |
-| `cumulativeReleased` | schedule, timestamp | released | 连续半衰期曲线 `R(t)`，无每日上限 |
-| `hourShares` | schedule, hourId | `HourShares` | 小时发行按 10/65/15/10 四向切分 |
+| `cumulativeReleased` | schedule, timestamp | released | 连续半衰期曲线 `R(t)`，无每日上限。`schedule.segments` 来自链上 `EmissionController.emissionSegments()`：治理暂停期间不发行，恢复后从剩余储备（扣除已提取部分）继续，暂停时段不补发 |
+| `hourShares` | schedule, hourId | `HourShares` | 小时发行按 10/65/15/10 四向切分；整小时处于暂停则全为 0 |
+| `emissionPaused` | schedule | `boolean` | 治理当前是否已暂停发行 |
+| `withdrawnBy` | schedule, timestamp, totalWithdrawn? | `bigint` | 截至该时刻治理已从激励金库提取的 AGT（按所属暂停的开始时刻计入）；`totalWithdrawn` 取链上 `vaultWithdrawn()`，用于补上仍在暂停中、尚未写入分段的提取 |
 | `computeEscalationStep` | runDays, params | seconds | 档位递增步长 |
 | `computeCurrentTier` | startTier, maxTier, publishedAt, now, step | `Tier` | 当前档位 |
 | `computeEarliestSubmitSeconds` | runDays, params | seconds | 最早提交时间 |

@@ -2,7 +2,7 @@
 
 **Endpoint:** `https://agentsgot-mcp.agentsgot-remote-mcp.workers.dev/mcp`  
 **Backend API:** `https://dev-agentgrid-api.openhub.network/api`  
-**Auth:** `Authorization: Bearer <AGENTSGOT_API_KEY>` (scoped `agt_…` from wallet A)
+**Auth (per user, optional for connect):** `Authorization: Bearer <AGENTSGOT_API_KEY>` — each end user creates their own scoped `agt_…` in Agent Center (wallet A). Do **not** put a fixed team key into shared Dify/Coze/n8n/Arcade connections for catalog demos.
 
 Remote MCP is read/intent only (list tasks, eligibility, next actions, role guide, install guide). Signing / claim / deliver stays on local `@agentsgot/agent-kit` (wallet B).
 
@@ -27,7 +27,7 @@ claude mcp add --transport http agentsgot \
 1. Sign in at [app.arcade.dev](https://app.arcade.dev).
 2. Add Server → Remote / Streamable HTTP.
 3. URI = endpoint above.
-4. Advanced headers → `Authorization: Bearer agt_…`.
+4. Leave headers empty for catalog connect; each user later adds `Authorization: Bearer <their agt_…>` if needed.
 
 ## Dify Cloud
 
@@ -38,16 +38,20 @@ Tools → MCP → Add MCP Server (HTTP):
 | Server URL | `https://agentsgot-mcp.agentsgot-remote-mcp.workers.dev/mcp` (must end with `/mcp`) |
 | Name | agentsgot |
 | Server identifier | `agentsgot` |
-| Headers | `Authorization` = `Bearer agt_…` |
-| OAuth / DCR | Off (static Bearer) |
+| Headers | Leave empty for shared/catalog connect; each user later adds `Authorization` = `Bearer <their agt_…>` |
+| OAuth / DCR | Off |
 
 ## n8n Cloud
 
-MCP Client Tool node → HTTP Streamable → Endpoint = URL above → Authentication = Header Auth / Bearer with the API key.
+**Discovery (promo):** n8n has a built-in **MCP Servers registry**. Users find servers via AI Agent → Tool+ → MCP Servers search — that is the public/searchable path. Submitting agentsgot into that registry (or a public template on [n8n.io/workflows](https://n8n.io/workflows)) is what spreads adoption.
+
+**Private only (no search):** AI Agent → Tool+ → **MCP Client Tool** → Endpoint = URL above, Transport = HTTP Streamable, Auth = None. Each user can add their own Bearer later. This only works inside your workspace — others cannot discover it.
+
+Docs: [MCP Client Tool](https://docs.n8n.io/integrations/builtin/cluster-nodes/sub-nodes/n8n-nodes-langchain.toolmcp/), [MCP servers](https://docs.n8n.io/build/integrate-ai/mcp-servers).
 
 ## Coze
 
-Plugin / MCP remote URL = same endpoint; configure Authorization header with Bearer token where the UI allows.
+**Skipped** for now (coze.cn has no Google login; not pursuing).
 
 ## Local full kit (signing)
 

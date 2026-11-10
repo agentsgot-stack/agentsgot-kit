@@ -101,9 +101,11 @@ npm run deploy
 # → https://agentsgot-mcp.<account>.workers.dev/mcp
 ```
 
-## Status (2026-11-09)
+## Status (2026-11-10)
 
 Identity for catalog work: **`@agentsgot-stack` / agentsgot** (GitHub active). Cloudflare `remote-mcp` is **live** (testnet API).
+
+Scoped `agt_…` keys are created in AgentsGot **Agent Center → 凭证** after wallet login (wallet A). Do not paste keys into chat. Catalog / shared host connects use the public MCP URL only — **never** embed a fixed team `agt_…`. Each end user adds their own Bearer in their own workspace.
 
 ### Done
 
@@ -113,6 +115,7 @@ Identity for catalog work: **`@agentsgot-stack` / agentsgot** (GitHub active). C
 - [x] Glama Add Server submitted (not public yet)
 - [x] skills.pub repo URL submitted (listing page not live yet)
 - [x] `remote-mcp/` scaffold + local Streamable HTTP smoke (`GET /`, `initialize`, `get_role_guide`)
+- [x] **MCP Market** workspace `agentsgot`: Tools → Add custom → Remote URL connected (`remote-eefb70f1-…`, 6 tools, status Connected). Auth tools still need Bearer `agt_…` when invoked.
 - [x] mcp.so / Vercel / goat / agentkit / OpenAI·Claude plugin dirs: **out of scope** (paid / duplicate host / not a catalog target / low priority)
 
 ### Incomplete (can follow without CF)
@@ -124,22 +127,23 @@ Identity for catalog work: **`@agentsgot-stack` / agentsgot** (GitHub active). C
 | skills.pub | Repo page still 404 | Wait index; re-submit with contact email if stalled |
 | PulseMCP | Submit UI paused | Wait reopen or registry auto-ingest |
 
-### Hosted platforms (remote MCP live — needs each product login)
+### Hosted platforms (remote MCP live)
 
 **MCP URL (testnet):** `https://agentsgot-mcp.agentsgot-remote-mcp.workers.dev/mcp`  
 **API behind it:** `https://dev-agentgrid-api.openhub.network/api`  
-**Auth header:** `Authorization: Bearer agt_…`
+**Auth:** per-user `Authorization: Bearer agt_…` from Agent Center — not a fixed key in shared host connects  
+**Policy (2026-11-10):** stop work that only yields private workspace connects with **no search/discovery promo**.
 
 | Platform | Status | How |
 | --- | --- | --- |
 | Cloudflare `remote-mcp` | **Live** | workers.dev URL above |
-| MCP Market | Needs GitHub login as `@agentsgot-stack` | Connect → paste MCP URL |
-| Arcade | Needs Arcade login | Add Server → Remote MCP → URI = MCP URL; Advanced → Authorization header |
-| n8n | Needs n8n Cloud workspace | MCP Client Tool → HTTP Streamable → Endpoint = MCP URL → Bearer Auth |
-| Dify | Needs Dify Cloud workspace | Tools → MCP → Add HTTP server → URL + custom header Bearer |
-| Coze | Needs Coze login | Plugin / MCP remote URL (same) |
-| skillsdirectory.co | Submit API returns “Something went wrong” (GitHub + npm tried) | Wait site fix; retry |
-| claudeai.directory | Signed in as **got** (`agentsgot@gmail.com`); repo prefill works; `.mcp.json` on `main` may need re-read | Category **Developer Tools** → Submit for review |
+| MCP Market | **Connected** (workspace agentsgot, 6 tools; no shared Bearer) | End users supply their own Bearer when invoking auth tools |
+| Dify | **Connected** (SANDBOX, 6 tools, 已授权; no shared Bearer) | Workspace connect done; confirm marketplace discoverability |
+| Arcade | **Stopped** — no promo | Private Add Server only |
+| n8n | **Stopped** — no promo | Private MCP Client Tool only; registry/template later if pursued |
+| Coze | **Stopped** | No Google on coze.cn; not pursuing |
+| skillsdirectory.co | Submit API errors | Wait site fix; retry |
+| claudeai.directory | Pending Google OTP → Submit | **Developer Tools** review (**directory = promo**) |
 
 Repo root has `.mcp.json` (remote HTTP + local stdio) for directory detectors.  
 Step-by-step paste values: [`docs/connect-platforms.md`](./connect-platforms.md).

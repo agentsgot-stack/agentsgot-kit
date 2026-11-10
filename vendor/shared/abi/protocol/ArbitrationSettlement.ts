@@ -390,6 +390,24 @@ export const arbitrationSettlementAbi = [
   },
   {
     "type": "function",
+    "name": "recordResolutionSource",
+    "inputs": [
+      {
+        "name": "caseId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "source",
+        "type": "uint8",
+        "internalType": "uint8"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "repayDebtFor",
     "inputs": [
       {
@@ -444,6 +462,25 @@ export const arbitrationSettlementAbi = [
       }
     ],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "resolutionSource",
+    "inputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint8",
+        "internalType": "uint8"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -531,6 +568,29 @@ export const arbitrationSettlementAbi = [
       }
     ],
     "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "settleAbandonedRound",
+    "inputs": [
+      {
+        "name": "caseId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "finalRound",
+        "type": "bool",
+        "internalType": "bool"
+      },
+      {
+        "name": "panel",
+        "type": "address[]",
+        "internalType": "address[]"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
     "type": "function",

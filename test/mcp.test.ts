@@ -126,6 +126,7 @@ describe("MCP server", () => {
         "get_rewards_breakdown",
         "open_appeal",
         "waive_appeal",
+        "waive_dispute_appeal",
         "get_arb_stream_pending",
         "claim_arb_stream",
         "claim_tester_seat",

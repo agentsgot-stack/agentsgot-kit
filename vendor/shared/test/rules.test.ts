@@ -23,6 +23,7 @@ import {
   computeEarliestSubmitSeconds,
   computeEscalationStep,
   computeFinalAppealFee,
+  computeArbitratorCoverage,
   computeMaxDisputeValue,
   computeMinimumTier,
   computeReserve,
@@ -306,13 +307,14 @@ describe("AGT units", () => {
 
 describe("arbitration", () => {
   it.each([
-    [17, ArbitrationRound.First, false, 0],
-    [18, ArbitrationRound.First, true, 5],
-    [39, ArbitrationRound.Final, true, 9],
-    [40, ArbitrationRound.First, true, 11],
-    [40, ArbitrationRound.Final, true, 21],
-  ])("selects panel for N_arb=%s round=%s", (count, round, enabled, panelSize) => {
-    expect(arbitrationPanel(count, round, defaultParams)).toMatchObject({
+    [2, ArbitrationRound.First, false, 0, 0],
+    [3, ArbitrationRound.First, true, 3, 0],
+    [18, ArbitrationRound.First, true, 3, 0],
+    [20, ArbitrationRound.First, true, 5, 2],
+    [45, ArbitrationRound.First, true, 11, 4],
+    [45, ArbitrationRound.Final, true, 21, 4],
+  ])("selects panel for N_arb=%s round=%s tier=%s", (count, round, enabled, panelSize, tier) => {
+    expect(arbitrationPanel(count, round, defaultParams, { tier, selectable: count })).toMatchObject({
       enabled,
       panelSize,
     });
@@ -337,15 +339,18 @@ describe("arbitration", () => {
     });
   });
 
-  it("bounds publishable disputes by arbitration capacity", () => {
+  it("publishes without a dispute cap by default and still reports seat coverage", () => {
     expect(computeDisputeBound(agtToWei(1_000), defaultParams)).toBe(agtToWei(650));
     expect(computeMaxDisputeValue({ eligibleArbitrators: 17, fullScale: false }, defaultParams)).toBe(
-      agtToWei(12_000),
+      (1n << 256n) - 1n,
     );
-    expect(computeMaxDisputeValue({ eligibleArbitrators: 18, fullScale: false }, defaultParams)).toBe(
+    expect(computeArbitratorCoverage({ eligibleArbitrators: 3, fullScale: false }, defaultParams)).toBe(
+      agtToWei(600_000),
+    );
+    expect(computeArbitratorCoverage({ eligibleArbitrators: 18, fullScale: false }, defaultParams)).toBe(
       agtToWei(1_500_000),
     );
-    expect(computeMaxDisputeValue({ eligibleArbitrators: 40, fullScale: true }, defaultParams)).toBe(
+    expect(computeArbitratorCoverage({ eligibleArbitrators: 40, fullScale: true }, defaultParams)).toBe(
       agtToWei(3_300_000),
     );
   });

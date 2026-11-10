@@ -253,6 +253,25 @@ export const arbitrationCourtAbi = [
   },
   {
     "type": "function",
+    "name": "defaultRulingAt",
+    "inputs": [
+      {
+        "name": "caseId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "drawPanel",
     "inputs": [
       {
@@ -276,6 +295,51 @@ export const arbitrationCourtAbi = [
     ],
     "outputs": [],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "forceResolve",
+    "inputs": [
+      {
+        "name": "caseId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "forceResolveAt",
+    "inputs": [
+      {
+        "name": "caseId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "forceResolveEpoch",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -312,6 +376,13 @@ export const arbitrationCourtAbi = [
   {
     "type": "function",
     "name": "initialize",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "initializeV2",
     "inputs": [],
     "outputs": [],
     "stateMutability": "nonpayable"
@@ -439,7 +510,7 @@ export const arbitrationCourtAbi = [
       {
         "name": "",
         "type": "uint8",
-        "internalType": "enum ArbitrationCourt.Phase"
+        "internalType": "enum CourtTypes.Phase"
       }
     ],
     "stateMutability": "view"
@@ -766,6 +837,19 @@ export const arbitrationCourtAbi = [
     "stateMutability": "view"
   },
   {
+    "type": "function",
+    "name": "waiveAppeal",
+    "inputs": [
+      {
+        "name": "caseId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
     "type": "event",
     "name": "AcceptWindowStarted",
     "inputs": [
@@ -817,6 +901,25 @@ export const arbitrationCourtAbi = [
         "type": "uint64",
         "indexed": false,
         "internalType": "uint64"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "AppealWaived",
+    "inputs": [
+      {
+        "name": "caseId",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "party",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
       }
     ],
     "anonymous": false
@@ -898,6 +1001,25 @@ export const arbitrationCourtAbi = [
   },
   {
     "type": "event",
+    "name": "CaseResolvedByDefault",
+    "inputs": [
+      {
+        "name": "caseId",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "executorWins",
+        "type": "bool",
+        "indexed": false,
+        "internalType": "bool"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "CommitStarted",
     "inputs": [
       {
@@ -955,6 +1077,25 @@ export const arbitrationCourtAbi = [
         "type": "uint64",
         "indexed": false,
         "internalType": "uint64"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "JurorExcluded",
+    "inputs": [
+      {
+        "name": "caseId",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "juror",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
       }
     ],
     "anonymous": false
@@ -1023,6 +1164,37 @@ export const arbitrationCourtAbi = [
         "type": "uint64",
         "indexed": false,
         "internalType": "uint64"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "PanelShrunk",
+    "inputs": [
+      {
+        "name": "caseId",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "finalRound",
+        "type": "bool",
+        "indexed": true,
+        "internalType": "bool"
+      },
+      {
+        "name": "panelSize",
+        "type": "uint8",
+        "indexed": false,
+        "internalType": "uint8"
+      },
+      {
+        "name": "jurors",
+        "type": "address[]",
+        "indexed": false,
+        "internalType": "address[]"
       }
     ],
     "anonymous": false
@@ -1451,12 +1623,12 @@ export const arbitrationCourtAbi = [
       {
         "name": "current",
         "type": "uint8",
-        "internalType": "enum ArbitrationCourt.Phase"
+        "internalType": "enum CourtTypes.Phase"
       },
       {
         "name": "required",
         "type": "uint8",
-        "internalType": "enum ArbitrationCourt.Phase"
+        "internalType": "enum CourtTypes.Phase"
       }
     ]
   },

@@ -5,6 +5,18 @@ export const HOUR = 3600n;
 export const BPS = 10_000n;
 const LN2_18 = 693_147_180_559_945_309n;
 
+/** One uninterrupted stretch of emission, as `EmissionController.emissionSegments` reports it. */
+export type ScheduleSegment = {
+  /** Unix time the stretch started. */
+  start: bigint;
+  /** Unix time governance paused it; 0 while it is running. */
+  end: bigint;
+  /** Cumulative emission when it started. */
+  base: bigint;
+  /** AGT still to be emitted when it started. */
+  pool: bigint;
+};
+
 export type Schedule = {
   startTime: bigint;
   initialBalance: bigint;
@@ -12,6 +24,11 @@ export type Schedule = {
   platformBps: bigint;
   execBps: bigint;
   testBps: bigint;
+  /**
+   * Stretches of emission, oldest first. Omitted or empty for a schedule that was never paused:
+   * one running stretch from `startTime` over `initialBalance`.
+   */
+  segments?: readonly ScheduleSegment[];
 };
 
 export type CumulativeShares = {
@@ -73,24 +90,61 @@ export function firstHour(schedule: Schedule): bigint {
   return schedule.startTime / HOUR;
 }
 
-function remain(schedule: Schedule, k: bigint): bigint {
-  return mulDiv(schedule.initialBalance, powWad(schedule.hourDecay18, k), WAD);
+/** Emitted from `pool` after `elapsed` seconds: hourly decay, linear inside the hour. */
+function releasedFrom(schedule: Schedule, pool: bigint, elapsed: bigint): bigint {
+  const emittedAfter = (k: bigint) => pool - mulDiv(pool, powWad(schedule.hourDecay18, k), WAD);
+  const k = elapsed / HOUR;
+  const r = elapsed % HOUR;
+  const rk0 = emittedAfter(k);
+  if (r === 0n) return rk0;
+  const rk1 = emittedAfter(k + 1n);
+  return rk0 + ((rk1 - rk0) * r) / HOUR;
 }
 
-function rk(schedule: Schedule, k: bigint): bigint {
-  return schedule.initialBalance - remain(schedule, k);
+/** True while governance has emission paused. */
+export function emissionPaused(schedule: Schedule): boolean {
+  const last = schedule.segments?.at(-1);
+  return last !== undefined && last.end !== 0n;
 }
 
-/** Cumulative released amount R(t) at absolute unix time t. */
+/**
+ * Cumulative released amount R(t) at absolute unix time t. Paused time emits nothing, and a
+ * resumed stretch emits from what was left (less anything governance withdrew).
+ */
 export function cumulativeReleased(schedule: Schedule, t: bigint): bigint {
   if (t <= schedule.startTime) return 0n;
-  const s = t - schedule.startTime;
-  const k = s / HOUR;
-  const r = s % HOUR;
-  const rk0 = rk(schedule, k);
-  if (r === 0n) return rk0;
-  const rk1 = rk(schedule, k + 1n);
-  return rk0 + ((rk1 - rk0) * r) / HOUR;
+  const segments = schedule.segments ?? [];
+  for (let index = segments.length - 1; index >= 0; index -= 1) {
+    const segment = segments[index] as ScheduleSegment;
+    if (t < segment.start) continue;
+    const until = segment.end !== 0n && t > segment.end ? segment.end : t;
+    return segment.base + releasedFrom(schedule, segment.pool, until - segment.start);
+  }
+  return releasedFrom(schedule, schedule.initialBalance, t - schedule.startTime);
+}
+
+/**
+ * AGT governance had withdrawn from the vault by time t. The schedule records what each pause took
+ * out of the pool, not when, so a withdrawal counts from the moment its pause began.
+ * `totalWithdrawn` (`EmissionController.vaultWithdrawn`) adds what a pause still in force has
+ * taken so far, which the schedule only records on resume.
+ */
+export function withdrawnBy(schedule: Schedule, t: bigint, totalWithdrawn = 0n): bigint {
+  const segments = schedule.segments ?? [];
+  let recorded = 0n;
+  let withdrawn = 0n;
+  for (let index = 1; index < segments.length; index += 1) {
+    const previous = segments[index - 1] as ScheduleSegment;
+    const segment = segments[index] as ScheduleSegment;
+    const taken = previous.pool - (segment.base - previous.base) - segment.pool;
+    recorded += taken;
+    if (t >= previous.end) withdrawn += taken;
+  }
+  const last = segments.at(-1);
+  if (last && last.end !== 0n && t >= last.end && totalWithdrawn > recorded) {
+    withdrawn += totalWithdrawn - recorded;
+  }
+  return withdrawn;
 }
 
 export function cumulativeShares(schedule: Schedule, t: bigint): CumulativeShares {

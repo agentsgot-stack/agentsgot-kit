@@ -706,19 +706,42 @@ export function computeDisputeBound(reserve: bigint, params: Params): bigint {
   return bpsDown(reserve, parameter(params, "deductionExecBps"));
 }
 
-/** Matches CourtRules.maxDisputeValue: fallback ceiling below the pool minimum, else threshold × mode multiplier. */
+/** Matches CourtRules.maxDisputeValue: 0 publish cap means unlimited. */
 export function computeMaxDisputeValue(
+  _pool: { eligibleArbitrators: number; fullScale: boolean },
+  params: Params,
+): bigint {
+  const maximum = parameter(params, "arbPublishMaxDisputeValueAgt");
+  if (maximum === 0) return (1n << 256n) - 1n;
+  return agtToWei(maximum);
+}
+
+/** Largest dispute one minimum-stake arbitrator can seat under the current pool mode. */
+export function computeArbitratorCoverage(
   pool: { eligibleArbitrators: number; fullScale: boolean },
   params: Params,
 ): bigint {
-  if (pool.eligibleArbitrators < parameter(params, "arbMinimumPoolSize")) {
-    return agtToWei(parameter(params, "arbFallbackMaxDisputeValueAgt"));
-  }
-  const multiplier = parameter(
-    params,
-    pool.fullScale ? "arbExposureMultiplierBps.Full" : "arbExposureMultiplierBps.Degraded",
-  );
-  return bpsDown(validatorRoleMinimum("ARBITRATOR", params), multiplier);
+  const key =
+    pool.eligibleArbitrators < parameter(params, "arbMinimumPoolSize")
+      ? "arbExposureMultiplierBps.Bootstrap"
+      : pool.fullScale
+        ? "arbExposureMultiplierBps.Full"
+        : "arbExposureMultiplierBps.Degraded";
+  return bpsDown(validatorRoleMinimum("ARBITRATOR", params), parameter(params, key));
+}
+
+function largestOddAtMost(value: number): number {
+  if (value < 3) return 3;
+  return value % 2 === 0 ? value - 1 : value;
+}
+
+/** Matches CourtRules.minimumReveal. */
+export function minimumReveal(panelSize: number, params: Params): number {
+  if (!Number.isInteger(panelSize) || panelSize < 2) throw new RangeError("panelSize must be >= 2");
+  const majority = Math.floor(panelSize / 2) + 1;
+  let required = Math.ceil((parameter(params, "arbMinRevealBps") * panelSize) / BPS);
+  if (required >= panelSize) required = panelSize - 1;
+  return Math.max(majority, required);
 }
 
 // ---------------------------------------------------------------------------
@@ -729,27 +752,33 @@ export function arbitrationPanel(
   eligibleArbitrators: number,
   round: ArbitrationRound,
   params: Params,
-): { enabled: boolean; panelSize: 0 | 3 | 5 | 9 | 11 | 21; majority: number; minReveal: number } {
+  options: { tier?: number; selectable?: number } = {},
+): { enabled: boolean; panelSize: number; majority: number; minReveal: number } {
   if (!Number.isInteger(eligibleArbitrators) || eligibleArbitrators < 0)
     throw new RangeError("eligibleArbitrators must be nonnegative");
-  if (eligibleArbitrators < parameter(params, "arbMinimumPoolSize")) {
+  const selectable = options.selectable ?? eligibleArbitrators;
+  const minPanel = parameter(params, "arbMinPanelSize");
+  if (selectable < minPanel) {
     return { enabled: false, panelSize: 0, majority: 0, minReveal: 0 };
   }
-  const full = eligibleArbitrators >= parameter(params, "arbFullPanelThreshold");
-  const panelSize = (
-    full
-      ? round === ArbitrationRound.First
-        ? parameter(params, "arbPanelSize.FullFirst")
-        : parameter(params, "arbPanelSize.FullFinal")
-      : round === ArbitrationRound.First
-        ? parameter(params, "arbPanelSize.DegradedFirst")
-        : parameter(params, "arbPanelSize.DegradedFinal")
-  ) as 5 | 9 | 11 | 21;
+  const tier = Math.min(4, Math.max(0, options.tier ?? 0));
+  const tierKey = `T${tier + 1}` as "T1" | "T2" | "T3" | "T4" | "T5";
+  const target = parameter(
+    params,
+    round === ArbitrationRound.First
+      ? (`arbPanelSizeFirst.${tierKey}` as keyof Params)
+      : (`arbPanelSizeFinal.${tierKey}` as keyof Params),
+  );
+  const capacity =
+    round === ArbitrationRound.First
+      ? largestOddAtMost(Math.floor(selectable / 2))
+      : largestOddAtMost(selectable);
+  const panelSize = Math.max(minPanel, Math.min(target, capacity));
   return {
     enabled: true,
     panelSize,
     majority: Math.floor(panelSize / 2) + 1,
-    minReveal: Math.ceil((parameter(params, "arbMinRevealBps") * panelSize) / BPS),
+    minReveal: minimumReveal(panelSize, params),
   };
 }
 

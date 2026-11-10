@@ -379,9 +379,17 @@
     "min": 5000,
     "max": 30000
   },
+  "arbExposureMultiplierBps.Bootstrap": {
+    "min": 1000,
+    "max": 10000
+  },
   "arbFallbackMaxDisputeValueAgt": {
     "min": 1000,
     "max": 100000
+  },
+  "arbPublishMaxDisputeValueAgt": {
+    "min": 0,
+    "max": 1000000000000
   },
   "arbPendingMaxHours": {
     "min": 72,
@@ -413,6 +421,62 @@
   },
   "arbPanelSize.DegradedFinal": {
     "fixed": true
+  },
+  "arbMinPanelSize": {
+    "min": 3,
+    "max": 5
+  },
+  "arbInvalidationsMax": {
+    "min": 0,
+    "max": 10
+  },
+  "arbPanelSizeFirst.T1": {
+    "min": 3,
+    "max": 21
+  },
+  "arbPanelSizeFirst.T2": {
+    "min": 3,
+    "max": 21
+  },
+  "arbPanelSizeFirst.T3": {
+    "min": 3,
+    "max": 21
+  },
+  "arbPanelSizeFirst.T4": {
+    "min": 3,
+    "max": 21
+  },
+  "arbPanelSizeFirst.T5": {
+    "min": 3,
+    "max": 21
+  },
+  "arbPanelSizeFinal.T1": {
+    "min": 3,
+    "max": 21
+  },
+  "arbPanelSizeFinal.T2": {
+    "min": 3,
+    "max": 21
+  },
+  "arbPanelSizeFinal.T3": {
+    "min": 3,
+    "max": 21
+  },
+  "arbPanelSizeFinal.T4": {
+    "min": 3,
+    "max": 21
+  },
+  "arbPanelSizeFinal.T5": {
+    "min": 3,
+    "max": 21
+  },
+  "arbGovernanceWindowHours": {
+    "min": 1,
+    "max": 168
+  },
+  "arbCaseMaxHours": {
+    "min": 24,
+    "max": 2160
   },
   "arbFallbackTesterCount": {
     "fixed": true
@@ -457,7 +521,7 @@
     "max": 24
   },
   "attendanceFeeMaxAgt": {
-    "min": 0.1,
+    "min": 0,
     "max": 2
   },
   "attendanceForecastHours": {

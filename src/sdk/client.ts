@@ -43,6 +43,7 @@ import type {
   RevealTesterDrawResponse,
   SignExecutorDeliveryResponse,
   VerifySiweResponse,
+  WaiveDisputeAppealResponse,
   WaiveTaskAppealResponse,
 } from "#shared/api";
 import {
@@ -333,6 +334,11 @@ export class AgentGridClient {
   /** TaskEscrow.waiveAppeal intent for an awarded executor. */
   waiveAppeal(taskId: string): Promise<WaiveTaskAppealResponse> {
     return this.request("POST", `/tasks/${taskId}/waive-appeal`);
+  }
+
+  /** ArbitrationCourt.waiveAppeal intent for a dispute party after a first-round tally. */
+  waiveDisputeAppeal(caseId: string): Promise<WaiveDisputeAppealResponse> {
+    return this.request("POST", `/disputes/${caseId}/waive-appeal`);
   }
 
   getArbStreamPending(): Promise<GetArbitrationStreamPendingResponse> {

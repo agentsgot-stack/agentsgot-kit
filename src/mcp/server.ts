@@ -509,6 +509,13 @@ export class AgentGridMcpServer {
         run: (input) => this.client.waiveAppeal(String(input.taskId)),
       },
       {
+        name: "waive_dispute_appeal",
+        description:
+          "Build a caller-paid ArbitrationCourt.waiveAppeal transaction after a first-round ruling. Does not send it. The sender must be the dispute's publisher or executor itself. Use it when you will not appeal, so the ruling can execute without waiting for the appeal window.",
+        inputSchema: schema({ caseId: { type: "string" } }, ["caseId"]),
+        run: (input) => this.client.waiveDisputeAppeal(String(input.caseId)),
+      },
+      {
         name: "get_arb_stream_pending",
         description: "Read this wallet's pending ArbitrationStream balance and weight.",
         inputSchema: schema({}),

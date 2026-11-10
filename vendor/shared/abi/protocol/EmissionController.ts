@@ -280,6 +280,54 @@ export const emissionControllerAbi = [
   },
   {
     "type": "function",
+    "name": "emissionPaused",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "emissionSegments",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "segments",
+        "type": "tuple[]",
+        "internalType": "struct EmissionController.Segment[]",
+        "components": [
+          {
+            "name": "start",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "end",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "base",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "pool",
+            "type": "uint256",
+            "internalType": "uint256"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "execBps",
     "inputs": [],
     "outputs": [
@@ -519,6 +567,26 @@ export const emissionControllerAbi = [
   },
   {
     "type": "function",
+    "name": "pauseEmission",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "pausedPool",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "platformBps",
     "inputs": [],
     "outputs": [
@@ -638,6 +706,13 @@ export const emissionControllerAbi = [
         "internalType": "address"
       }
     ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "resumeEmission",
+    "inputs": [],
     "outputs": [],
     "stateMutability": "nonpayable"
   },
@@ -858,6 +933,37 @@ export const emissionControllerAbi = [
     "stateMutability": "view"
   },
   {
+    "type": "function",
+    "name": "vaultWithdrawn",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "withdrawVault",
+    "inputs": [
+      {
+        "name": "to",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
     "type": "event",
     "name": "ArbitrationReleased",
     "inputs": [
@@ -903,6 +1009,56 @@ export const emissionControllerAbi = [
         "type": "address",
         "indexed": true,
         "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "EmissionPaused",
+    "inputs": [
+      {
+        "name": "pausedAt",
+        "type": "uint64",
+        "indexed": true,
+        "internalType": "uint64"
+      },
+      {
+        "name": "released",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "unemitted",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "EmissionResumed",
+    "inputs": [
+      {
+        "name": "resumedAt",
+        "type": "uint64",
+        "indexed": true,
+        "internalType": "uint64"
+      },
+      {
+        "name": "released",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "pool",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
       }
     ],
     "anonymous": false
@@ -1164,6 +1320,31 @@ export const emissionControllerAbi = [
     "anonymous": false
   },
   {
+    "type": "event",
+    "name": "VaultWithdrawn",
+    "inputs": [
+      {
+        "name": "to",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "unemitted",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
     "type": "error",
     "name": "AccessControlBadConfirmation",
     "inputs": []
@@ -1220,6 +1401,16 @@ export const emissionControllerAbi = [
   {
     "type": "error",
     "name": "ERC1967NonPayable",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "EmissionAlreadyPaused",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "EmissionNotPaused",
     "inputs": []
   },
   {
@@ -1423,6 +1614,22 @@ export const emissionControllerAbi = [
     "inputs": [
       {
         "name": "available",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "requested",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "WithdrawExceedsUnemitted",
+    "inputs": [
+      {
+        "name": "unemitted",
         "type": "uint256",
         "internalType": "uint256"
       },

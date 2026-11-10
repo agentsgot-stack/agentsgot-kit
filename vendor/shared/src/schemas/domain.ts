@@ -129,7 +129,12 @@ export const DisputeSchema = z.object({
   taskId: z.string().min(1),
   trigger: z.enum(["REJECTION", "TEST_CONTESTED", "MAINTENANCE_DEFECT"]),
   round: ArbitrationRoundSchema,
-  panelSize: z.union([z.literal(3), z.literal(5), z.literal(9), z.literal(11), z.literal(21)]),
+  panelSize: z
+    .number()
+    .int()
+    .min(0)
+    .max(21)
+    .refine((value) => value === 0 || value % 2 === 1, "panelSize must be 0 or an odd integer"),
   criterionIds: z.array(z.string().min(1)).min(1),
   phase: z.enum(["DRAWING", "CONFIRM", "COMMIT", "REVEAL", "TALLIED", "EXECUTED"]),
   caseFee: DecimalIntegerSchema,

@@ -68,6 +68,25 @@ export const testerAssignmentAbi = [
   },
   {
     "type": "function",
+    "name": "activeReviewKey",
+    "inputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "arbitrationFeeRecipient",
     "inputs": [],
     "outputs": [
@@ -202,6 +221,19 @@ export const testerAssignmentAbi = [
   },
   {
     "type": "function",
+    "name": "cancelFallbackReview",
+    "inputs": [
+      {
+        "name": "caseId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "court",
     "inputs": [],
     "outputs": [
@@ -247,6 +279,35 @@ export const testerAssignmentAbi = [
   },
   {
     "type": "function",
+    "name": "fallbackParticipants",
+    "inputs": [
+      {
+        "name": "caseId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "finalRound",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "participants",
+        "type": "address[]",
+        "internalType": "address[]"
+      },
+      {
+        "name": "approved",
+        "type": "bool[]",
+        "internalType": "bool[]"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "fallbackProgress",
     "inputs": [
       {
@@ -270,6 +331,25 @@ export const testerAssignmentAbi = [
         "name": "redraws",
         "type": "uint8",
         "internalType": "uint8"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "finalResultPassed",
+    "inputs": [
+      {
+        "name": "taskId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
       }
     ],
     "stateMutability": "view"
@@ -521,6 +601,49 @@ export const testerAssignmentAbi = [
   },
   {
     "type": "function",
+    "name": "requestFallbackReviewForRound",
+    "inputs": [
+      {
+        "name": "caseId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "finalRound",
+        "type": "bool",
+        "internalType": "bool"
+      },
+      {
+        "name": "taskId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "publisher",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "executor",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "testerCount",
+        "type": "uint8",
+        "internalType": "uint8"
+      },
+      {
+        "name": "excluded",
+        "type": "address[]",
+        "internalType": "address[]"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "selection",
     "inputs": [],
     "outputs": [
@@ -528,6 +651,30 @@ export const testerAssignmentAbi = [
         "name": "",
         "type": "address",
         "internalType": "contract IArbitrationSelection"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "servedInCase",
+    "inputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
       }
     ],
     "stateMutability": "view"
@@ -884,6 +1031,31 @@ export const testerAssignmentAbi = [
         "type": "bool",
         "indexed": false,
         "internalType": "bool"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "FallbackRoundRequested",
+    "inputs": [
+      {
+        "name": "caseId",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "finalRound",
+        "type": "bool",
+        "indexed": true,
+        "internalType": "bool"
+      },
+      {
+        "name": "reviewKey",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
       }
     ],
     "anonymous": false

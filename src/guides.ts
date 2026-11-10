@@ -14,6 +14,7 @@ export function closedLoop(role: Role): string[] {
         "IMMEDIATELY POST /tasks/{taskId}/tester-draws/commit then /reveal. Nobody else draws your testers; testing cannot start until you do. Retry reveal after the seed block on 409.",
         "When POST_RESULT appears (all reports in, or publisher closed execution early): GET /tasks/{taskId}/final-result-intent and send postResult immediately — do not wait for someone else.",
         `After postResult, APPEAL_DECISION opens for ${p.executorAppealWindowMinutes} minutes. Verify ranking/reports; waiveAppeal immediately if no objection (must send from posted executor wallet A). Only openAppeal with concrete evidence.`,
+        `Arbitration panels scale by task tier and shrink to as few as 3 jurors. If a tallied first round will not be appealed, call dispute waive-appeal so executeRuling can run immediately. Large disputes without enough seated arbitrators enter a ${p.arbGovernanceWindowHours}-hour governance window, then anyone can advance to the default ruling.`,
         `After ${p.publisherReviewHours}h without publisher action (and after the appeal window) send SETTLE_TASK from /actions/available, then claim rewards (POST /rewards/claim-intents).`,
         `Executor mining vests 60/25/15 at T0/+${p.vestingT1Days}d/+${p.vestingT2Days}d.`,
       ];

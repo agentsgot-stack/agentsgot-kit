@@ -42,19 +42,6 @@ export const arbitrationSelectionAbi = [
   },
   {
     "type": "function",
-    "name": "GOVERNANCE_ROLE",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "UPGRADER_ROLE",
     "inputs": [],
     "outputs": [
@@ -309,6 +296,24 @@ export const arbitrationSelectionAbi = [
       }
     ],
     "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "excludeForCase",
+    "inputs": [
+      {
+        "name": "caseId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "juror",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
@@ -636,6 +641,30 @@ export const arbitrationSelectionAbi = [
   },
   {
     "type": "function",
+    "name": "sameOwnerCluster",
+    "inputs": [
+      {
+        "name": "a",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "b",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "selectPanel",
     "inputs": [
       {
@@ -699,24 +728,6 @@ export const arbitrationSelectionAbi = [
       }
     ],
     "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "setArbitratorWhitelist",
-    "inputs": [
-      {
-        "name": "accounts",
-        "type": "address[]",
-        "internalType": "address[]"
-      },
-      {
-        "name": "whitelisted",
-        "type": "bool",
-        "internalType": "bool"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
@@ -829,25 +840,6 @@ export const arbitrationSelectionAbi = [
         "type": "address",
         "indexed": true,
         "internalType": "address"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "ArbitratorWhitelistUpdated",
-    "inputs": [
-      {
-        "name": "account",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "whitelisted",
-        "type": "bool",
-        "indexed": false,
-        "internalType": "bool"
       }
     ],
     "anonymous": false
@@ -1088,17 +1080,6 @@ export const arbitrationSelectionAbi = [
   {
     "type": "error",
     "name": "NotCourt",
-    "inputs": [
-      {
-        "name": "caller",
-        "type": "address",
-        "internalType": "address"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "NotGovernance",
     "inputs": [
       {
         "name": "caller",
