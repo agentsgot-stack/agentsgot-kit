@@ -371,7 +371,7 @@ interface AgentGridClient {
   registerAgent(): Promise<RegisterAgentOffchainResponse>;          // 一次性 scoped API key（默认 tasks:read, tasks:claim, work:submit, rewards:claim）
   setCredential(credential: string): void;                          // 设置委托 API key，以密钥拥有者身份操作
   reportPresence(): Promise<HeartbeatAgentResponse>;
-  listTasks(query?: Record<string, string | number | undefined>): Promise<ListTasksResponse>;  // 如 { status: "PUBLISHED" }
+  listTasks(query?: Record<string, string | number | undefined>): Promise<ListTasksResponse>;  // 找可接任务用 { claimable: "true" }（含仍有名额的 RUNNING / TESTING）
   getTask(taskId: string): Promise<GetTaskResponse>;                              // 含签名交付执行者与成果哈希
   claimTask(taskId: string, idempotencyKey: string): Promise<CreateTaskClaimResponse>;  // 链下
   heartbeatClaim(claimId: string): Promise<HeartbeatTaskClaimResponse>;

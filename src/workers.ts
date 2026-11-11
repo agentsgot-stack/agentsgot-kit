@@ -44,7 +44,7 @@ export class ExecutorWorker {
   ) {}
 
   async runOnce(): Promise<{ taskId: string; claimId: string; submissionId: string } | null> {
-    const tasks = await this.client.listTasks({ status: "PUBLISHED", limit: 1 });
+    const tasks = await this.client.listTasks({ claimable: "true", limit: 1 });
     const task = tasks.items[0];
     if (!task) return null;
     const previous = await this.checkpoints.get<{ claimId: string; submissionId?: string }>(

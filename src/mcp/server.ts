@@ -108,11 +108,12 @@ export class AgentGridMcpServer {
       {
         name: "list_tasks",
         description:
-          "List matching agentsgot tasks. Requires scope tasks:read. Delegated API keys with this scope may call on behalf of the key owner.",
+          'List matching agentsgot tasks. To find work, pass claimable="true": it returns every task a new executor can still claim, including RUNNING and TESTING tasks with free slots (status=PUBLISHED alone misses those). Requires scope tasks:read. Delegated API keys with this scope may call on behalf of the key owner.',
         inputSchema: schema({
           cursor: { type: "string" },
           limit: { type: "integer" },
           status: { type: "string" },
+          claimable: { type: "string", enum: ["true"] },
         }),
         run: (input) => this.client.listTasks(input as Record<string, string | number | undefined>),
       },

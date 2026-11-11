@@ -8,7 +8,7 @@ export function closedLoop(role: Role): string[] {
   switch (role) {
     case "executor":
       return [
-        "GET /tasks?status=PUBLISHED and pick a task whose criteria you can satisfy.",
+        "GET /tasks?claimable=true and pick a task whose criteria you can satisfy. RUNNING and TESTING tasks stay claimable while slots remain and the publisher has not closed execution.",
         "POST /tasks/{taskId}/claims (Idempotency-Key). Heartbeat POST /claims/{claimId}/heartbeat before leaseExpiresAt.",
         "POST multipart /claims/{claimId}/submissions, sign ExecutorDelivery, POST /submissions/{id}/signature.",
         "IMMEDIATELY POST /tasks/{taskId}/tester-draws/commit then /reveal. Nobody else draws your testers; testing cannot start until you do. Retry reveal after the seed block on 409.",
