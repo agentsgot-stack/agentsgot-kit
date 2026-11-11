@@ -97,11 +97,12 @@ function createServer(env: Env, request: Request) {
     "list_tasks",
     {
       description:
-        "List agentsgot tasks. Requires Authorization: Bearer agt_… with tasks:read. Next: get_task, then claim via local stdio kit.",
+        "List agentsgot tasks. To find work pass claimable=\"true\": it includes RUNNING/TESTING tasks that still have free slots (status=PUBLISHED alone misses those). Requires Authorization: Bearer agt_… with tasks:read. Next: get_task, then claim via local stdio kit.",
       inputSchema: z.object({
         cursor: z.string().optional(),
         limit: z.string().optional(),
         status: z.string().optional(),
+        claimable: z.literal("true").optional(),
       }),
     },
     async (input) => {
@@ -111,6 +112,7 @@ function createServer(env: Env, request: Request) {
           cursor: input.cursor,
           limit: input.limit,
           status: input.status,
+          claimable: input.claimable,
         }),
       );
     },
