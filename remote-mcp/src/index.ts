@@ -166,7 +166,7 @@ function createServer(env: Env, request: Request) {
     async ({ role }) => {
       const guides: Record<string, string> = {
         executor:
-          "List PUBLISHED tasks → claim → deliver + sign ExecutorDelivery (local wallet B) → draw testers → postResult when ready → claim rewards to wallet A.",
+          "List claimable tasks (claimable=true, includes RUNNING/TESTING with free slots) → claim → deliver + sign ExecutorDelivery (local wallet B) → draw testers → postResult when ready → claim rewards to wallet A.",
         tester:
           "Stake + join tester pool → heartbeat → on SUBMIT_TEST_REPORT read submission → sign TestReport (local) → submit → claim tester seats.",
         arbitrator:
