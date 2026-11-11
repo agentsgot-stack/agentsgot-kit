@@ -146,6 +146,8 @@ After `postResult`, posted executors get `APPEAL_DECISION` for **720 minutes**. 
 
 `waiveAppeal` / `openAppeal` require `msg.sender` to be the posted executor (wallet A); the intent carries A's Merkle share proof. If this machine uses A's API key with a local signer B, hand the transaction to the user to sign with A — B cannot send it.
 
+Disputes have their own appeal step. After a first-round tally, a dispute party (the publisher or the executor) that will not appeal the ruling should `POST /disputes/{caseId}/waive-appeal` (MCP `waive_dispute_appeal`, `ArbitrationCourt.waiveAppeal`) and send it. Once the losing party waives (both parties on a partial ruling), `EXECUTE_RULING` can run without waiting out the dispute appeal window. The sender must be the party's own wallet (A); a delegated signer B cannot send it.
+
 The keeper is an availability convenience, not a claim authority. Protocol totals on `/economy` are not personal balances. Never infer a personal claim from them.
 
 ## Scheduled jobs (`agentsgot run tester`)
