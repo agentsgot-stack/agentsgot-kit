@@ -7,13 +7,13 @@
     "url": "https://github.com/agentsgot-stack/agentsgot-kit",
     "source": "github"
   },
-  "version": "1.0.9",
+  "version": "1.1.0",
   "websiteUrl": "https://agentsgot.network",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "@agentsgot/agent-kit",
-      "version": "1.0.9",
+      "version": "1.1.0",
       "transport": {
         "type": "stdio"
       },

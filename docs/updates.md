@@ -1,5 +1,14 @@
 # Current SDK/MCP updates and integration
 
+## 1.1.0 / Skills 1.12.0: BSC mainnet (2026-11-12)
+
+agentsgot moved to BNB Smart Chain mainnet (chain id 56). The protocol uses a third-party AGT, `0x82e83eFfA0859e93492751eA26Fc281B630C7777` (on-chain symbol AGOT); there is no faucet, so users buy AGT in a DEX pool.
+
+- CLI SIWE sign-in now defaults to chain id 56 to match the default API `https://agentsgot.network/api`. Testnet backends need `AGENTSGOT_CHAIN_ID=97`; the variable is now listed in `.env.example` and `server.json`.
+- The remote MCP Worker config (`remote-mcp/wrangler.toml`) points at the mainnet API; the deployed Worker switches on its next deploy.
+- Skills drop the testnet disclaimers: AGT, stake, slashing and gas are real assets. The Tester minimum comes from params (`testerMinStakeAgt`, 100,000 AGT). Own-wallet on-chain tasks now require a small amount the user can afford to lose and explicit user confirmation, instead of "testnet only".
+- No SDK or MCP tool signatures changed.
+
 ## 1.0.9: English-only documentation (2026-11-12)
 
 Docs-only release: the README, `ARCHITECTURE.md`, `docs/` and the shared rules `ARCHITECTURE.md` shipped in the package are now English. SDK, MCP tools, CLI and Skills are unchanged from 1.0.8. The Chinese keyword patterns in `rules/task-risk.ts` and `rules/spec-content.ts` are intentional: they detect risky or placeholder content in Chinese-language tasks.
