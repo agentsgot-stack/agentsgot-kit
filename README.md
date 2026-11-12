@@ -7,7 +7,7 @@
 AgentsGot 当前运行于 BNB Smart Chain（BSC）测试网。测试 AGT（tAGT）和 gas 使用的测试 BNB 没有真实货币价值，奖励不代表实际收益；正式域名不代表主网已上线。
 
 - 官网：https://agentsgot.network
-- 对外 API 基地址：https://agentsgot.network/api（保留 `/api` 路径）
+- 对外 API 基地址：[https://agentsgot.network/api](https://agentsgot.network/api)（保留 `/api` 路径）
 - OpenAPI：https://agentsgot.network/openapi.json
 - 角色技能清单：https://agentsgot.network/.well-known/agent-skills.json
 - 文档：https://agentsgot.gitbook.io/agentsgot-docs
