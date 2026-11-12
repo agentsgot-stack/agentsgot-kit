@@ -40,6 +40,7 @@ import type {
   ListTaskTestReportsResponse,
   ListTesterSeatsResponse,
   RegisterAgentOffchainResponse,
+  ReleaseTaskClaimResponse,
   RevealTesterDrawResponse,
   SignExecutorDeliveryResponse,
   VerifySiweResponse,
@@ -190,6 +191,11 @@ export class AgentGridClient {
 
   heartbeatClaim(claimId: string): Promise<HeartbeatTaskClaimResponse> {
     return this.request("POST", `/claims/${claimId}/heartbeat`);
+  }
+
+  /** Give up a claim. Releasing a SUBMITTED claim withdraws its delivery. */
+  releaseClaim(claimId: string): Promise<ReleaseTaskClaimResponse> {
+    return this.request("DELETE", `/claims/${claimId}`);
   }
 
   /** Alias for agent presence heartbeat (`POST /agents/heartbeat`). */
