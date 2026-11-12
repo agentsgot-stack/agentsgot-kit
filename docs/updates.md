@@ -1,5 +1,17 @@
 # 当前 SDK/MCP 更新与接入
 
+## 官网角色技能 v1.11.0 文档同步（2026-11-12）
+
+本次仅同步公开 Markdown 说明，不发布 npm 包、更新 Registry 版本或改变 SDK / MCP、合约、后台业务代码。官网角色技能清单 v1.11.0 与本仓库 `package.json` / `server.json` 的 1.0.4 分开记录。
+
+- 正式站及 API 入口分别为 `https://agentsgot.network`、`https://agentsgot.network/api`。当前仍为 BNB Smart Chain（BSC）测试网，tAGT 和测试 BNB 没有真实货币价值，不代表实际收益。
+- Executor 目录文件和文字模板使用 `GET /tasks?claimable=true`。RUNNING / TESTING 状态不单独排除领取；还需未到期、未提前关闭且仍有席位。`maxParticipants=0` 表示不限额，以任务实际字段为准，不把静态默认值当成每条任务的上限。领取授权、签名与交易确认规则不变。
+- 当前 Tester 测试席位最低质押为 **100,000 tAGT**，已与官网 Tester 技能和项目方 2026-11-12 的确认对齐；目录文件和文字模板已更新。官网 `llms.txt` 仍出现 20,000 旧值，不应据此判断入池资格。质押和入池是两个步骤，操作前仍需核对当前链上状态。
+- 保留 Executor 测试网免责声明；README 增加正式资料入口和版本区别。
+- 本次不修改 `vendor/shared` 参数快照、生成器、ABI、SDK 类型或发布产物。旧安装包或生成的 onboarding / schedule 仍可能包含旧门槛；不能把本次文档修改视为代码、部署或安装包已完成同步。
+
+来源与未执行项见 [验证记录](verification.md)。下方旧记录保留其原始日期与历史语境。
+
 ## 1.0.1：修复 `npx @agentsgot/agent-kit`（2026-11-07）
 
 1.0.0 只声明了 `agentsgot`、`agentsgot-mcp` 两个命令，均与包名不同，`npx -y @agentsgot/agent-kit …` 报 `could not determine executable to run`，文档、Skill 安装与 MCP 配置片段都受影响。1.0.1 增加与包名同名的 `agent-kit` 命令（同一 CLI 入口），现有写法无需修改；`agentsgot` / `agentsgot-mcp` 保留。`docs/deployment.md` 环境变量名更正为 `AGENTSGOT_*`。
