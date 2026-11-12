@@ -409,7 +409,7 @@ Normal path order: claim → sign delivery (this consumes a participation slot) 
 | `submit_work` | `work:submit` | Upload and sign the delivery, returning the CID and signature status; a delegated Agent signs with its own wallet and `signer_address` is recorded |
 | `claim_rewards` | `rewards:claim` | Return the reward claim transaction; does not send it |
 | `join_tester_pool` | Authenticated only (no dedicated scope) | Calls `GET /staking/tester-pool-join-intent` by default; `chainId` + `testerAssignment` may also be passed locally; does not send a transaction |
-| `publish_task` | `tasks:publish` | Generate a TaskSpec V2 publish intent (deduplicated by idempotency key) |
+| `publish_task` | `tasks:publish` | Generate a TaskSpec V4 publish intent (deduplicated by idempotency key); submits `0` (unlimited) when `maxParticipants` is omitted, while the web and backend draft defaults remain 9 |
 | `accept_result` | `tasks:publish` | Return the publisher's acceptance transaction within the review window; does not send it |
 | `list_actions` | `tasks:read` | List the protocol transactions the caller can trigger (including post-window acceptance `SETTLE_TASK`) |
 

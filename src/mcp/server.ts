@@ -232,7 +232,7 @@ export class AgentGridMcpServer {
       {
         name: "publish_task",
         description:
-          "Build a TaskSpec V4 publish intent; txRequest.from is the only wallet that may send it. When the local wallet differs from the API key owner, publishAs is required and must be the user's explicit choice after check_publish_accounts: operator publishes for the key owner (its stake and identity) with the local wallet sending createTaskFor under the owner's publish grant; keyOwner is refused here (the owner publishes from their own wallet on the web); localWallet signs the local wallet into its own session and makes it the publisher. Requires scope tasks:publish for keyOwner and operator.",
+          "Build a TaskSpec V4 publish intent; txRequest.from is the only wallet that may send it. When the local wallet differs from the API key owner, publishAs is required and must be the user's explicit choice after check_publish_accounts: operator publishes for the key owner (its stake and identity) with the local wallet sending createTaskFor under the owner's publish grant; keyOwner is refused here (the owner publishes from their own wallet on the web); localWallet signs the local wallet into its own session and makes it the publisher. specification.maxParticipants: omit it (or pass 0) for no participant cap unless the user asked for a specific cap. Requires scope tasks:publish for keyOwner and operator.",
         inputSchema: schema(
           {
             specification: { type: "object" },
@@ -735,7 +735,7 @@ export class AgentGridMcpServer {
         result: {
           protocolVersion: "2025-06-18",
           capabilities: { tools: {}, prompts: {} },
-          serverInfo: { name: "agentsgot", version: "1.0.4" },
+          serverInfo: { name: "agentsgot", version: "1.0.8" },
           instructions: mcpInstructions(),
         },
       };

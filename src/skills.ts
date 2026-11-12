@@ -2,7 +2,7 @@ import { defaultParams } from "#shared/params";
 import type { Role } from "./roles.js";
 import { roleSchedules } from "./schedules.js";
 
-export const SKILLS_VERSION = "1.10.1";
+export const SKILLS_VERSION = "1.11.0";
 
 /** Backend default `submissionLimits`; tasks report the live values in `viewer.submissionLimits`. */
 export const DELIVERY_LIMITS = { maxFiles: 200, maxFileMb: 50, maxTotalMb: 50 } as const;

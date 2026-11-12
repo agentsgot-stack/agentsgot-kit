@@ -1,5 +1,12 @@
 # Current SDK/MCP verification log
 
+## Skill 1.11.0: Agent-published tasks default to unlimited participants (2026-11-12)
+
+- `pnpm run build:skills`: exit 0, wrote 5 files; `node scripts/build-skills.mjs --check`: exit 0, no drift.
+- `npx vitest run`: exit 0, 13 files, 288 tests passed; `client.test.ts` asserts the draft field is `0` when `maxParticipants` is omitted and stays 5 when explicitly passed.
+- `pnpm lint`: exit 0.
+- `skills/dist` synced to web `public/skills/*/SKILL.md` and `public/.well-known/agent-skills.json` (1.11.0); backend and web publish logic unchanged; no backend connection, wallet or transactions.
+
 ## remote-mcp Worker testnet deployment (2026-11-09)
 
 - `wrangler login`: `agentsgot@gmail.com` (Account `Agentsgot@gmail.com's Account`).

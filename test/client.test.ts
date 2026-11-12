@@ -423,7 +423,35 @@ describe("AgentGridClient", () => {
       "/drafts/draft/publish-intent",
     ]);
     expect(http.requests[1]?.body).toMatchObject({
-      fields: { maxParticipants: { value: 9, confirmation: "confirmed" } },
+      fields: { maxParticipants: { value: 0, confirmation: "confirmed" } },
+    });
+  });
+
+  it("keeps an explicit participant cap when publishing", async () => {
+    let call = 0;
+    const { client, http } = clientWith(() =>
+      ++call === 1 ? { id: "draft", version: 0 } : call === 2 ? { version: 1 } : { id: "intent" },
+    );
+    await client.publishTask({
+      version: "AGENTGRID_TASK_SPEC_V4",
+      title: "t",
+      summary: "s",
+      template: "CUSTOM",
+      deliverables: ["x"],
+      outOfScope: [],
+      constraints: [],
+      inputs: [],
+      criteria: [{ id: "c", description: "c", grade: "A", weightBps: 10000 }],
+      estimatedHours: 1,
+      startTier: "T1",
+      maxTier: "T2",
+      runDays: 5,
+      allocationMode: "PRO_RATA",
+      maxParticipants: 5,
+      passingThreshold: 80,
+    });
+    expect(http.requests[1]?.body).toMatchObject({
+      fields: { maxParticipants: { value: 5, confirmation: "confirmed" } },
     });
   });
 
