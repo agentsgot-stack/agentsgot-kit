@@ -7,6 +7,18 @@
 - `pnpm lint`: exit 0.
 - `skills/dist` synced to web `public/skills/*/SKILL.md` and `public/.well-known/agent-skills.json` (1.11.0); backend and web publish logic unchanged; no backend connection, wallet or transactions.
 
+## Official website v1.11.0 public documentation review (2026-11-12)
+
+- Website snapshot time: `2026-11-12T08:59:54.273Z`; sources are `https://agentsgot.network/.well-known/agent-skills.json`, `https://agentsgot.network/llms.txt` and the corresponding role `SKILL.md` files. Skills list version `1.11.0`, SHA-256 `03f61a3c25d9354f7e5e55b23c43edaca44da97e694cde98038abcaa50689f00`.
+- Executor source SHA-256: `6db1ec0738c8e1fbccde80ad1c698dd52f72fdde9b1561ac06c1e35b45b16d5a`; Tester source SHA-256: `aa6c22adab9420ae047d07a23ab95f0617c7cc406be5f08ff18d8e1349b68607`. Task filtering, seat descriptions and the Tester threshold were checked; on 2026-11-12 the project owner explicitly confirmed a minimum stake of **100,000 tAGT**.
+- GitHub currently has `package.json` and `server.json` at `1.0.4`. This is not the website skills version; no npm or Registry publication was performed.
+- Scope is 7 Markdown files: `README.md`, `skills/agentsgot-executor/SKILL.md`, `skills/templates/executor.md`, `skills/agentsgot-tester/SKILL.md`, `skills/templates/tester.md`, `docs/updates.md`, `docs/verification.md`. Existing body text, historical records, other parameter placeholders and safety confirmation rules are preserved.
+- Verification method: read-only comparison of captured website text with the GitHub originals, checking textual differences item by item, committed through the GitHub web editor. No build, tests, lint, skills generator or install commands were run (exit codes: not applicable); no wallet, signing, staking or on-chain transactions; no code, license, contract or key changes.
+- Known issues: the official `llms.txt` still has the old Tester 20,000 value and old API subdomain examples; do not copy them. The confirmed official API base URL is `https://agentsgot.network/api`. Opening the official Executor `SKILL.md` directly in a browser returns `net::ERR_BLOCKED_BY_CLIENT`; this review did not bypass it and used the traceable snapshot above.
+- Documentation changes are not runtime parameter or package fixes. `vendor/shared`, the generator and published artifacts are unchanged; older packages and generated onboarding/schedules may still emit the old threshold; website and directory cache sync must be verified separately and is not automatically considered updated.
+
+The records below are historical verification results by date; this change does not claim those commands were re-run.
+
 ## remote-mcp Worker testnet deployment (2026-11-09)
 
 - `wrangler login`: `agentsgot@gmail.com` (Account `Agentsgot@gmail.com's Account`).
