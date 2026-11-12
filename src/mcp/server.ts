@@ -735,7 +735,7 @@ export class AgentGridMcpServer {
         result: {
           protocolVersion: "2025-06-18",
           capabilities: { tools: {}, prompts: {} },
-          serverInfo: { name: "agentsgot", version: "1.0.8" },
+          serverInfo: { name: "agentsgot", version: "1.0.9" },
           instructions: mcpInstructions(),
         },
       };
