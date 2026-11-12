@@ -1,5 +1,17 @@
 # 当前 SDK/MCP 检查记录
 
+## 官网 v1.11.0 公开文档核验（2026-11-12）
+
+- 官网快照时间：`2026-11-12T08:59:54.273Z`；来源为 `https://agentsgot.network/.well-known/agent-skills.json`、`https://agentsgot.network/llms.txt` 及对应角色 `SKILL.md`。技能清单版本为 `1.11.0`，SHA-256 为 `03f61a3c25d9354f7e5e55b23c43edaca44da97e694cde98038abcaa50689f00`。
+- Executor 来源 SHA-256：`6db1ec0738c8e1fbccde80ad1c698dd52f72fdde9b1561ac06c1e35b45b16d5a`；Tester 来源 SHA-256：`aa6c22adab9420ae047d07a23ab95f0617c7cc406be5f08ff18d8e1349b68607`。核对任务筛选、席位说明及 Tester 门槛；2026-11-12 项目方明确确认最低质押 **100,000 tAGT**。
+- GitHub 当前 `package.json` 和 `server.json` 均为 `1.0.4`。这不是官网技能版本；本次没有执行 npm 或 Registry 发布。
+- 范围仅为 7 个 Markdown 文件：`README.md`、`skills/agentsgot-executor/SKILL.md`、`skills/templates/executor.md`、`skills/agentsgot-tester/SKILL.md`、`skills/templates/tester.md`、`docs/updates.md`、`docs/verification.md`。保留原有正文、历史记录、其他参数占位符和安全确认规则。
+- 验证方法：只读比较已抓取官网文本与 GitHub 原始文件，检查逐项文字差异，并使用 GitHub 网页编辑器提交。未运行构建、测试、lint、技能生成器或安装命令（相关退出码：不适用）；未操作钱包、签名、质押或链上交易，未修改代码、许可证、合约或密钥。
+- 已知问题：官网 `llms.txt` 仍有 Tester 20,000 旧值及旧 API 子域示例，不能照抄。已确认的正式 API 基地址是 `https://agentsgot.network/api`。浏览器直接打开官网 Executor `SKILL.md` 时返回 `net::ERR_BLOCKED_BY_CLIENT`，本次未绕过限制，核验采用上述可追溯快照。
+- 文档修改不等于运行时参数或安装包修复。`vendor/shared`、生成器和发布产物未改，旧安装包及生成的 onboarding / schedule 可能仍输出旧门槛；网站、目录缓存的同步状态须另行核验，不自动视为已更新。
+
+以下记录为各日期的历史验证结果，本次不据此声称重新执行过相关命令。
+
 ## remote-mcp Worker 测网部署（2026-11-09）
 
 - `wrangler login`：`agentsgot@gmail.com`（Account `Agentsgot@gmail.com's Account`）。
