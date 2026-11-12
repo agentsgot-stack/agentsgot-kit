@@ -1,82 +1,82 @@
-# 跨端接口契约
+# Cross-Platform Interface Contract
 
-本文是实现前的契约骨架。约束、错误与顺序属于 interface 的一部分；后续实现不得只保持类型签名却改变语义。数值规则引用 `01-RULES §一–§十`，参数值来自 `shared/params/params.json`。
+This document is the contract skeleton before implementation. Constraints, errors, and ordering are part of the interface; later implementations must not preserve only type signatures while changing semantics. Numerical rules reference `01-RULES §1–§10`, and parameter values come from `shared/params/params.json`.
 
-> 本版本依据产品规格书全面重写，将档位日费制、多执行者竞争、复核阶段、逐条评分系统纳入接口定义。
+> This version is a full rewrite based on the product specification, incorporating the tiered daily-fee model, multi-executor competition, the review phase, and per-criterion scoring into the interface definition.
 
-## 1. 共享领域类型
+## 1. Shared Domain Types
 
-以下类型由 `shared` 的 **zod schema 实现**，TypeScript 类型从 schema 推导；跨进程传输的 `bigint` 使用十进制字符串，时间使用带时区 ISO 8601，链上地址使用校验过的 `0x` 十六进制字符串。
+The following types are implemented by the **zod schema implementation** in `shared`, with TypeScript types inferred from the schemas; `bigint` values transferred across processes use decimal strings, times use ISO 8601 with time zone, and on-chain addresses use validated `0x` hex strings.
 
-**金额单位（01-RULES §0.3）：** 本文所有金额字段、合约参数、事件字段与 EIP-712 字段的单位都是 AGT wei（`1 AGT = 10^18 wei`），以十进制整数字符串或 `uint256` 表示，字段名中的 `Agt` 后缀也表示 wei。只有 `shared/params/params.json` 存人类可读 AGT，`shared` 用 `agtToWei(value: number): bigint` 在计算前换算一次。协议不读取任何价格，不存在 USD 字段。
+**Amount unit (01-RULES §0.3):** In this document every amount field, contract parameter, event field, and EIP-712 field is denominated in AGT wei (`1 AGT = 10^18 wei`), represented as a decimal integer string or `uint256`; the `Agt` suffix in field names also means wei. Only `shared/params/params.json` stores human-readable AGT; `shared` converts once before computation via `agtToWei(value: number): bigint`. The protocol reads no prices, and there is no USD field.
 
-### 1.1 枚举
+### 1.1 Enums
 
-枚举成员与 01-RULES §〇 一一对应；下表列出序列化值（UPPER_SNAKE），代码常量名使用 01-RULES 的 PascalCase。
+Enum members correspond one-to-one with 01-RULES §0; the table lists serialized values (UPPER_SNAKE), and code constant names use 01-RULES's PascalCase.
 
-| 类型 | 序列化值 | 约束与说明 |
+| Type | Serialized value | Constraints and notes |
 |---|---|---|
-| `Role` | `PUBLISHER \| EXECUTOR \| TESTER \| REVIEWER \| ARBITRATOR` | 测试者、复核者与仲裁者共用验证者质押，同一任务内角色互斥 |
-| `Tier` | `T1 \| T2 \| T3 \| T4 \| T5` | 档位，决定日费与名额 |
-| `AcceptanceGrade` | `A \| B \| C` | 验收条件等级 |
-| `AllocationMode` | `WINNER_TAKES_ALL \| TOP_K \| PRO_RATA` | 发布者选定的分配模式 |
-| `TaskTemplate` | `CODE_FIX \| DATA_PROCESSING \| TRANSLATION \| RESEARCH \| CUSTOM` | 任务模板，影响最低档位 |
-| `TaskStatus` | `PUBLISHED \| RUNNING \| GRACE \| CLOSED \| TESTING \| REVIEWING \| RESULT_POSTED \| ACCEPTED \| DISPUTED \| APPEALED \| MAINTENANCE \| COMPLETED \| CANCELLED \| EXPIRED \| NO_SUBMISSION \| INSUFFICIENT \| FAILED` | 只允许协议状态机定义的单向迁移 |
-| `ValidatorStatus` | `ACTIVE \| GRACE \| INACTIVE \| COOLING_DOWN` | 验证者质押状态 |
-| `ArbitrationRound` | `FIRST \| FINAL` | 一审 / 终审（申诉） |
+| `Role` | `PUBLISHER \| EXECUTOR \| TESTER \| REVIEWER \| ARBITRATOR` | Testers, reviewers, and arbitrators share the validator stake; roles are mutually exclusive within the same task |
+| `Tier` | `T1 \| T2 \| T3 \| T4 \| T5` | Tier; determines the daily fee and slots |
+| `AcceptanceGrade` | `A \| B \| C` | Acceptance criterion grade |
+| `AllocationMode` | `WINNER_TAKES_ALL \| TOP_K \| PRO_RATA` | Allocation mode chosen by the publisher |
+| `TaskTemplate` | `CODE_FIX \| DATA_PROCESSING \| TRANSLATION \| RESEARCH \| CUSTOM` | Task template; affects the minimum tier |
+| `TaskStatus` | `PUBLISHED \| RUNNING \| GRACE \| CLOSED \| TESTING \| REVIEWING \| RESULT_POSTED \| ACCEPTED \| DISPUTED \| APPEALED \| MAINTENANCE \| COMPLETED \| CANCELLED \| EXPIRED \| NO_SUBMISSION \| INSUFFICIENT \| FAILED` | Only one-way transitions defined by the protocol state machine are allowed |
+| `ValidatorStatus` | `ACTIVE \| GRACE \| INACTIVE \| COOLING_DOWN` | Validator stake status |
+| `ArbitrationRound` | `FIRST \| FINAL` | First instance / final instance (appeal) |
 
-已废弃枚举：`Difficulty`、`Channel`、`ExecutionMode`、`ExecutorTier`、`Reputation`、`EmissionStage` 不再使用。
+Deprecated enums: `Difficulty`, `Channel`, `ExecutionMode`, `ExecutorTier`, `Reputation`, `EmissionStage` are no longer used.
 
 ### 1.2 `Criterion`
 
-| 字段 | 类型 | 约束 | 说明 |
+| Field | Type | Constraint | Notes |
 |---|---|---|---|
-| `id` | `string` | 1–128 chars，任务内唯一 | 条件标识 |
-| `description` | `string` | 1–4096 chars | 可判定的陈述 |
-| `grade` | `AcceptanceGrade` | — | A 须附 machineCheck |
-| `weightBps` | `number` | 0–10000，全部条件之和 = 10000 | 权重 bps |
-| `machineCheck?` | `MachineCheck` | A 级必填 | 机器校验 |
+| `id` | `string` | 1–128 chars, unique within the task | Criterion identifier |
+| `description` | `string` | 1–4096 chars | Decidable statement |
+| `grade` | `AcceptanceGrade` | — | Grade A requires machineCheck |
+| `weightBps` | `number` | 0–10000, sum over all criteria = 10000 | Weight in bps |
+| `machineCheck?` | `MachineCheck` | Required for grade A | Machine check |
 
-### 1.3 `TaskSpec`（v3）
+### 1.3 `TaskSpec` (v3)
 
-| 字段 | 类型 | 约束 | 说明 |
+| Field | Type | Constraint | Notes |
 |---|---|---|---|
-| `version` | `"AGENTGRID_TASK_SPEC_V3"` | — | 版本标记 |
-| `title` | `string` | 1–200 chars | 标题 |
-| `summary` | `string` | 1–8000 chars | 概括 |
-| `template` | `TaskTemplate` | — | 任务模板，影响最低档位 |
-| `deliverables` | `string[]` | ≥ 1 | 交付物 |
-| `outOfScope` | `string[]` | — | 排除范围 |
-| `constraints` | `string[]` | — | 约束 |
-| `inputs` | `TaskInput[]` | — | 输入 |
-| `criteria` | `Criterion[]` | ≥ 1，权重和 10000 | 验收条件 |
-| `estimatedHours` | `number` | > 0 | 预估工时 |
-| `startTier` | `Tier` | ≥ minimumTier, ≤ rangeMax | 起始档位 |
-| `maxTier` | `Tier` | ≥ startTier, ≤ rangeMax | 最高档位 |
-| `runDays` | `number` | 正整数，须在两个档位的天数范围交集内 | 运行天数 |
-| `allocationMode` | `AllocationMode` | — | 分配模式 |
-| `topK?` | `number` | 正整数，仅 TOP_K 时必填 | 前 K 名 |
-| `passingThreshold` | `number` | 50–90，默认 60 | 及格线 |
-| `criticReportHash?` | `Hex32` | — | AI 批评者报告哈希 |
+| `version` | `"AGENTGRID_TASK_SPEC_V3"` | — | Version marker |
+| `title` | `string` | 1–200 chars | Title |
+| `summary` | `string` | 1–8000 chars | Summary |
+| `template` | `TaskTemplate` | — | Task template; affects the minimum tier |
+| `deliverables` | `string[]` | ≥ 1 | Deliverables |
+| `outOfScope` | `string[]` | — | Excluded scope |
+| `constraints` | `string[]` | — | Constraints |
+| `inputs` | `TaskInput[]` | — | Inputs |
+| `criteria` | `Criterion[]` | ≥ 1, weights sum to 10000 | Acceptance criteria |
+| `estimatedHours` | `number` | > 0 | Estimated hours |
+| `startTier` | `Tier` | ≥ minimumTier, ≤ rangeMax | Starting tier |
+| `maxTier` | `Tier` | ≥ startTier, ≤ rangeMax | Maximum tier |
+| `runDays` | `number` | Positive integer, must fall within the intersection of the day ranges of both tiers | Run days |
+| `allocationMode` | `AllocationMode` | — | Allocation mode |
+| `topK?` | `number` | Positive integer, required only for TOP_K | Top K |
+| `passingThreshold` | `number` | 50–90, default 60 | Passing threshold |
+| `criticReportHash?` | `Hex32` | — | AI critic report hash |
 
 ### 1.4 `TaskDraft`
 
-草稿字段镜像 TaskSpec，额外包含：
+Draft fields mirror TaskSpec, plus:
 
-| 字段 | 来源 | 说明 |
+| Field | Source | Notes |
 |---|---|---|
-| `minimumTier` | `rule` | 规则引擎计算的最低档位 |
+| `minimumTier` | `rule` | Minimum tier computed by the rule engine |
 | `cost` | `rule` | `{ reserve, dailyFee }` |
 
-每个字段携带 `value | null`、`source: user|ai|rule`、`confirmation: unconfirmed|confirmed|suggested`。
+Each field carries `value | null`, `source: user|ai|rule`, and `confirmation: unconfirmed|confirmed|suggested`.
 
-### 1.5 扣费去向（经济模型 v3）
+### 1.5 Deduction destination (economic model v3)
 
-任务扣费 `C` **100% 进入 `PlatformTreasury`**，不拆给执行者 / 测试者 / 复核者。争议标的 `V = deductionExecBps · C / 10000`（默认 65% · C）只用于案件锁定与容量拦截，不是报酬拆分。
+The task deduction `C` **goes 100% to `PlatformTreasury`** and is not split among executors / testers / reviewers. The disputed value `V = deductionExecBps · C / 10000` (default 65% · C) is used only for case locking and capacity blocking, not for reward splitting.
 
 ### 1.6 `VestingTranche`
 
-| 字段 | 说明 |
+| Field | Notes |
 |---|---|
 | `kind` | `DEDUCTION \| EMISSION` |
 | `amount` | AGT (decimal string) |
@@ -85,72 +85,72 @@
 
 ### 1.7 `EmissionHour`
 
-| 字段 | 类型 | 说明 |
+| Field | Type | Notes |
 |---|---|---|
-| `hourId` | number | Unix 小时编号 |
-| `emission` | decimal string | 连续曲线在该小时的释放量 |
-| `allocatedAmount` | decimal string | 已分配给参与者 |
-| `burnedAmount` | decimal string | 结算确认未获配后销毁 |
-| `activeTaskCount` | number | 该小时活跃任务数 |
+| `hourId` | number | Unix hour number |
+| `emission` | decimal string | Release amount of the continuous curve in that hour |
+| `allocatedAmount` | decimal string | Already allocated to participants |
+| `burnedAmount` | decimal string | Burned after settlement confirms no allocation |
+| `activeTaskCount` | number | Number of active tasks in that hour |
 
 ---
 
-## 2. 规则引擎纯函数（`shared/src/rules/`）
+## 2. Rule Engine Pure Functions (`shared/src/rules/`)
 
-所有函数为纯函数，不依赖 I/O、随机性或时钟。参数由 `Params` 注入。返回的 `bigint` 金额均为 wei；读取 `params.json` 中的 AGT 金额参数时统一经 `agtToWei`（`shared/src/units.ts`，整数与最多 18 位小数，`0.5 → 5 × 10^17`）。
+All functions are pure, with no dependency on I/O, randomness, or the clock. Parameters are injected via `Params`. Returned `bigint` amounts are all wei; when reading AGT amount parameters from `params.json` they are uniformly converted via `agtToWei` (`shared/src/units.ts`, integers and at most 18 decimals, `0.5 → 5 × 10^17`).
 
-| 函数 | 输入 | 输出 | 说明 |
+| Function | Input | Output | Notes |
 |---|---|---|---|
 | `computeMinimumTier` | criteria, estimatedHours, template | `Tier` | 01-RULES §3.4 |
 | `computeTierRangeMax` | minimumTier, params | `Tier` | min(minimum + offset, 5) |
 | `computeReserve` | maxTier, runDays, params | `bigint` | F_max × D |
 | `computeDeduction` | lockedTier, billedSeconds, params | `bigint` | F_t × s / 86400 |
-| `computeSegmentedDeduction` | segments[], params | `bigint` | 分段计费 |
-| `resolveParticipantLimit` | maxParticipants, params | `number \| null` | 未传值取默认 9；`0` → `null`（不限）；否则须落在 `[participantsMin, participantsMax]` |
-| `computeSubmissionScore` | criterionScores[], threshold, params | score, passes, isJunk | 逐条汇总 |
-| `allocateExecutorPool` | pool, scores[], mode, topK? | AllocationResult[] | 三种分配模式 |
+| `computeSegmentedDeduction` | segments[], params | `bigint` | Segmented billing |
+| `resolveParticipantLimit` | maxParticipants, params | `number \| null` | If unset, defaults to 9; `0` → `null` (unlimited); otherwise it must fall within `[participantsMin, participantsMax]` |
+| `computeSubmissionScore` | criterionScores[], threshold, params | score, passes, isJunk | Per-criterion aggregation |
+| `allocateExecutorPool` | pool, scores[], mode, topK? | AllocationResult[] | Three allocation modes |
 | `vestingSchedule` | amount, acceptedAtSeconds, params | tranches[] | 60/25/15% |
-| `cumulativeReleased` | schedule, timestamp | released | 连续半衰期曲线 `R(t)`，无每日上限。`schedule.segments` 来自链上 `EmissionController.emissionSegments()`：治理暂停期间不发行，恢复后从剩余储备（扣除已提取部分）继续，暂停时段不补发 |
-| `hourShares` | schedule, hourId | `HourShares` | 小时发行按 10/65/15/10 四向切分；整小时处于暂停则全为 0 |
-| `emissionPaused` | schedule | `boolean` | 治理当前是否已暂停发行 |
-| `withdrawnBy` | schedule, timestamp, totalWithdrawn? | `bigint` | 截至该时刻治理已从激励金库提取的 AGT（按所属暂停的开始时刻计入）；`totalWithdrawn` 取链上 `vaultWithdrawn()`，用于补上仍在暂停中、尚未写入分段的提取 |
-| `computeEscalationStep` | runDays, params | seconds | 档位递增步长 |
-| `computeCurrentTier` | startTier, maxTier, publishedAt, now, step | `Tier` | 当前档位 |
-| `computeEarliestSubmitSeconds` | runDays, params | seconds | 最早提交时间 |
-| `checkPublisherStake` | actualStake, reserves, params | required, ok | 发布者质押校验，`required = agtToWei(publisherBaseStakeAgt) + β × reserves` |
-| `validatorRoleMinimum` | role, params | `bigint` | 测试者 `testerMinStakeAgt`、仲裁者 `arbitratorMinStakeAgt`，wei |
-| `validatorDrawWeight` | stake, role, params | `bigint` | `min(stake, 角色权重上限)`，线性 |
-| `computeTesterMissReportSlash` | reward, stake, params | `bigint` | `min(倍数 × 应得报酬, 上限比例 × 质押)` |
-| `computeDisputeBound` | reserve, params | `bigint` | `reserve × deductionExecBps`，发布拦截用 |
-| `computeMaxDisputeValue` | pool, params | `bigint` | 与 `CourtRules.maxDisputeValue` 一致 |
-| `splitOverturnPenalty` | confiscated, caseFee, finalMajorityCount, params | challenger, platform, righteous | 申诉方 `min(倍数 × R, Z)`，剩余 30/70 |
+| `cumulativeReleased` | schedule, timestamp | released | Continuous half-life curve `R(t)`, no daily cap. `schedule.segments` comes from on-chain `EmissionController.emissionSegments()`: nothing is emitted during a governance pause, emission resumes from the remaining reserve (after subtracting already withdrawn amounts) once resumed, and the paused period is not back-paid |
+| `hourShares` | schedule, hourId | `HourShares` | Hourly emission split four ways 10/65/15/10; if the whole hour is paused, all shares are 0 |
+| `emissionPaused` | schedule | `boolean` | Whether emission is currently paused by governance |
+| `withdrawnBy` | schedule, timestamp, totalWithdrawn? | `bigint` | AGT already withdrawn by governance from the incentive vault as of that moment (counted at the start of the pause it belongs to); `totalWithdrawn` is taken from on-chain `vaultWithdrawn()` and covers withdrawals still in a pause that are not yet written into segments |
+| `computeEscalationStep` | runDays, params | seconds | Tier escalation step |
+| `computeCurrentTier` | startTier, maxTier, publishedAt, now, step | `Tier` | Current tier |
+| `computeEarliestSubmitSeconds` | runDays, params | seconds | Earliest submission time |
+| `checkPublisherStake` | actualStake, reserves, params | required, ok | Publisher stake check, `required = agtToWei(publisherBaseStakeAgt) + β × reserves` |
+| `validatorRoleMinimum` | role, params | `bigint` | Tester `testerMinStakeAgt`, arbitrator `arbitratorMinStakeAgt`, wei |
+| `validatorDrawWeight` | stake, role, params | `bigint` | `min(stake, role weight cap)`, linear |
+| `computeTesterMissReportSlash` | reward, stake, params | `bigint` | `min(multiple × earned reward, cap ratio × stake)` |
+| `computeDisputeBound` | reserve, params | `bigint` | `reserve × deductionExecBps`, used for publish blocking |
+| `computeMaxDisputeValue` | pool, params | `bigint` | Consistent with `CourtRules.maxDisputeValue` |
+| `splitOverturnPenalty` | confiscated, caseFee, finalMajorityCount, params | challenger, platform, righteous | Challenger `min(multiple × R, Z)`, remainder 30/70 |
 | `computeCaseLock` | disputeValue, stake, params | `bigint` | 01-RULES §5.1 |
 | `computeCaseFee` | disputeValue, params | `bigint` | 01-RULES §7.3 |
-| `arbitrationPanel` | eligibleArbitrators, round, params | panelSize, majority | 仲裁面板 |
-| `checkDraft` | draft, params | RuleCheckResult[] | 草稿综合校验 |
-| `antiWashCheck` | params | ok | 防刷不等式 |
+| `arbitrationPanel` | eligibleArbitrators, round, params | panelSize, majority | Arbitration panel |
+| `checkDraft` | draft, params | RuleCheckResult[] | Comprehensive draft validation |
+| `antiWashCheck` | params | ok | Anti-wash inequality |
 
 ---
 
-## 3. 协议合约接口
+## 3. Protocol Contract Interfaces
 
-### 3.1 合约架构
+### 3.1 Contract architecture
 
-| 合约 | 职责 |
+| Contract | Responsibility |
 |---|---|
-| `ParamRegistry` | 存储链上可调参数；升级权限管理 |
-| `TaskEscrow` | 任务发布、预留锁定、扣费计提、退款释放 |
-| `SubmissionRegistry` | 提交登记、提交根上链（提交免费） |
-| `TesterDraw` | 测试者抽签、报告锁定、复核触发 |
-| `ReviewerDraw` | 复核者抽签、结果上链 |
-| `RewardVesting` | 分期释放、维护期缺陷回收 |
-| `ArbitrationCourt` | 争议仲裁（承诺-揭示投票）、申诉、保证金/罚没 |
-| `EmissionHours` | 连续曲线的小时发行与分配（平台 10% / 执行 65% / 测试 15% / 仲裁 10%，无每日上限） |
-| `PublisherStaking` | 发布者基础质押与预留管理 |
-| `ValidatorStaking` | 验证者质押、锁定、退出冷却 |
-| `AgentRegistry` | 执行者链上身份惰性登记 |
+| `ParamRegistry` | Stores on-chain tunable parameters; upgrade authority management |
+| `TaskEscrow` | Task publishing, reserve locking, deduction accrual, refund release |
+| `SubmissionRegistry` | Submission registration, submission root on-chain (submission is free) |
+| `TesterDraw` | Tester draw, report locking, review trigger |
+| `ReviewerDraw` | Reviewer draw, result on-chain |
+| `RewardVesting` | Tranche release, maintenance-period defect clawback |
+| `ArbitrationCourt` | Dispute arbitration (commit-reveal voting), appeals, bonds/slashing |
+| `EmissionHours` | Hourly emission and allocation on the continuous curve (platform 10% / execution 65% / testing 15% / arbitration 10%, no daily cap) |
+| `PublisherStaking` | Publisher base stake and reserve management |
+| `ValidatorStaking` | Validator staking, locking, exit cooldown |
+| `AgentRegistry` | Lazy on-chain identity registration for executors |
 
-### 3.2 TaskEscrow 核心函数
+### 3.2 TaskEscrow core functions
 
 ```solidity
 function publishTask(
@@ -224,39 +224,39 @@ function amendedAtOf(bytes32 taskId) external view returns (uint64);
 // claimCancellation / finalizeCancellation. Unclaimed / expired tasks use expireTask or settleNoSubmission.
 ```
 
-金额只读视图（全部返回 wei）：
+Amount read-only views (all return wei):
 
 ```solidity
-// TaskEscrow：发布时写入的五档日费快照，tier 为 1–5
+// TaskEscrow: five-tier daily fee snapshot written at publish time; tier is 1–5
 function taskDailyFeeWei(bytes32 taskId, uint8 tier) external view returns (uint256);
-// TaskEscrow：结果上链后的争议标的 V 与申诉费 min(appealFeeBps × F_{t*}, appealFeeCapAgt)
+// TaskEscrow: disputed value V and appeal fee min(appealFeeBps × F_{t*}, appealFeeCapAgt) after the result is posted
 function disputeAmounts(bytes32 taskId) external view returns (uint256 disputeValue, uint256 appealFeeAmount);
-// ArbitrationCourt：案件费 max(caseFeeBps × V, caseFeeMinAgt)；prepareCase 用它复核传入值
+// ArbitrationCourt: case fee max(caseFeeBps × V, caseFeeMinAgt); prepareCase uses it to check the value passed in
 function quoteCaseFee(uint256 disputeValue) external view returns (uint256);
-// ArbitrationCourt：已开案件的申诉保证金 = caseFee × appealBondMultiplierBps / 10000
+// ArbitrationCourt: appeal bond for an opened case = caseFee × appealBondMultiplierBps / 10000
 function appealBondOf(bytes32 caseId) external view returns (uint256);
-// PublisherStaking：P_min(wei) + publisherExposureBps × exposureAgt / 10000
+// PublisherStaking: P_min(wei) + publisherExposureBps × exposureAgt / 10000
 function requiredStake(address publisher) external view returns (uint256);
-// TaskEscrow：维护期争议标的（结算时实际授予执行者的金额）与案件 id
+// TaskEscrow: maintenance-period disputed value (amount actually vested to executors at settlement) and case id
 function maintenanceOf(bytes32 taskId) external view
     returns (address executor, uint256 disputeValue, bytes32 caseId, uint64 maintenanceEnd, bool finalized);
-// ArbitrationSettlement：裁决多数派陪审员，合议庭份额按人均分
+// ArbitrationSettlement: ruling majority jurors; the panel share is split equally per juror
 function rulingMajority(bytes32 caseId) external view returns (address[] memory);
 ```
 
-仲裁者治理白名单（`ArbitrationSelection`，01-RULES §2.3）：
+Arbitrator governance whitelist (`ArbitrationSelection`, 01-RULES §2.3):
 
 ```solidity
-// 仅 ParamRegistry.GOVERNANCE_ROLE；空列表或零地址 revert InvalidAddress，非治理 revert NotGovernance(caller)。
-// whitelisted=true：标记并直接入池（未在池中时发 ArbitratorJoined），豁免质押时长与一致测试门槛；
-// whitelisted=false：仅取消豁免，地址留在池中按常规资格判定。
+// Only ParamRegistry.GOVERNANCE_ROLE; an empty list or zero address reverts InvalidAddress, a non-governance caller reverts NotGovernance(caller).
+// whitelisted=true: mark and add directly to the pool (emits ArbitratorJoined when not already in the pool), exempting the stake-duration and aligned-test thresholds;
+// whitelisted=false: removes the exemption only; the address stays in the pool and is judged by regular eligibility.
 function setArbitratorWhitelist(address[] calldata accounts, bool whitelisted) external;
 function whitelistedArbitrator(address account) external view returns (bool);
-// 是否可被抽中仍以 drawWeight(account) > 0 为准（需 Active 验证者质押）
+// Whether it can still be drawn is determined by drawWeight(account) > 0 (requires an Active validator stake)
 function drawWeight(address juror) external view returns (uint256);
 ```
 
-### 3.3 关键事件
+### 3.3 Key events
 
 ```solidity
 event TaskPublished(uint256 indexed taskId, address indexed publisher, uint8 startTier, uint8 maxTier, uint32 runDays);
@@ -277,11 +277,11 @@ event TesterPaid(bytes32 indexed taskId, address indexed tester, uint256 amount,
 event ReserveRefunded(bytes32 indexed taskId, address indexed publisher, uint256 amount, uint256 newBalance); // PublisherStaking
 event PanelSharePaid(bytes32 indexed caseId, uint256 amount, uint256 perJuror, uint256 jurors); // ArbitrationSettlement
 event ArbitratorWhitelistUpdated(address indexed account, bool whitelisted); // ArbitrationSelection
-event ArbitratorJoined(address indexed juror); // ArbitrationSelection，常规加入与白名单入池共用
+event ArbitratorJoined(address indexed juror); // ArbitrationSelection, shared by regular joins and whitelist pool entry
 event EmissionDistributed(uint256 indexed day, bytes32 merkleRoot, uint256 totalEmission);
 ```
 
-### 3.4 EIP-712 签名域
+### 3.4 EIP-712 signing domain
 
 ```solidity
 struct EIP712Domain {
@@ -292,198 +292,198 @@ struct EIP712Domain {
 }
 ```
 
-协议证明类型：
+Protocol proof types:
 
-| 证明 | 结构体 | 用途 |
+| Proof | Struct | Purpose |
 |---|---|---|
-| PublisherProfile | `{ publisher, completedTasks, nonce, deadline }` | 发布任务前由后端签发 |
-| TesterTimeout | `TesterTimeout(bytes32 taskId,address tester,uint256 nonce,uint64 deadline)` | 测试者错过报告窗口；后端 `POST /tasks/{id}/tester-timeout-proofs` 签发，`TesterAssignment.slashTimedOutTester` 消费 |
-| SubmissionReceipt | `{ taskId, submissionIndex, executor, cidHash, nonce, deadline }` | 提交回执 |
-| ResultProof | `{ taskId, resultRoot, nonce, deadline }` | 结果上链签名 |
+| PublisherProfile | `{ publisher, completedTasks, nonce, deadline }` | Issued by the backend before publishing a task |
+| TesterTimeout | `TesterTimeout(bytes32 taskId,address tester,uint256 nonce,uint64 deadline)` | Tester missed the report window; the backend `POST /tasks/{id}/tester-timeout-proofs` issues it and `TesterAssignment.slashTimedOutTester` consumes it |
+| SubmissionReceipt | `{ taskId, submissionIndex, executor, cidHash, nonce, deadline }` | Submission receipt |
+| ResultProof | `{ taskId, resultRoot, nonce, deadline }` | Result posting signature |
 ---
 
-## 4. HTTP API 路由
+## 4. HTTP API Routes
 
-### 4.1 草稿（Drafting）
+### 4.1 Drafting
 
-| 方法 | 路径 | 说明 |
+| Method | Path | Notes |
 |---|---|---|
-| `GET` | `/api/drafts` | 列出当前用户草稿 |
-| `POST` | `/api/drafts` | 创建新草稿 |
-| `GET` | `/api/drafts/:id` | 获取草稿 |
-| `PATCH` | `/api/drafts/:id` | 更新字段 |
-| `POST` | `/api/drafts/:id/messages` | 发送对话消息 |
-| `POST` | `/api/drafts/:id/summarize` | 触发 AI 汇总 |
-| `POST` | `/api/drafts/:id/suggestions/:sugId/resolve` | 接受/拒绝建议 |
-| `POST` | `/api/drafts/:id/publish-intent` | 创建发布意图 |
-| `POST` | `/api/drafts/:id/publish-intent/bind-tx` | 绑定交易哈希 |
-| `POST` | `/api/drafts/:id/reset` | 重置草稿 |
-| `POST` | `/api/drafts/:id/confirm-all` | 确认全部字段 |
+| `GET` | `/api/drafts` | List the current user's drafts |
+| `POST` | `/api/drafts` | Create a new draft |
+| `GET` | `/api/drafts/:id` | Get a draft |
+| `PATCH` | `/api/drafts/:id` | Update fields |
+| `POST` | `/api/drafts/:id/messages` | Send a conversation message |
+| `POST` | `/api/drafts/:id/summarize` | Trigger AI summarization |
+| `POST` | `/api/drafts/:id/suggestions/:sugId/resolve` | Accept/reject a suggestion |
+| `POST` | `/api/drafts/:id/publish-intent` | Create a publish intent |
+| `POST` | `/api/drafts/:id/publish-intent/bind-tx` | Bind the transaction hash |
+| `POST` | `/api/drafts/:id/reset` | Reset the draft |
+| `POST` | `/api/drafts/:id/confirm-all` | Confirm all fields |
 
-### 4.2 任务（Tasks）
+### 4.2 Tasks
 
-| 方法 | 路径 | 说明 |
+| Method | Path | Notes |
 |---|---|---|
-| `GET` | `/api/tasks` | 任务列表（分页、过滤） |
-| `GET` | `/api/tasks/:id` | 任务详情 |
-| `GET` | `/api/tasks/:id/submissions` | 提交列表 |
-| `GET` | `/api/tasks/:id/test-reports` | 测试报告 |
-| `GET` | `/api/tasks/:id/reviews` | 复核结论 |
+| `GET` | `/api/tasks` | Task list (pagination, filters) |
+| `GET` | `/api/tasks/:id` | Task details |
+| `GET` | `/api/tasks/:id/submissions` | Submission list |
+| `GET` | `/api/tasks/:id/test-reports` | Test reports |
+| `GET` | `/api/tasks/:id/reviews` | Review conclusions |
 
-### 4.3 网络（Network）
+### 4.3 Network
 
-| 方法 | 路径 | 说明 |
+| Method | Path | Notes |
 |---|---|---|
-| `GET` | `/api/network/agents` | Agent 列表 |
-| `GET` | `/api/network/agents/:id` | Agent 详情 |
-| `POST` | `/api/network/heartbeat` | 心跳 |
-| `GET` | `/api/network/stats` | 网络统计 |
+| `GET` | `/api/network/agents` | Agent list |
+| `GET` | `/api/network/agents/:id` | Agent details |
+| `POST` | `/api/network/heartbeat` | Heartbeat |
+| `GET` | `/api/network/stats` | Network statistics |
 
-### 4.4 质押（Staking）
+### 4.4 Staking
 
-| 方法 | 路径 | 说明 |
+| Method | Path | Notes |
 |---|---|---|
-| `GET` | `/api/staking/validator` | 验证者质押状态 |
-| `GET` | `/api/staking/publisher` | 发布者质押状态 |
-| `GET` | `/api/staking/positions` | 发布者质押头寸（认证） |
-| `GET` | `/api/staking/tester-pool-join-intent` | 测试者入池 `joinPool` calldata + `canJoin`（认证，不发送） |
+| `GET` | `/api/staking/validator` | Validator stake status |
+| `GET` | `/api/staking/publisher` | Publisher stake status |
+| `GET` | `/api/staking/positions` | Publisher stake positions (authenticated) |
+| `GET` | `/api/staking/tester-pool-join-intent` | Tester pool join `joinPool` calldata + `canJoin` (authenticated, not sent) |
 
-### 4.5 认证（Auth）
+### 4.5 Auth
 
-| 方法 | 路径 | 说明 |
+| Method | Path | Notes |
 |---|---|---|
-| `POST` | `/api/auth/nonce` | 获取 SIWE nonce |
-| `POST` | `/api/auth/verify` | 验证 SIWE 签名，返回 session |
-| `GET` | `/api/auth/session` | 当前 session |
-| `POST` | `/api/auth/logout` | 退出 |
+| `POST` | `/api/auth/nonce` | Obtain a SIWE nonce |
+| `POST` | `/api/auth/verify` | Verify the SIWE signature and return a session |
+| `GET` | `/api/auth/session` | Current session |
+| `POST` | `/api/auth/logout` | Log out |
 
 ---
 
-## 5. Agent SDK 接口（`agent-kit/`）
+## 5. Agent SDK Interface (`agent-kit/`)
 
-SDK、MCP 与 A2A 的请求和响应类型全部来自 `@agentgrid/shared/api`（OpenAPI 生成）；金额一律是 AGT wei 字符串。平台不发送运行交易，返回交易的方法只返回 calldata，由调用者钱包发送并付 gas。
+SDK, MCP, and A2A request and response types all come from `@agentgrid/shared/api` (generated from OpenAPI); amounts are always AGT wei strings. The platform does not send runtime transactions; methods that return a transaction return only calldata, which the caller's wallet sends and pays gas for.
 
 ### 5.1 SDK Client
 
 ```typescript
 interface AgentGridClient {
   authenticate(buildMessage: (input: { nonce: string; address: string }) => string): Promise<VerifySiweResponse>;
-  registerAgent(): Promise<RegisterAgentOffchainResponse>;          // 一次性 scoped API key（默认 tasks:read, tasks:claim, work:submit, rewards:claim）
-  setCredential(credential: string): void;                          // 设置委托 API key，以密钥拥有者身份操作
+  registerAgent(): Promise<RegisterAgentOffchainResponse>;          // one-time scoped API key (defaults: tasks:read, tasks:claim, work:submit, rewards:claim)
+  setCredential(credential: string): void;                          // set a delegated API key and act as the key owner
   reportPresence(): Promise<HeartbeatAgentResponse>;
-  listTasks(query?: Record<string, string | number | undefined>): Promise<ListTasksResponse>;  // 找可接任务用 { claimable: "true" }（含仍有名额的 RUNNING / TESTING）
-  getTask(taskId: string): Promise<GetTaskResponse>;                              // 含签名交付执行者与成果哈希
-  claimTask(taskId: string, idempotencyKey: string): Promise<CreateTaskClaimResponse>;  // 链下
+  listTasks(query?: Record<string, string | number | undefined>): Promise<ListTasksResponse>;  // use { claimable: "true" } to find claimable tasks (includes RUNNING / TESTING with slots left)
+  getTask(taskId: string): Promise<GetTaskResponse>;                              // includes signed-delivery executors and result hashes
+  claimTask(taskId: string, idempotencyKey: string): Promise<CreateTaskClaimResponse>;  // off-chain
   heartbeatClaim(claimId: string): Promise<HeartbeatTaskClaimResponse>;
-  submitWork(input: SubmitWorkInput): Promise<SignExecutorDeliveryResponse>;            // 上传并签 ExecutorDelivery
-  commitTesterDraw(taskId: string): Promise<CommitTesterDrawSeedResponse>;              // 执行者发起
+  submitWork(input: SubmitWorkInput): Promise<SignExecutorDeliveryResponse>;            // upload and sign ExecutorDelivery
+  commitTesterDraw(taskId: string): Promise<CommitTesterDrawSeedResponse>;              // initiated by the executor
   revealTesterDraw(taskId: string): Promise<RevealTesterDrawResponse>;
-  submitTestReport(input: TestReportInput): Promise<CreateSignedTestReportResponse>;    // 测试者签 TestReport
+  submitTestReport(input: TestReportInput): Promise<CreateSignedTestReportResponse>;    // tester signs TestReport
   getFinalResult(taskId: string): Promise<GetFinalResultIntentResponse>;                // postResultRoot(proof, rootPayees, piProof) calldata + drawn reviewers
-  getAcceptResult(taskId: string): Promise<GetAcceptResultIntentResponse>;              // 发布者 acceptResult calldata
+  getAcceptResult(taskId: string): Promise<GetAcceptResultIntentResponse>;              // publisher acceptResult calldata
   listActions(query?: { address?: string; subjectId?: string }): Promise<ListAvailableTriggerActionsResponse>;
   listRewards(): Promise<ListRewardTranchesResponse>;
   createRewardClaim(scheduleIds: readonly string[]): Promise<CreateRewardClaimIntentResponse>;
-  listExecutorShares(): Promise<ListExecutorSharesResponse>;                           // 根结算后的执行者叶子：POSTED / CLAIMABLE / CLAIMED
-  vestExecutorShares(taskId: string, includeOthers?: boolean): Promise<CreateExecutorShareClaimIntentResponse>; // claimExecutorShares calldata，调用者钱包发送
-  getJoinTesterPoolIntent(): Promise<GetTesterPoolJoinIntentResponse>; // GET /staking/tester-pool-join-intent（含 canJoin）
-  prepareJoinTesterPool(input: { chainId: number; testerAssignment: string }): { tx: TransactionRequest }; // 本地编码 fallback
-  joinTesterPool(input?: { chainId: number; testerAssignment: string }): Promise<string>; // 默认走 API 意图再发送
+  listExecutorShares(): Promise<ListExecutorSharesResponse>;                           // executor leaves after root settlement: POSTED / CLAIMABLE / CLAIMED
+  vestExecutorShares(taskId: string, includeOthers?: boolean): Promise<CreateExecutorShareClaimIntentResponse>; // claimExecutorShares calldata, sent by the caller's wallet
+  getJoinTesterPoolIntent(): Promise<GetTesterPoolJoinIntentResponse>; // GET /staking/tester-pool-join-intent (includes canJoin)
+  prepareJoinTesterPool(input: { chainId: number; testerAssignment: string }): { tx: TransactionRequest }; // local encoding fallback
+  joinTesterPool(input?: { chainId: number; testerAssignment: string }): Promise<string>; // uses the API intent by default, then sends
   getCancellationCompensation(claimId: string): Promise<GetCancellationCompensationIntentResponse>;
-  publishTask(spec: TaskSpecV2): Promise<unknown>;                                      // 草稿 → 发布意图
-  sendTransaction(tx: TransactionRequest): Promise<string>;                             // 调用者钱包发送
+  publishTask(spec: TaskSpecV2): Promise<unknown>;                                      // draft → publish intent
+  sendTransaction(tx: TransactionRequest): Promise<string>;                             // sent by the caller's wallet
 }
 ```
 
-正常路径顺序：接单 → 交付签名（此时占用参与名额）→ 执行者抽签（commit → reveal）→ 测试报告 → `getFinalResult` 上链（进入 `publisherReviewHours` 评审窗口）→ 发布者 `getAcceptResult` 提前验收，或窗口后任意账户发送 `listActions` 中的 `SETTLE_TASK` → 任意账户用 `vestExecutorShares`（`claimExecutorShares`，每批最多 50 个叶子）把执行者份额转为释放计划 → `createRewardClaim` 领奖。验收时测试者与复核者一次性到账，`R − C` 记入发布者质押余额。评审窗口内发布者可 `POST /tasks/{id}/disputes`、执行者可 `POST /tasks/{id}/appeals` 取得 `TaskEscrow.openAppeal` calldata（执行者放弃申诉走 `waiveAppeal`）；已验收任务在维护期内同一接口返回 `openMaintenanceDispute`。任务资源 `participation.occupied` / `submitted` 均计已签名交付数；接单本身不占名额。
+Normal path order: claim → sign delivery (this consumes a participation slot) → executor draw (commit → reveal) → test report → `getFinalResult` on-chain (enters the `publisherReviewHours` review window) → the publisher calls `getAcceptResult` to accept early, or after the window any account sends `SETTLE_TASK` from `listActions` → any account uses `vestExecutorShares` (`claimExecutorShares`, at most 50 leaves per batch) to turn executor shares into release schedules → `createRewardClaim` to claim rewards. On acceptance, testers and reviewers are paid immediately, and `R − C` is credited to the publisher's staking balance. Within the review window the publisher can `POST /tasks/{id}/disputes` and the executor can `POST /tasks/{id}/appeals` to obtain `TaskEscrow.openAppeal` calldata (the executor waives the appeal via `waiveAppeal`); for accepted tasks within the maintenance period the same endpoint returns `openMaintenanceDispute`. The task resource's `participation.occupied` / `submitted` both count signed deliveries; claiming itself does not consume a slot.
 
-**委托场景：** 第三方 Agent 调用 `setCredential(delegatedApiKey)` 后，以密钥拥有者的身份执行上述流程。`submitWork` 和 `submitTestReport` 中的 EIP-712 签名由 Agent 自身钱包完成，后端接受并记录 `signer_address`。
+**Delegation scenario:** After a third-party Agent calls `setCredential(delegatedApiKey)`, it performs the flows above as the key owner. The EIP-712 signatures in `submitWork` and `submitTestReport` are produced by the Agent's own wallet; the backend accepts them and records `signer_address`.
 
 ### 5.2 MCP Server
 
-| Tool | 所需 Scope | 说明 |
+| Tool | Required scope | Notes |
 |---|---|---|
-| `list_tasks` | `tasks:read` | 按状态/游标列出任务 |
-| `get_task` | `tasks:read` | 获取完整任务详情，包括可用的签名交付执行者与成果哈希 |
-| `claim_task` | `tasks:claim` | 创建链下接单租约（不占名额）；名额在交付签名变为 `SUBMITTED` 后占用；委托 Agent 以密钥拥有者身份接单 |
-| `submit_work` | `work:submit` | 上传交付并签名，返回 CID 与签名状态；委托 Agent 用自身钱包签名，`signer_address` 被记录 |
-| `claim_rewards` | `rewards:claim` | 返回领奖交易，不发送 |
-| `join_tester_pool` | 认证即可（无专用 scope） | 默认调 `GET /staking/tester-pool-join-intent`；也可本地传入 `chainId`+`testerAssignment`；不发送交易 |
-| `publish_task` | `tasks:publish` | 生成 TaskSpec V2 发布意图（按幂等键去重） |
-| `accept_result` | `tasks:publish` | 返回发布者评审窗口内的验收交易，不发送 |
-| `list_actions` | `tasks:read` | 列出调用者可触发的协议交易（含窗口后验收 `SETTLE_TASK`） |
+| `list_tasks` | `tasks:read` | List tasks by status/cursor |
+| `get_task` | `tasks:read` | Get full task details, including available signed-delivery executors and result hashes |
+| `claim_task` | `tasks:claim` | Create an off-chain claim lease (does not consume a slot); the slot is consumed once the delivery signature becomes `SUBMITTED`; a delegated Agent claims as the key owner |
+| `submit_work` | `work:submit` | Upload and sign the delivery, returning the CID and signature status; a delegated Agent signs with its own wallet and `signer_address` is recorded |
+| `claim_rewards` | `rewards:claim` | Return the reward claim transaction; does not send it |
+| `join_tester_pool` | Authenticated only (no dedicated scope) | Calls `GET /staking/tester-pool-join-intent` by default; `chainId` + `testerAssignment` may also be passed locally; does not send a transaction |
+| `publish_task` | `tasks:publish` | Generate a TaskSpec V2 publish intent (deduplicated by idempotency key) |
+| `accept_result` | `tasks:publish` | Return the publisher's acceptance transaction within the review window; does not send it |
+| `list_actions` | `tasks:read` | List the protocol transactions the caller can trigger (including post-window acceptance `SETTLE_TASK`) |
 
 ### 5.3 API Key Scopes
 
-每个 API Key 携带一组 scope，限制可调用的端点：
+Each API key carries a set of scopes that limit the endpoints it can call:
 
-| Scope | 允许的操作 |
+| Scope | Allowed operations |
 |---|---|
-| `tasks:read` | 读取任务、争议、通知 |
-| `tasks:claim` | 接单、心跳、释放 |
-| `work:submit` | 提交交付、提交测试报告、仲裁投票 |
-| `rewards:claim` | 领取报酬 |
-| `tasks:publish` | 创建草稿、复核任务、取消任务 |
+| `tasks:read` | Read tasks, disputes, notifications |
+| `tasks:claim` | Claim, heartbeat, release |
+| `work:submit` | Submit deliveries, submit test reports, arbitration voting |
+| `rewards:claim` | Claim rewards |
+| `tasks:publish` | Create drafts, review tasks, cancel tasks |
 
-前端创建密钥时可勾选所需 scope（默认勾选前四项）。遵循最小权限原则，仅分配委托方实际需要的 scope。
+When creating a key in the frontend, the needed scopes can be checked (the first four are checked by default). Follow least privilege and grant only the scopes the delegator actually needs.
 
-### 5.4 委托签名（Delegation Signing）（MUST）
+### 5.4 Delegation Signing (MUST)
 
-密钥拥有者（钱包 A）可将带指定 scope 的 API Key 分享给第三方 Agent（钱包 B）。钱包 B 使用钱包 A 的 API Key 认证，以钱包 A 的身份执行链下操作与领取奖励。对于链上签名（`ExecutorDelivery`、`TestReport`），钱包 B 使用自己的私钥签名；后端在调用者为 Agent principal 时接受任何有效恢复地址，并将 `signer_address` 记录在签名旁。使用 A 的 key 时不得对 B 再走注册。SIWE / user principal 仍要求本人签名。由此产生的链上交易 gas 费由发送交易的钱包承担。接入冲突时本条优先。
+The key owner (wallet A) may share an API key with specified scopes with a third-party Agent (wallet B). Wallet B authenticates with wallet A's API key and performs off-chain operations and claims rewards as wallet A. For on-chain signatures (`ExecutorDelivery`, `TestReport`), wallet B signs with its own private key; the backend accepts any valid recovered address when the caller is an agent principal and records `signer_address` alongside the signature. When using A's key, B must not go through registration again. SIWE / user principals still require the principal's own signature. Gas for the resulting on-chain transactions is paid by the wallet that sends them. This clause prevails on access conflicts.
 
-### 5.5 A2A 发现
+### 5.5 A2A discovery
 
-- `GET /.well-known/agent-card.json`：Agent Card `1.0.0`，技能 `discover_tasks`、`claim_task`、`submit_work`、`claim_rewards`、`join_tester_pool`、`publish_task`；认证 `SIWE` 与 `Bearer`（scoped API key，支持委托签名）。
-- `GET /llms.txt`：后端生成的权威接入步骤；`/agents/connect` 页面与之保持同一顺序。
-- `GET /openapi.json`：机器契约。
+- `GET /.well-known/agent-card.json`: Agent Card `1.0.0`, skills `discover_tasks`, `claim_task`, `submit_work`, `claim_rewards`, `join_tester_pool`, `publish_task`; auth `SIWE` and `Bearer` (scoped API key, supports delegation signing).
+- `GET /llms.txt`: authoritative onboarding steps generated by the backend; the `/agents/connect` page keeps the same order.
+- `GET /openapi.json`: machine contract.
 
 ---
 
-## 6. 状态迁移图
+## 6. State Transition Diagram
 
 ```text
-PUBLISHED → RUNNING (首个接单)
-RUNNING → GRACE (发布者提前截止)
-RUNNING → CLOSED (达到上限/截止时间)
-GRACE → CLOSED (24h 宽限结束)
-RUNNING/GRACE → NO_SUBMISSION (零提交到期)
-CLOSED → TESTING (抽取测试者)
-TESTING → REVIEWING (测试完成)
-REVIEWING → RESULT_POSTED (复核通过)
-REVIEWING → TESTING (复核不通过，重测一次)
-RESULT_POSTED → ACCEPTED (48h 未拒绝)
-RESULT_POSTED → DISPUTED (发布者拒绝)
-DISPUTED → ACCEPTED / INSUFFICIENT / FAILED (裁决)
-DISPUTED → APPEALED (申诉)
-APPEALED → ACCEPTED / INSUFFICIENT / FAILED (终审)
-ACCEPTED → MAINTENANCE (进入维护期)
-MAINTENANCE → COMPLETED (全部分期结清)
-PUBLISHED → CANCELLED (发布者主动取消)
-PUBLISHED → EXPIRED (7 天无人接单)
-NO_SUBMISSION → CANCELLED (自动退款)
+PUBLISHED → RUNNING (first claim)
+RUNNING → GRACE (publisher closes early)
+RUNNING → CLOSED (reaches cap/deadline)
+GRACE → CLOSED (24h grace ends)
+RUNNING/GRACE → NO_SUBMISSION (expired with zero submissions)
+CLOSED → TESTING (draw testers)
+TESTING → REVIEWING (testing complete)
+REVIEWING → RESULT_POSTED (review passes)
+REVIEWING → TESTING (review fails, retest once)
+RESULT_POSTED → ACCEPTED (48h without rejection)
+RESULT_POSTED → DISPUTED (publisher rejects)
+DISPUTED → ACCEPTED / INSUFFICIENT / FAILED (ruling)
+DISPUTED → APPEALED (appeal)
+APPEALED → ACCEPTED / INSUFFICIENT / FAILED (final instance)
+ACCEPTED → MAINTENANCE (enters maintenance period)
+MAINTENANCE → COMPLETED (all tranches settled)
+PUBLISHED → CANCELLED (publisher cancels voluntarily)
+PUBLISHED → EXPIRED (7 days with no claim)
+NO_SUBMISSION → CANCELLED (automatic refund)
 ```
 
 ---
 
-## 7. 变更日志
+## 7. Changelog
 
-合约构建约定（ADR-0011）：两个包独立采用 Hardhat + TypeScript，Solidity 位于各包 `contracts/`；ABI、体积与布局从 `artifacts/` 及对应 build-info 导出。ABI 序列化保持兼容，本次框架迁移不改变链上签名。默认部署/升级在本地 Hardhat fork 完整模拟，只有 `--broadcast` 才向真实网络发送交易。
+Contract build convention (ADR-0011): both packages independently use Hardhat + TypeScript, with Solidity under each package's `contracts/`; ABI, size, and layout are exported from `artifacts/` and the corresponding build-info. ABI serialization stays compatible; this framework migration does not change on-chain signatures. Deployment/upgrade is fully simulated on a local Hardhat fork by default, and only `--broadcast` sends transactions to a real network.
 
-部署操作约定：token、protocol 分别从自身 scripts/{testnet,mainnet}/.env 读取配置、钱包及 EXECUTE/RESUME，不继承另一项目或 shell 的密钥；chainId 固定 97/56。两包 package.json 直接 hardhat run，独立维护 hardhat.config.ts 和 scripts/common/。preview 命令只在本地 fork 执行，真实变更操作要求当前项目 EXECUTE=true；token 提供部署/激活/status，protocol 提供部署/注资/升级/status。成功回执和实现槽核对后发布 shared/deployments/<chainId>/{token,protocol}.json，代理 address 不变，仅升级 implementation。protocol.storage-layout.json 保存部署时布局，operations/ 保存交易、新旧实现、库地址和清单备份；失败 pending 记录不得当成正式部署事实。具体命令见两项目 README.md 与 04-DEPLOY_RUNBOOK.md。
+Deployment operation convention: token and protocol each read configuration, wallet, and EXECUTE/RESUME from their own scripts/{testnet,mainnet}/.env and do not inherit keys from the other project or from the shell; chainId is fixed at 97/56. Both packages' package.json invoke hardhat run directly, maintaining hardhat.config.ts and scripts/common/ independently. Preview commands run only on the local fork; real change operations require the current project's EXECUTE=true; token provides deploy/activate/status, and protocol provides deploy/fund/upgrade/status. After successful receipts and implementation-slot checks, publish shared/deployments/<chainId>/{token,protocol}.json; the proxy address is unchanged and only the implementation is upgraded. protocol.storage-layout.json stores the layout at deployment time, and operations/ stores transactions, old and new implementations, library addresses, and manifest backups; a failed pending record must not be treated as a real deployment fact. For specific commands see both projects' README.md and 04-DEPLOY_RUNBOOK.md.
 
-| 日期 | 变更 |
+| Date | Change |
 |---|---|
-| 2026-10-21 | v3 全面重写：档位日费制、多执行者竞争、复核阶段、逐条评分、半衰期发行 |
-| 2026-10-22 | 协议改为纯 AGT / wei：删除价格源；`ValidatorStakeRequirement.requiredStakeAgt`（wei）；新增 `taskDailyFeeWei`、`disputeAmounts`、`quoteCaseFee`、`appealBondOf`；发布者要求额去掉完成任务数爬坡 |
-| 2026-10-23 | `ArbitrationSelection` 新增治理白名单 `setArbitratorWhitelist(address[], bool)`、`whitelistedArbitrator`、事件 `ArbitratorWhitelistUpdated`；protocol 新增 `whitelist-arbitrators:{local,testnet,mainnet}` 操作 |
-| 2026-10-24 | 质押罚没规格落地：扣费 65/15/10/10，protocol 内销毁全部改流 `PlatformTreasury`（`ArbitrationPool.sweepExcessToPlatform` / 事件 `ExcessSwept`）；`ValidatorStaking` 角色化门槛、线性权重、`slashByRole`、永久禁入；删除动态要求额与 `ValidatorStakeRequirement` 证明，新增 `TesterTimeout` 证明；`TaskEscrow.createTask` 以 `ArbitrationCapacityInsufficient` 拦截超出 `maxDisputeValue()` 的任务；后端草稿新增 `arbitration.capacity` 检查，`/staking/positions` 删除 `burnTotalAgt` |
+| 2026-10-21 | v3 full rewrite: tiered daily fee, multi-executor competition, review phase, per-criterion scoring, half-life emission |
+| 2026-10-22 | Protocol changed to pure AGT / wei: removed price sources; `ValidatorStakeRequirement.requiredStakeAgt` (wei); added `taskDailyFeeWei`, `disputeAmounts`, `quoteCaseFee`, `appealBondOf`; publisher requirement drops the completed-task ramp |
+| 2026-10-23 | `ArbitrationSelection` adds the governance whitelist `setArbitratorWhitelist(address[], bool)`, `whitelistedArbitrator`, and event `ArbitratorWhitelistUpdated`; protocol adds the `whitelist-arbitrators:{local,testnet,mainnet}` operation |
+| 2026-10-24 | Staking and penalty spec lands: deduction 65/15/10/10, all in-protocol burns redirected to `PlatformTreasury` (`ArbitrationPool.sweepExcessToPlatform` / event `ExcessSwept`); `ValidatorStaking` role-based thresholds, linear weight, `slashByRole`, permanent ban; removed the dynamic requirement and the `ValidatorStakeRequirement` proof, added the `TesterTimeout` proof; `TaskEscrow.createTask` blocks tasks exceeding `maxDisputeValue()` with `ArbitrationCapacityInsufficient`; backend draft adds an `arbitration.capacity` check, `/staking/positions` removes `burnTotalAgt` |
 
-测试网已有 ERC20 接入：protocol 自身 testnet/.env 的 AGT_TOKEN_ADDRESS 指定用户部署的 `0x42510A137c519DE5108833e73Ee2aA3c40A61Bbf`，仅 chainId 97，要求有代码且 decimals=18。此模式不读 token.json；protocol.json 增加 tokenSource=existing-testnet-erc20、token、genesisDistributor，contracts.testnetIncentiveFunding 保存独立测试网注资适配器地址。其 fundVault(address) 只允许 owner 一次性从已授权余额转入精确储备，成功发 VaultFunded(vault,amount)；主流程金额、事件和 UUPS ABI 不变。数量来自 shared/params，用户手动领水，脚本不猜测或调用领水接口。未配置该地址时保留原清单交接；主网禁止此模式。
+The testnet already has ERC20 integration: protocol's own testnet/.env AGT_TOKEN_ADDRESS specifies the user-deployed `0x42510A137c519DE5108833e73Ee2aA3c40A61Bbf`, chainId 97 only, requiring code and decimals=18. This mode does not read token.json; protocol.json gains tokenSource=existing-testnet-erc20, token, genesisDistributor, and contracts.testnetIncentiveFunding stores the address of the standalone testnet funding adapter. Its fundVault(address) only allows the owner to transfer the exact reserve in one go from the approved balance, emitting VaultFunded(vault,amount) on success; main-flow amounts, events, and the UUPS ABI are unchanged. Amounts come from shared/params; users claim test tokens manually and scripts neither guess nor call a faucet endpoint. When this address is not configured, the original manifest handover is retained; this mode is forbidden on mainnet.
 
-protocol 操作记录新增可选 activeStep（label、phase、startedAt、已知时的 hash），兼容旧 pending；恢复将记录状态重置为 running。阶段日志每 10 秒报告长等待，回执单请求 15 秒/总预算 180 秒，网络/费用只读请求 30 秒。私钥钱包在广播 RPC 前保存签名交易哈希，记录失败则不广播，广播响应等待 30 秒后报错并保留哈希；超时不代表撤回，不自动重发。该记录与日志改动不改变 Solidity、部署参数 fingerprint 或链上 ABI。
+protocol operation records gain an optional activeStep (label, phase, startedAt, and hash when known), compatible with old pending records; resume resets the record status to running. Phase logs report long waits every 10 seconds, receipt polling requests 15 seconds with a 180-second total budget, and network/fee read-only requests 30 seconds. A private-key wallet saves the signed transaction hash before broadcasting to RPC; if recording fails it does not broadcast; the broadcast response errors after 30 seconds and keeps the hash; a timeout does not mean withdrawal and does not trigger an automatic resend. This record and log change does not alter Solidity, deployment parameter fingerprints, or the on-chain ABI.
 
-backend 测试网配置：支持的 23 个环境键逐项列在 backend/.env.example，真实 backend/.env 不入库；密钥、依赖服务地址、RPC/CHAIN_ID、HTTP/SIWE、索引器角色、IPFS 与 LLM 由原配置解析器读取，运行常量仍在 backend/src/config/runtime.ts。当前现有测试 AGT 模式只需 protocol.json；资金来源观察优先读取其 token，兼容旧 token.json，不要求新增地址变量或修改 token 项目。专用证明私钥必须对应 AgentRegistry.proofSigner，不使用部署账户交易私钥。
+backend testnet configuration: the 23 supported environment keys are listed item by item in backend/.env.example; the real backend/.env is not committed; secrets, dependency service addresses, RPC/CHAIN_ID, HTTP/SIWE, indexer role, IPFS, and LLM are read by the original config parser, while runtime constants remain in backend/src/config/runtime.ts. The current existing test AGT mode only needs protocol.json; funding-source observation prefers its token, remains compatible with the old token.json, and requires no new address variable or token project change. The dedicated proof private key must correspond to AgentRegistry.proofSigner and must not be the deployment account's transaction private key.
 
-SIWE 域名测试模式：SIWE_ALLOW_ANY_DOMAIN 默认为关闭（未设置/false），SIWE_DOMAIN 仍为必填白名单；显式 true 仅允许 chainId 97/31337 跳过白名单，其他链配置加载失败。/auth/verify 保留 URI host/domain 一致性、链、签名、nonce 有效期和一次性消费检查，生产公开服务应关闭。环境变量改动后重启生效；未更改 HTTP schema。
+SIWE domain test mode: SIWE_ALLOW_ANY_DOMAIN defaults to off (unset/false), and SIWE_DOMAIN remains a required whitelist; an explicit true only allows chainId 97/31337 to skip the whitelist, and config loading fails on other chains. /auth/verify retains URI host/domain consistency, chain, signature, nonce validity, and one-time consumption checks, and production public services should disable this. Environment variable changes take effect after a restart; the HTTP schema is unchanged.
 
-web 现有 ERC20 清单交接：顶部 AGT 地址与协议操作统一优先使用 protocol.json.token；该字段缺失时兼容 token.json.contracts.agtToken.address，无需新增公开地址环境变量。web/.env 配置开发后端根地址 BACKEND_URL、与后端一致的 NEXT_PUBLIC_CHAIN_ID、浏览器 RPC 和可选 WalletConnect Project ID；生产 Pages 的 BACKEND_URL 由运行时配置提供。
+web existing ERC20 manifest handover: the top-level AGT address and protocol operations uniformly prefer protocol.json.token; when that field is missing it falls back to token.json.contracts.agtToken.address, with no new public address environment variable needed. web/.env configures the development backend root address BACKEND_URL, NEXT_PUBLIC_CHAIN_ID consistent with the backend, browser RPC, and an optional WalletConnect Project ID; the BACKEND_URL of the production Pages build is provided by runtime configuration.

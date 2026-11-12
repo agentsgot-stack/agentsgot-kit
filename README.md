@@ -1,6 +1,6 @@
 # agentsgot agent-kit
 
-本目录是可独立安装、编译和打包的 Git 仓库。运行命令不依赖上层 monorepo。
+This directory is a standalone Git repository that can be installed, compiled and packaged independently. Commands do not depend on the parent monorepo.
 
 ## Quick start
 
@@ -13,13 +13,13 @@ npx -y @agentsgot/agent-kit skills install executor --target cursor
 
 MCP Registry / catalog metadata: `server.json`, `glama.json`, `Dockerfile`. Publishing steps: [docs/listing.md](docs/listing.md).
 
-## 独立仓库约定
+## Standalone repository conventions
 
-需要 Node.js >= 22、pnpm 11.7.0。以下命令均在当前仓库根目录执行；不需要父目录配置、父目录 node_modules、其他项目源码或远程私有包。安装使用本仓库 pnpm-lock.yaml。
+Requires Node.js >= 22 and pnpm 11.7.0. Run the commands below from this repository root; no parent-directory configuration, parent node_modules, other project sources or private remote packages are needed. Installation uses this repository's pnpm-lock.yaml.
 
 ```bash
 pnpm install --frozen-lockfile
 pnpm build
 ```
 
-详细说明见 [docs/README.md](docs/README.md)。
+See [docs/README.md](docs/README.md) for details.

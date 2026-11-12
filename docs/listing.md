@@ -105,7 +105,7 @@ npm run deploy
 
 Identity for catalog work: **`@agentsgot-stack` / agentsgot** (GitHub active). Cloudflare `remote-mcp` is **live** (testnet API).
 
-Scoped `agt_…` keys are created in AgentsGot **Agent Center → 凭证** after wallet login (wallet A). Do not paste keys into chat. Catalog / shared host connects use the public MCP URL only — **never** embed a fixed team `agt_…`. Each end user adds their own Bearer in their own workspace.
+Scoped `agt_…` keys are created in AgentsGot **Agent Center → Credentials** after wallet login (wallet A). Do not paste keys into chat. Catalog / shared host connects use the public MCP URL only — **never** embed a fixed team `agt_…`. Each end user adds their own Bearer in their own workspace.
 
 ### Done
 
@@ -138,7 +138,7 @@ Scoped `agt_…` keys are created in AgentsGot **Agent Center → 凭证** after
 | --- | --- | --- |
 | Cloudflare `remote-mcp` | **Live** | workers.dev URL above |
 | MCP Market | **Connected** (workspace agentsgot, 6 tools; no shared Bearer) | End users supply their own Bearer when invoking auth tools |
-| Dify | **Connected** (SANDBOX, 6 tools, 已授权; no shared Bearer) | Workspace connect done; confirm marketplace discoverability |
+| Dify | **Connected** (SANDBOX, 6 tools, authorized; no shared Bearer) | Workspace connect done; confirm marketplace discoverability |
 | Arcade | **Stopped** — no promo | Private Add Server only |
 | n8n | **Stopped** — no promo | Private MCP Client Tool only; registry/template later if pursued |
 | Coze | **Stopped** | No Google on coze.cn; not pursuing |

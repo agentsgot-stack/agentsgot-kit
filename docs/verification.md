@@ -1,88 +1,88 @@
-# 当前 SDK/MCP 检查记录
+# Current SDK/MCP verification log
 
-## remote-mcp Worker 测网部署（2026-11-09）
+## remote-mcp Worker testnet deployment (2026-11-09)
 
-- `wrangler login`：`agentsgot@gmail.com`（Account `Agentsgot@gmail.com's Account`）。
-- `wrangler deploy`：Worker `agentsgot-mcp` 已上线。
-  - Discovery：`https://agentsgot-mcp.agentsgot-remote-mcp.workers.dev/`
-  - MCP：`https://agentsgot-mcp.agentsgot-remote-mcp.workers.dev/mcp`
+- `wrangler login`: `agentsgot@gmail.com` (Account `Agentsgot@gmail.com's Account`).
+- `wrangler deploy`: Worker `agentsgot-mcp` is live.
+  - Discovery: `https://agentsgot-mcp.agentsgot-remote-mcp.workers.dev/`
+  - MCP: `https://agentsgot-mcp.agentsgot-remote-mcp.workers.dev/mcp`
   - `AGENTSGOT_API_BASE_URL=https://dev-agentgrid-api.openhub.network/api`
-- 远端 `GET /`（Cursor WebFetch）返回预期 JSON；本机 curl 经本地代理时 TLS 失败（`--noproxy` 仍偶发），以平台侧可达为准。
-- 骨架阶段本地 `wrangler dev` 烟测曾通过（`initialize` / `get_role_guide`）。
+- Remote `GET /` (Cursor WebFetch) returned the expected JSON; local curl through the local proxy fails TLS (`--noproxy` still intermittent), so platform-side reachability is authoritative.
+- During the skeleton phase a local `wrangler dev` smoke test passed (`initialize` / `get_role_guide`).
 
-## remote-mcp Worker 骨架（2026-11-09）
+## remote-mcp Worker skeleton (2026-11-09)
 
-- 新增 `remote-mcp/`：Cloudflare Workers + `createMcpHandler`（Streamable HTTP `/mcp`），只读/指引工具；Bearer `agt_…` 调 agentsgot API；不托管私钥。
-- `npm install`（该目录独立 npm，非 kit pnpm workspace）：退出 0。
-- 目录侧：官方 Registry active；PulseMCP 提交暂停；Glama / SkillsMP / skills.pub 仍待收录。
+- Added `remote-mcp/`: Cloudflare Workers + `createMcpHandler` (Streamable HTTP `/mcp`), read-only/guidance tools; Bearer `agt_…` calls the agentsgot API; no private keys hosted.
+- `npm install` (independent npm in that directory, not the kit pnpm workspace): exit 0.
+- Directory side: official Registry active; PulseMCP submission paused; Glama / SkillsMP / skills.pub still awaiting listing.
 
-## Webhook 读取类型同步（2026-11-07）
+## Webhook read type sync (2026-11-07)
 
-- `vendor/shared/types/api/index.d.ts` 由后台 `pnpm codegen:api` 同步：`GetAgentWebhookResponse` 新增 `configured`，`url` 可为 `null`。
-- `pnpm typecheck`：退出 0；`npx vitest run`：退出 0，13 个文件 279 项通过；`pnpm run check:independent`：退出 0，90 个源码文件。
-- SDK/MCP 未调用该接口，未新增调用入口，未连接后台、钱包或发送交易。
+- `vendor/shared/types/api/index.d.ts` synced from backend `pnpm codegen:api`: `GetAgentWebhookResponse` adds `configured`, and `url` may be `null`.
+- `pnpm typecheck`: exit 0; `npx vitest run`: exit 0, 13 files, 279 tests passed; `pnpm run check:independent`: exit 0, 90 source files.
+- SDK/MCP do not call this endpoint, add no call entry points, and neither connect to the backend or wallet nor send transactions.
 
-## Skill 1.5.0 风控片段（2026-11-04）
+## Skill 1.5.0 risk control snippet (2026-11-04)
 
-- `pnpm run build:skills`：退出 0；`node scripts/build-skills.mjs --check`：退出 0，5 个文件无漂移。
-- `npx vitest run`：退出 0，13 个文件 225 项通过；`skills.test.ts` 断言每个角色含 "Risk control (MUST)" 与钓鱼链接段。
+- `pnpm run build:skills`: exit 0; `node scripts/build-skills.mjs --check`: exit 0, 5 files with no drift.
+- `npx vitest run`: exit 0, 13 files, 225 tests passed; `skills.test.ts` asserts each role contains "Risk control (MUST)" and the phishing link section.
 
-## Delegation Signing 规则与 Skill 1.4.1（2026-11-04）
+## Delegation Signing rule and Skill 1.4.1 (2026-11-04)
 
-- `pnpm run build:skills` → exit 0；`skills/dist` 与 web `public/skills` / `.well-known/agent-skills.json` 均为 **1.4.1**，executor SKILL 含 `MUST — Delegation Signing`。
-- 仓库 `.cursor/rules/delegation-signing.mdc`（`alwaysApply: true`）已写入 monorepo / kit / web / backend；各 `AGENTS.md` 置顶摘要。
+- `pnpm run build:skills` → exit 0; `skills/dist` and web `public/skills` / `.well-known/agent-skills.json` are all **1.4.1**, and the executor SKILL contains `MUST — Delegation Signing`.
+- Repo `.cursor/rules/delegation-signing.mdc` (`alwaysApply: true`) has been written into monorepo / kit / web / backend; each `AGENTS.md` has the top summary.
 
-## 经济 API 类型快照同步（2026-11-04）
+## Economy API type snapshot sync (2026-11-04)
 
-- `vendor/shared/types/api/index.d.ts` 由后台 `pnpm codegen:api` 同步。
-- `pnpm typecheck` 与 `pnpm check:independent`：退出 0；独立边界检查覆盖 87 个源码文件。
-- 未新增 SDK/MCP 调用入口，未连接后台、钱包或发送交易；未提交或推送。
+- `vendor/shared/types/api/index.d.ts` synced from backend `pnpm codegen:api`.
+- `pnpm typecheck` and `pnpm check:independent`: exit 0; the independent boundary check covers 87 source files.
+- Added no SDK/MCP call entry points; neither connected to the backend or wallet nor sent transactions; nothing committed or pushed.
 
-## 通知批量已读类型同步（2026-11-03）
+## Notification bulk read type sync (2026-11-03)
 
-- `vendor/shared/types/api/index.d.ts` 由后台 `pnpm codegen:api` 生成，新增 `MarkAllNotificationsReadResponse` 与对应 operation 映射。
-- `pnpm typecheck` 与 `pnpm check:independent`：退出 0；独立边界检查覆盖 87 个源码文件，`git diff --check` 通过。
-- 未新增 SDK/MCP 调用入口，未连接后台、钱包或发送交易。
+- `vendor/shared/types/api/index.d.ts` generated by backend `pnpm codegen:api`, adding `MarkAllNotificationsReadResponse` and the corresponding operation mapping.
+- `pnpm typecheck` and `pnpm check:independent`: exit 0; the independent boundary check covers 87 source files, and `git diff --check` passes.
+- Added no SDK/MCP call entry points; neither connected to the backend or wallet nor sent transactions.
 
-## 双领取能力与 Skill 1.2.0（2026-10-29）
+## Dual claim capability and Skill 1.2.0 (2026-10-29)
 
-- `pnpm typecheck`、`pnpm build:skills`：退出 0，生成 4 个角色 Skill 与 1 份发现清单。
-- `pnpm exec vitest run test/mcp.test.ts test/discovery-workers.test.ts`：退出 0，2 个文件、32 项通过；覆盖独立工具清单、两种批量上限和 Publisher 排除边界。
-- `pnpm test` 复跑退出 0，11 个文件、199 项通过；`pnpm lint`、`pnpm check:skills`、`pnpm check:independent` 均退出 0。
-- API 类型与 EmissionController ABI 快照已同步；未连接真实后台、钱包或 keeper，未广播交易。
+- `pnpm typecheck`, `pnpm build:skills`: exit 0, generating 4 role Skills and 1 discovery manifest.
+- `pnpm exec vitest run test/mcp.test.ts test/discovery-workers.test.ts`: exit 0, 2 files, 32 tests passed; covers the independent tool list, both batch limits and the Publisher exclusion boundary.
+- `pnpm test` re-run exit 0, 11 files, 199 tests passed; `pnpm lint`, `pnpm check:skills`, `pnpm check:independent` all exit 0.
+- API types and the EmissionController ABI snapshot are synced; no real backend, wallet or keeper connected, and no transactions broadcast.
 
-## 三类发行角色每日挖矿领取 Skill（2026-10-28）
+## Daily mining claim Skills for the three emission roles (2026-10-28)
 
-- Skill 1.1.0 按合约实际角色拆分覆盖 Executor、Tester、Reviewer / Arbitrator，明确排除没有发行份额的 Publisher；三个角色均区分个人 `EMISSION` 与其他 `REWARD`，只使用当前钱包 `CLAIMABLE` 的奖励计划，每批最多 100 个。协议级累计发行不可作为个人领取余额，Keeper 不代替角色钱包领取。
-- `pnpm run build:skills`、`pnpm run check:skills`：退出 0；生成并核对 4 个角色 Skill 与发现清单，共 5 个文件。Executor / Tester / Arbitrator Skill SHA-256 分别为 `0448569fa2aea4a7bcf4d1586a4bdf2b218cb6ff0fe06bdc51f3515d1c2ec6ea`、`a8bcf08c08b57691afe774b345d4f77784780bc5426e074535f009e4603954b3`、`0a754c17a16fd0ce767cca0dcd7c6fc2848036e99f9771796dfdf7a34879e9e8`。
-- `pnpm lint` 首次因新增 MCP 测试格式不符退出 1，按 Biome 建议格式化后复跑退出 0，最终复核仍为退出 0、34 个文件通过；`pnpm test`：退出 0，11 个测试文件、198 项全部通过；`pnpm run check:independent`：退出 0，检查 82 个源码文件。
-- API 类型快照已同步奖励来源字段 `kind: REWARD | EMISSION`。本轮未修改合约、Keeper、后台状态或钱包授权，未连接远程服务、广播交易、提交或推送。
+- Skill 1.1.0 splits coverage per the contracts' actual roles into Executor, Tester, Reviewer / Arbitrator, explicitly excluding the Publisher, which has no emission share; all three roles distinguish personal `EMISSION` from other `REWARD` and use only reward plans that are `CLAIMABLE` in the current wallet, at most 100 per batch. Protocol-level cumulative emission cannot serve as a personal claimable balance, and the Keeper does not claim on behalf of role wallets.
+- `pnpm run build:skills`, `pnpm run check:skills`: exit 0; generated and verified 4 role Skills and the discovery manifest, 5 files in total. Executor / Tester / Arbitrator Skill SHA-256 are `0448569fa2aea4a7bcf4d1586a4bdf2b218cb6ff0fe06bdc51f3515d1c2ec6ea`, `a8bcf08c08b57691afe774b345d4f77784780bc5426e074535f009e4603954b3` and `0a754c17a16fd0ce767cca0dcd7c6fc2848036e99f9771796dfdf7a34879e9e8` respectively.
+- `pnpm lint` first exited 1 because the newly added MCP tests did not match the format; after formatting per Biome's suggestion the re-run exited 0, and the final re-check again exited 0 with 34 files passing; `pnpm test`: exit 0, 11 test files, all 198 tests passed; `pnpm run check:independent`: exit 0, checking 82 source files.
+- The API type snapshot syncs the reward source field `kind: REWARD | EMISSION`. This round did not modify contracts, the Keeper, backend state or wallet authorizations, and did not connect to remote services, broadcast transactions, commit or push.
 
-## 任务详情交付凭证同步（2026-10-26）
+## Task detail delivery voucher sync (2026-10-26)
 
-- 从当前 backend 同步 `vendor/shared/types/api/index.d.ts`，任务详情与列表类型新增可选 `settlement.deliveries`；SDK 新增 `getTask(taskId)`，MCP 新增 `get_task`，返回已签名交付的执行者、成果哈希、状态与提交时间。
-- `pnpm exec biome check src/sdk/client.ts src/mcp/server.ts test/client.test.ts test/mcp.test.ts`：退出 0；`pnpm run typecheck`、`pnpm build`：退出 0。
-- `pnpm exec vitest run test/client.test.ts test/mcp.test.ts`：退出 0，2 个文件 42 项通过；`pnpm test`：退出 0，8 个文件 152 项通过。
-- `pnpm run check:independent`：退出 0，60 个源码文件；`git diff --check`：退出 0。未连接真实后台、重启远程 MCP/Worker、广播交易、提交或推送。
+- Synced `vendor/shared/types/api/index.d.ts` from the current backend, adding the optional `settlement.deliveries` to task detail and list types; the SDK adds `getTask(taskId)` and MCP adds `get_task`, returning the executor, result hash, status and submission time of signed deliveries.
+- `pnpm exec biome check src/sdk/client.ts src/mcp/server.ts test/client.test.ts test/mcp.test.ts`: exit 0; `pnpm run typecheck`, `pnpm build`: exit 0.
+- `pnpm exec vitest run test/client.test.ts test/mcp.test.ts`: exit 0, 2 files, 42 tests passed; `pnpm test`: exit 0, 8 files, 152 tests passed.
+- `pnpm run check:independent`: exit 0, 60 source files; `git diff --check`: exit 0. No real backend connected, no remote MCP/Worker restart, no transactions broadcast, nothing committed or pushed.
 
-## 当前后台兼容同步（2026-10-26）
+## Current backend compatibility sync (2026-10-26)
 
-- 同步 API 类型快照（任务 canClaimReason）；修复 HTTP 基地址 /api 丢失；更新规格声明 V4、V3/V4 兼容列表与 TaskSpec 类型；报告请求携带 submissionId。保留原有未提交文档修改，未覆盖真实 .env。
-- `node node_modules/@biomejs/biome/bin/biome check --write src/index.ts src/ports.ts src/sdk/client.ts src/mcp/server.ts src/a2a.ts test/client.test.ts`：退出 0。
-- `node node_modules/typescript/bin/tsc -p vendor/shared/tsconfig.json`、`node node_modules/typescript/bin/tsc -p vendor/shared/tsconfig.abi.json`、`node node_modules/typescript/bin/tsc -p tsconfig.json`：均退出 0，独立构建成功。
-- `node node_modules/vitest/vitest.mjs run`：退出 0，8 个文件 150 项通过（含共享规则/属性测试），新增基地址根路径与 /api 两种结尾覆盖；报告绑定及 V4 发布默认名额断言通过。
-- `node scripts/check-independent.mjs`：退出 0，60 个源码文件；`git diff --check`：退出 0。未连接真实后台进行端到端验证，未广播交易、提交或推送。
+- Synced the API type snapshot (task canClaimReason); fixed the loss of /api in the HTTP base URL; updated the spec declaration to V4, the V3/V4 compatibility list and the TaskSpec type; report requests carry submissionId. Preserved existing uncommitted doc changes and did not overwrite the real .env.
+- `node node_modules/@biomejs/biome/bin/biome check --write src/index.ts src/ports.ts src/sdk/client.ts src/mcp/server.ts src/a2a.ts test/client.test.ts`: exit 0.
+- `node node_modules/typescript/bin/tsc -p vendor/shared/tsconfig.json`, `node node_modules/typescript/bin/tsc -p vendor/shared/tsconfig.abi.json`, `node node_modules/typescript/bin/tsc -p tsconfig.json`: all exit 0, independent builds succeeded.
+- `node node_modules/vitest/vitest.mjs run`: exit 0, 8 files, 150 tests passed (including shared rule/property tests), with new coverage for both base URL root-path and /api endings; report binding and V4 publish default slot assertions passed.
+- `node scripts/check-independent.mjs`: exit 0, 60 source files; `git diff --check`: exit 0. No end-to-end verification against a real backend, no transactions broadcast, nothing committed or pushed.
 
-日期 2026-10-24，代码基线 1d712de。
+Date 2026-10-24, code baseline 1d712de.
 
-- 使用本项目 TypeScript 顺序编译 vendor/shared、ABI 和 tsconfig.json：均退出 0。
-- node node_modules/vitest/vitest.mjs run：退出 0，8 个文件、147 项通过（包含 vendor/shared 规则/属性用例，不与 SDK 自身用例混淆）。
-- 当前 SDK 无部署地址目录或真实合约快照记录；新协议发布后需要接入已更新的后台，不复用旧任务 checkpoint。
+- Sequential TypeScript compilation of vendor/shared, ABI and tsconfig.json with this project: all exit 0.
+- node node_modules/vitest/vitest.mjs run: exit 0, 8 files, 147 tests passed (including vendor/shared rule/property cases, not to be confused with the SDK's own cases).
+- The current SDK has no deployment address directory or real contract snapshot record; after a new protocol release it must connect to the updated backend and must not reuse old task checkpoints.
 
-## 本轮清理和边界
+## This round's cleanup and boundaries
 
-经用户确认废弃旧部署，删除 contracts/shared/deployments/97、backend/deployments/97、web/deployments/97 中旧清单/布局副本/operations 共 42 个文件，同时清理旧部署预演、恢复/广播记录、旧文档归档与旧打包归档。各发布根目录保留 README，等待新清单。未修改真实 .env、私钥、Git 历史或 protocol/storage-layout 的 15 份源码布局；未连接服务器、清数据库、迁移线上状态或广播交易。
+With user confirmation that the old deployment is deprecated, deleted a total of 42 files — old manifests / layout copies / operations — under contracts/shared/deployments/97, backend/deployments/97 and web/deployments/97, along with old deployment dry-runs, restore/broadcast records, old doc archives and old package archives. Each release root keeps a README, awaiting the new manifest. Did not modify the real .env, private keys, Git history, or the 15 protocol/storage-layout source layouts; did not connect to servers, clear databases, migrate live state or broadcast transactions.
 
-四个项目 check-independent 均退出 0（contracts 177、backend 179、web 213、agent-kit 59 个源码文件），git diff --check 均退出 0。四端 params.json 哈希一致；从当前 Hardhat 产物重新生成的 16 份协议 ABI JSON 与 backend/web/agent-kit 的副本逐项一致。本轮无需改 ABI 或跨端字段。
+All four projects' check-independent exited 0 (contracts 177, backend 179, web 213, agent-kit 59 source files), and git diff --check exited 0 for all. params.json hashes are identical across the four; the 16 protocol ABI JSONs regenerated from the current Hardhat artifacts match the copies in backend/web/agent-kit item by item. This round needs no ABI or cross-project field changes.
 
-本轮未改 SDK 业务代码、钱包密钥或真实 .env，未启动远程 MCP/worker 或签署真实链上交易。
+This round changed no SDK business code, wallet keys or the real .env, and did not start a remote MCP/worker or sign real on-chain transactions.

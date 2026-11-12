@@ -1,601 +1,601 @@
-# 质押门槛与奖惩机制：需求规格（确认版）
+# Staking Thresholds and Reward/Penalty Mechanism: Requirements Specification (Confirmed)
 
-> 版本：v1.0 · 2026-10-24 · 计价单位：AGT
-> 适用：发布池、测试池、仲裁池（含复核者）的准入门槛、质押上限、锁仓、罚没与奖励。
-> 本文所有条款为最终需求。实现完成后，须将本文结论回写 `01-RULES.md` 的第二章 2.3、第五章、第七章、第八章。
-> 参数一律先写中文名称，代码中的参数标识集中列在第 9 章参数表。
+> Version: v1.0 · 2026-10-24 · Pricing unit: AGT
+> Applies to: admission thresholds, stake caps, locking, slashing, and rewards for the publisher pool, tester pool, and arbitration pool (including reviewers).
+> All clauses in this document are final requirements. After implementation, the conclusions must be written back into sections 2.3, Chapter 5, Chapter 7, and Chapter 8 of `01-RULES.md`.
+> Each parameter is given by name first; the parameter identifiers used in code are listed together in the parameter table in Chapter 9.
 
 ---
 
-## 1. 目标与范围
+## 1. Goals and Scope
 
-### 1.1 目标
+### 1.1 Goals
 
-1. 仲裁与测试的准入只看代币质押，不设历史条件。
-2. 三个池的质押量级与各自承担的风险匹配。
-3. 罚没与奖励随争议标的浮动，使诚实参与的期望收益为正，作恶的期望收益为负。
-4. 任何已发布的任务，其争议标的都在仲裁池的经济安全范围内。
+1. Admission to arbitration and testing depends only on token stake, with no historical conditions.
+2. The stake magnitudes of the three pools match the risks each pool bears.
+3. Slashing and rewards float with the disputed value, so that the expected return of honest participation is positive and that of malice is negative.
+4. For any published task, its disputed value lies within the economic safety range of the arbitration pool.
 
-### 1.2 范围内
+### 1.2 In scope
 
-- 发布、测试、仲裁（含复核者）三池的准入、上限、权重、锁仓。
-- 仲裁与测试的罚没、奖励、罚没去向。
-- 任务标的上限、发布时拦截、降级与兜底路径约束。
-- 对应的合约、参数、文档与前后端同步。
-- 经济模型 v3：任务扣费 `C` **100% 进入平台金库 `PlatformTreasury`**，不再按 65/15/10/10 拆分给 Agent；Agent 报酬全部来自挖矿发行（平台 10% / 执行者 65% / 测试者 15% / 仲裁者 10%）。无参与者时段的执行者 / 测试者 / 仲裁者份额打入零地址销毁（AGT `burn`，`totalSupply` 减少）。
-- 案件费余额、推翻罚没份额、执行者债务份额、仲裁池超额仍进入 `PlatformTreasury`（不销毁）。平台金库是独立账户，不是 8 亿 AGT 的激励金库 `IncentiveVault`，部署时校验二者不得相同。
-- 拒绝保证金已废弃，统一为申诉费（`computeAppealFee`），100% 支付给已揭示陪审员。
-- 已知例外：代币项目（`agent-grid-contracts/token`）不在本期范围，`TaxDistributor` 的交易税销毁份额与 `AGTToken.burn()` 保持不变。
+- Admission, caps, weights, and locking for the three pools: publishing, testing, and arbitration (including reviewers).
+- Slashing, rewards, and slashing destinations for arbitration and testing.
+- Task disputed value cap, publish-time blocking, degradation, and fallback path constraints.
+- The corresponding contracts, parameters, documentation, and frontend/backend synchronization.
+- Economic model v3: the task deduction `C` **goes 100% into the platform treasury `PlatformTreasury`** and is no longer split 65/15/10/10 among Agents; all Agent rewards come from mining emission (platform 10% / executor 65% / tester 15% / arbitrator 10%). Executor / tester / arbitrator shares for periods with no participants are sent to the zero address and burned (AGT `burn`, `totalSupply` decreases).
+- Case fee balances, overturned slashing shares, executor debt shares, and arbitration pool excess still go to `PlatformTreasury` (they are not burned). The platform treasury is a separate account, not the 800 million AGT incentive vault `IncentiveVault`; deployment validates that the two are not identical.
+- The rejection bond is deprecated and unified into the appeal fee (`computeAppealFee`), paid 100% to revealed jurors.
+- Known exception: the token project (`agent-grid-contracts/token`) is out of scope for this phase; the `TaxDistributor` transaction-tax burn share and `AGTToken.burn()` remain unchanged.
 
-### 1.3 范围外
+### 1.3 Out of scope
 
-| 项 | 本期处理 | 不做的原因 | 本期的替代措施 |
+| Item | Handling this phase | Reason for not doing it | Alternative this phase |
 |---|---|---|---|
-| 角色互斥 | 保持不变 | 同一任务内一个钱包只能担一种角色，已实现，与本次奖惩和门槛调整无关 | — |
-| 发布者质押公式 | 保持不变 | 发布者质押随预留自动放大，T5（28 天）所需约 42 万，与仲裁门槛同量级，无需调整 | — |
-| B 级串通委员会 | 不做 | 需要新增多签委员会、证据标准与延时执行机制，属于治理机制的新增；证据标准（哪些链下证据加链上旁证足以罚没）尚未定义，仓促上线会引入误罚风险 | 只对链上可验证的 A 级串通执行没收全部质押并永久禁入；仅聊天截图类证据不得作为罚没依据 |
-| 30 天罚没锁仓账户 | 不做 | 它的作用是给复核推翻留出回滚窗口；本期没有协议复核层，没有需要回滚的对象 | 终审为终局，罚没即时执行 |
-| 协议复核层 | 不做 | 需要新的复核角色、保证金与裁决流程，改动面超出本次"奖惩与准入"范围；复核推翻后已分配罚没如何追回，规则未定义 | 终审为终局；以"争议标的不超过暴露倍数乘以质押"的上限与发布时拦截限制单案风险 |
-| 关联簇排除 | 不做 | 注册表中的关联簇字段没有写入方，链上始终为空；要启用需先确定谁写入、依据什么数据判定同一控制人，这是链下身份与数据源问题，不属于质押与罚没规则 | 沿用每案证据机制：开案时由协议签名的案件证明提交回避名单与资金来源，并按"同一来源权重占比上限"限制同一来源的权重；另加线性权重使拆地址不增加总权重，每个地址仍需 100 万质押 |
-| 测试者质量罚（报告与终局不一致） | 不做 | 报告与终局不一致可能是诚实分歧，链上无法与恶意区分；以此罚没会惩罚诚实的少数意见 | 只罚可客观判定的行为：超时未交报告（见 7.6）与 A 级串通 |
+| Role mutual exclusion | Unchanged | Within one task a wallet can hold only one role; already implemented and unrelated to this reward/penalty and threshold adjustment | — |
+| Publisher stake formula | Unchanged | Publisher stake automatically scales with reserves; T5 (28 days) needs about 420,000, the same order of magnitude as the arbitration threshold, so no adjustment is needed | — |
+| Grade B collusion committee | Not doing | Requires a new multisig committee, evidence standards, and delayed execution, which is a new governance mechanism; the evidence standard (which off-chain evidence plus on-chain corroboration suffices for slashing) is not yet defined, and launching hastily would introduce wrongful-slashing risk | Only on-chain verifiable grade A collusion triggers confiscation of the full stake and a permanent ban; chat-screenshot-only evidence must not be grounds for slashing |
+| 30-day slashing lock account | Not doing | Its purpose is to leave a rollback window for review overturns; this phase has no protocol review layer, so there is nothing to roll back | The final instance is final; slashing executes immediately |
+| Protocol review layer | Not doing | Requires a new reviewer role, bonds, and a ruling process, exceeding the scope of this "reward/penalty and admission" change; how to recover already-distributed slashes after a review overturn is undefined | The final instance is final; single-case risk is bounded by the cap "disputed value does not exceed exposure multiple times stake" and by publish-time blocking |
+| Related-cluster exclusion | Not doing | The related-cluster field in the registry has no writer and is always empty on-chain; enabling it requires first deciding who writes it and on what data the same controller is determined, which is an off-chain identity and data-source problem outside staking and slashing rules | Keep the per-case evidence mechanism: when a case opens, the protocol-signed case proof submits a recusal list and funding sources, and the same-source weight share is capped by the "same-source weight share cap"; plus linear weight so splitting addresses does not increase total weight, and each address still needs 1,000,000 stake |
+| Tester quality penalty (report inconsistent with the final outcome) | Not doing | A report inconsistent with the final outcome may be honest disagreement and cannot be distinguished from malice on-chain; penalizing it would punish honest minority opinions | Penalize only objectively determinable behavior: missing the report before the timeout (see 7.6) and grade A collusion |
 
 ---
 
-## 2. 术语与符号
+## 2. Terms and Symbols
 
-| 符号 | 名称 | 含义 |
+| Symbol | Name | Meaning |
 |---|---|---|
-| V | 争议标的 | 被争议的执行者池金额，开案时由任务托管合约传入仲裁庭 |
-| Y | 预留额 | 任务预留 = 最高档日费 × 运行天数，发布任务时锁定 |
-| V上限 | 争议标的上界 | `Y × 执行者份额比例`（65%） |
-| S | 质押 | 单个验证者的质押量 |
-| 仲裁准入质押、测试准入质押 | 准入门槛 | 分别为仲裁池、测试池的最低质押 |
-| F | 案件费 | `max(5% × V, 6 AGT)` |
-| L | 单案锁仓 | 陪审员为一个案件锁定的质押 |
-| R | 单席多数费 | `F × 70% ÷ 终审多数派人数` |
-| p | 串通发现率 | 串通被发现并罚没的概率，取 30% |
-| k | 必须买通人数 | 为让错误结果维持，攻击者需买通的最少人数 = `⌊终审人数 ÷ 2⌋ + 1` |
-| μ | 暴露倍数 | `k × p`，约束 `V ≤ μ × S` |
-| U | 标的上限 | 当前模式下允许发布的争议标的最大值 |
-| Z | 罚没总额 | 一审多数方被罚没的合计 |
+| V | Disputed value | The disputed executor pool amount, passed by the task escrow contract to the arbitration court when the case opens |
+| Y | Reserve | Task reserve = highest-tier daily fee × run days, locked when the task is published |
+| V_cap | Disputed value upper bound | `Y × executor share ratio` (65%) |
+| S | Stake | Stake amount of a single validator |
+| Arbitration admission stake, tester admission stake | Admission threshold | Minimum stake for the arbitration pool and the tester pool respectively |
+| F | Case fee | `max(5% × V, 6 AGT)` |
+| L | Per-case lock | The stake a juror locks for one case |
+| R | Per-seat majority fee | `F × 70% ÷ number of final-instance majority jurors` |
+| p | Collusion detection rate | Probability that collusion is detected and slashed; taken as 30% |
+| k | Must-bribe count | To keep a wrong result, the minimum number an attacker must bribe = `⌊final jurors ÷ 2⌋ + 1` |
+| μ | Exposure multiple | `k × p`, with the constraint `V ≤ μ × S` |
+| U | Disputed value cap | Maximum disputed value allowed to be published under the current mode |
+| Z | Total slashed | Total slashed from the first-instance majority |
 
 ---
 
-## 3. 最终决策
+## 3. Final Decisions
 
-### 3.1 门槛与上限
+### 3.1 Thresholds and caps
 
-| 项 | 决定 |
+| Item | Decision |
 |---|---|
-| 发布池 | 基础质押 10 AGT + 10% × 在途预留总额 |
-| 测试池准入 | 质押 ≥ **100,000 AGT** |
-| 仲裁池准入（含复核者） | 质押 ≥ **1,000,000 AGT**，唯一条件 |
-| 存款总额上限 | **3,000,000 AGT**（测试与仲裁共用一份质押，全局上限） |
-| 角色权重上限 | 仲裁 3,000,000；测试 200,000 |
-| 抽选权重 | 线性：`min(质押, 角色权重上限) × 响应率 × 活跃系数` |
-| 同一份质押 | 可同时满足测试池与仲裁池；同任务内互斥保持不变 |
+| Publisher pool | Base stake 10 AGT + 10% × total in-flight reserves |
+| Tester pool admission | Stake ≥ **100,000 AGT** |
+| Arbitration pool admission (including reviewers) | Stake ≥ **1,000,000 AGT**, the only condition |
+| Total deposit cap | **3,000,000 AGT** (testing and arbitration share one stake, global cap) |
+| Role weight cap | Arbitration 3,000,000; testing 200,000 |
+| Draw weight | Linear: `min(stake, role weight cap) × response rate × activity coefficient` |
+| Same stake | Can satisfy both the tester pool and the arbitration pool; mutual exclusion within a task remains unchanged |
 
-### 3.2 陪审规模与标的
+### 3.2 Panel size and disputed value
 
-| 项 | 决定 |
+| Item | Decision |
 |---|---|
-| 满编（池 ≥ 40） | 一审 11 人，终审 21 人 |
-| 降级（18 ≤ 池 < 40） | 一审 5 人，终审 9 人 |
-| 最小池规模 | **18** |
-| 终审改判规则 | 简单多数 |
-| 暴露倍数 | 满编 3.3，降级 1.5 |
-| 兜底（池 < 18） | 3 名测试者，2 票通过，仅限 `V ≤ 60,000 AGT` |
-| T5 最长天数 | **28 天** |
-| 发布时拦截 | 创建任务时校验争议标的上界不超过当前模式的标的上限 |
+| Full panel (pool ≥ 40) | First instance 11 jurors, final instance 21 |
+| Degraded (18 ≤ pool < 40) | First instance 5, final instance 9 |
+| Minimum pool size | **18** |
+| Final-instance reversal rule | Simple majority |
+| Exposure multiple | Full panel 3.3, degraded 1.5 |
+| Fallback (pool < 18) | 3 testers, 2 votes to pass, limited to `V ≤ 60,000 AGT` |
+| T5 maximum days | **28 days** |
+| Publish-time blocking | At task creation, validate that the disputed value upper bound does not exceed the disputed value cap of the current mode |
 
-### 3.3 锁仓与罚没
+### 3.3 Locking and slashing
 
-| 项 | 决定 |
+| Item | Decision |
 |---|---|
-| 单案锁仓 | `L = min(max(5% × V, 50 AGT), 10% × S)` |
-| 并发案件数 | 3 |
-| 拒席 | 不罚没 |
-| 已确认席位未提交 | 罚 20% × L |
-| 已提交未揭示 | 罚 100% × L |
-| 一审多数被终审推翻 | 罚 100% × L |
-| 终审少数 | 不罚（0%） |
-| A 级串通 | 没收全部质押 + 永久禁入 |
-| 测试者超时未交报告 | 罚 `min(5 × 应得报酬, 10% × 质押)` |
+| Per-case lock | `L = min(max(5% × V, 50 AGT), 10% × S)` |
+| Concurrent cases | 3 |
+| Seat refusal | No slashing |
+| Confirmed seat, no commit | Penalty 20% × L |
+| Committed, not revealed | Penalty 100% × L |
+| First-instance majority overturned by the final instance | Penalty 100% × L |
+| Final-instance minority | No penalty (0%) |
+| Grade A collusion | Confiscate the full stake + permanent ban |
+| Tester misses the report before the timeout | Penalty `min(5 × earned reward, 10% × stake)` |
 
-### 3.4 奖励分配
+### 3.4 Reward allocation
 
-| 项 | 决定 |
+| Item | Decision |
 |---|---|
-| 申诉方奖励 | `min(10 × R, Z)` |
-| 剩余罚没 | 平台金库 30%；正义方 70%，人头均分 |
-| 正义方 | 终审多数派 ∪ 一审中与终审裁决一致的少数派（未揭示者不计） |
-| 申诉资格 | 发布者、执行者 |
-| 申诉保证金 | `2 × F` |
-| 池不足时的高标的案件 | 等待池恢复；超过 336 小时由治理裁定 |
+| Challenger reward | `min(10 × R, Z)` |
+| Remaining slashed | Platform treasury 30%; righteous party 70%, split equally per person |
+| Righteous party | Final-instance majority ∪ the first-instance minority that agreed with the final ruling (non-revealers excluded) |
+| Appeal eligibility | Publisher, executor |
+| Appeal bond | `2 × F` |
+| High-value case with an insufficient pool | Wait for the pool to recover; governance rules after 336 hours |
 
 ---
 
-## 4. 数学模型
+## 4. Mathematical Model
 
-### 4.1 抗贿赂约束
+### 4.1 Anti-bribery constraint
 
-攻击者收买一审多数后，要让错误结果在终审中维持，须买通终审中"能阻止改判的最少人数 k"。被买通者被发现的预期损失为 `p × S`，攻击不划算的条件：
+After bribing the first-instance majority, keeping the wrong result through the final instance requires bribing "the minimum number k that can block a reversal" in the final instance. The expected loss of a bribed juror once detected is `p × S`, and the condition under which the attack does not pay is:
 
 ```
-k × p × S  ≥  V          即   V ≤ μ × S
+k × p × S  ≥  V          i.e.   V ≤ μ × S
 ```
 
-| 模式 | 终审人数 | k | μ（p = 30%） | S = 100 万时 V 上限 |
+| Mode | Final jurors | k | μ (p = 30%) | V cap when S = 1 million |
 |---|---:|---:|---:|---:|
-| 满编 | 21 | 11 | 3.3 | 330 万 |
-| 降级 | 9 | 5 | 1.5 | 150 万 |
-| 兜底 | 3 | 2 | 0.6 | 测试准入质押 10 万时为 60,000 |
+| Full panel | 21 | 11 | 3.3 | 3.3 million |
+| Degraded | 9 | 5 | 1.5 | 1.5 million |
+| Fallback | 3 | 2 | 0.6 | 60,000 when the tester admission stake is 100,000 |
 
-### 4.2 收入与流动性约束
+### 4.2 Revenue and liquidity constraints
 
-- 收入：`S ≤ 年收入 ÷ 资金成本 25%`。`S = 100 万` 需要年收入 ≥ 25 万 AGT。仲裁者收入来源：
-  - 复核份额：扣费的 10% 在本任务复核者间均分（T1、T2 一人，T3 三人），是主要来源。以 T3 扣费 60 万、3 名复核者计，每人约 2 万/任务。
-  - 案件费：最大 T3 的 `V = 39 万`，`F = 1.95 万`，多数派 70% 由 6 人平分，每人约 2,275。
-  - 出席费：每人每案最多 0.5 AGT。
-- 流动性：`池规模 × S ≤ 初始流动性池储备 2 亿 AGT`。
+- Revenue: `S ≤ annual revenue ÷ cost of capital 25%`. `S = 1 million` requires annual revenue ≥ 250,000 AGT. Arbitrator revenue sources:
+  - Review share: 10% of the deduction is split equally among this task's reviewers (one for T1 and T2, three for T3), and is the main source. With a T3 deduction of 600,000 and 3 reviewers, each gets about 20,000 per task.
+  - Case fee: for the largest T3, `V = 390,000`, `F = 19,500`, and the majority's 70% is split among 6 people, about 2,275 each.
+  - Attendance fee: at most 0.5 AGT per person per case.
+- Liquidity: `pool size × S ≤ initial liquidity pool reserve 200 million AGT`.
 
-| 池规模 | 质押合计 | 占流动性池 |
+| Pool size | Total stake | Share of the liquidity pool |
 |---|---:|---:|
-| 最小池 18 | 1,800 万 | 9% |
-| 满编 40 | 4,000 万 | 20% |
+| Minimum pool 18 | 18 million | 9% |
+| Full panel 40 | 40 million | 20% |
 
-### 4.3 各档任务覆盖
+### 4.3 Coverage per tier
 
-`V上限 = 0.65 × Y`。
+`V_cap = 0.65 × Y`.
 
-| 档位 | 日费 | 最大天数 | 预留额最大 | V 最大 | 满编（330 万） | 降级（150 万） | 兜底（6 万） |
+| Tier | Daily fee | Max days | Max reserve | Max V | Full panel (3.3 million) | Degraded (1.5 million) | Fallback (60,000) |
 |---|---:|---:|---:|---:|:-:|:-:|:-:|
-| T1 | 300 | 7 | 2,100 | 1,365 | 覆盖 | 覆盖 | 覆盖 |
-| T2 | 2,000 | 14 | 28,000 | 18,200 | 覆盖 | 覆盖 | 覆盖 |
-| T3 | 20,000 | 30 | 60 万 | 39 万 | 覆盖 | 覆盖 | 4 天内 |
-| T4 | 60,000 | 45 | 270 万 | 175.5 万 | 覆盖 | 38 天内 | 不覆盖 |
-| T5 | 150,000 | 28 | 420 万 | 273 万 | 覆盖，余量 17% | 15 天内 | 不覆盖 |
+| T1 | 300 | 7 | 2,100 | 1,365 | Covered | Covered | Covered |
+| T2 | 2,000 | 14 | 28,000 | 18,200 | Covered | Covered | Covered |
+| T3 | 20,000 | 30 | 600,000 | 390,000 | Covered | Covered | Within 4 days |
+| T4 | 60,000 | 45 | 2.7 million | 1.755 million | Covered | Within 38 days | Not covered |
+| T5 | 150,000 | 28 | 4.2 million | 2.73 million | Covered, 17% headroom | Within 15 days | Not covered |
 
-### 4.4 单案锁仓与盈亏
+### 4.4 Per-case lock and profit/loss
 
 ```
 L  = min( max( 5% × V, 50 ),  10% × S )
-盈亏平衡的被推翻概率 = R ÷ ( R + L )
+Break-even overturn probability = R ÷ ( R + L )
 ```
 
-- 满编一审（多数 6 人）：`R = 0.117 × F`，`L = F`（V ≤ 200 万时），盈亏平衡概率约 10.4%。
-- 降级一审（多数 3 人）：`R = 0.233 × F`，`L = F`（V ≤ 200 万时），盈亏平衡概率约 18.9%。
-- `V > 2 × S`（200 万）时，锁仓占质押的上限（10%）生效。
+- Full-panel first instance (majority 6): `R = 0.117 × F`, `L = F` (when V ≤ 2 million), break-even probability about 10.4%.
+- Degraded first instance (majority 3): `R = 0.233 × F`, `L = F` (when V ≤ 2 million), break-even probability about 18.9%.
+- When `V > 2 × S` (2 million), the lock's cap on stake (10%) takes effect.
 
-### 4.5 对串通发现率的敏感性
+### 4.5 Sensitivity to the collusion detection rate
 
-| 发现率 p | 满编 V 上限 | T5 最长天数 | 降级 V 上限 | 兜底 V 上限 |
+| Detection rate p | Full-panel V cap | T5 max days | Degraded V cap | Fallback V cap |
 |---:|---:|---:|---:|---:|
-| 20% | 220 万 | 约 20 天 | 100 万 | 40,000 |
-| 30%（采用） | 330 万 | 约 31 天（取 28） | 150 万 | 60,000 |
-| 50% | 550 万 | 约 52 天 | 250 万 | 100,000 |
+| 20% | 2.2 million | about 20 days | 1 million | 40,000 |
+| 30% (adopted) | 3.3 million | about 31 days (28 adopted) | 1.5 million | 60,000 |
+| 50% | 5.5 million | about 52 days | 2.5 million | 100,000 |
 
-发现率为模型假设。运营中实际发现率低于 30% 时，下调两档暴露倍数与兜底标的上限，并缩短 T5 最长天数。
+The detection rate is a model assumption. If the actual detection rate during operations is below 30%, lower the exposure multiples for both modes and the fallback disputed value cap, and shorten the T5 maximum days.
 
 ---
 
-## 5. 三个池的规则
+## 5. Rules for the Three Pools
 
-### 5.1 发布池
+### 5.1 Publisher pool
 
 ```
-发布者所需质押 = 发布者基础质押 + 发布者预留质押比例 × 在途预留额合计
-              = 10 AGT + 10% × 在途预留额合计
+Publisher required stake = publisher base stake + publisher reserve stake ratio × total in-flight reserves
+                         = 10 AGT + 10% × total in-flight reserves
 ```
 
-| 任务 | 预留额 | 所需质押 |
+| Task | Reserve | Required stake |
 |---|---:|---:|
-| T1 满额 | 2,100 | 220 AGT |
-| T3 满额 | 60 万 | 60,010 AGT |
-| T5（28 天） | 420 万 | 420,010 AGT |
+| T1 full | 2,100 | 220 AGT |
+| T3 full | 600,000 | 60,010 AGT |
+| T5 (28 days) | 4.2 million | 420,010 AGT |
 
-### 5.2 测试池
+### 5.2 Tester pool
 
-| 项 | 要求 |
+| Item | Requirement |
 |---|---|
-| 入池 | 质押 ≥ 测试准入质押（100,000）；加入测试池时校验 |
-| 保持 | 质押低于门槛时立即不具备抽选资格；补足后立即恢复 |
-| 权重 | `min(质押, 200,000) × 响应率` |
-| 并发 | 不占仲裁并发额度 |
-| 退出 | 首次质押后锁定 14 天；申请退出后冷却 7 天 |
-| 罚没 | 见 7.6 |
+| Pool entry | Stake ≥ tester admission stake (100,000); validated when joining the tester pool |
+| Maintenance | Immediately ineligible for draws when the stake falls below the threshold; immediately restored once topped up |
+| Weight | `min(stake, 200,000) × response rate` |
+| Concurrency | Does not consume the arbitration concurrency quota |
+| Exit | Locked for 14 days after the first stake; 7-day cooldown after requesting exit |
+| Slashing | See 7.6 |
 
-### 5.3 仲裁池（含复核者）
+### 5.3 Arbitration pool (including reviewers)
 
-**准入**
+**Admission**
 
-| 条件 | 要求 |
+| Condition | Requirement |
 |---|---|
-| 质押 | ≥ 仲裁准入质押（1,000,000） |
-| 债务 | 无未清偿罚没；注册表无记录视为无债务 |
-| 暂停 | 不在暂停期（纪律暂停与响应率暂停） |
-| 响应率 | ≥ 最低响应率（50%） |
+| Stake | ≥ arbitration admission stake (1,000,000) |
+| Debt | No outstanding slashing; no registry record means no debt |
+| Suspension | Not in a suspension period (disciplinary suspension and response-rate suspension) |
+| Response rate | ≥ minimum response rate (50%) |
 
-除上表外不设任何准入条件：不要求质押时长、不要求测试历史、不要求注册档案。
+Beyond the table above there are no admission conditions: no stake duration, no testing history, and no registry profile are required.
 
-**权重**：`min(质押, 3,000,000) × 响应率 × 活跃系数`。连续 5 次终审少数后活跃系数为 50%。
+**Weight**: `min(stake, 3,000,000) × response rate × activity coefficient`. After 5 consecutive final-instance minority votes the activity coefficient is 50%.
 
-**复核者**：从仲裁池抽取，资格同仲裁者。仲裁池人数低于冷启动阈值（10）时，复核者可从全部合格验证者中抽取。
+**Reviewers**: drawn from the arbitration pool, with the same eligibility as arbitrators. When the arbitration pool falls below the cold-start threshold (10), reviewers may be drawn from all eligible validators.
 
-**治理白名单**：只用于批量加入仲裁池，不豁免任何质押要求。
+**Governance whitelist**: used only for bulk admission to the arbitration pool and exempts no staking requirement.
 
-**案件上限**
+**Case caps**
 
-- 并发案件数上限为 3；最坏同时锁仓 `3 × 10 万 = 30 万 ≤ 100 万`。
-- 被抽陪审员须满足 `V ≤ 质押 × 当前模式暴露倍数`。
+- The concurrent case cap is 3; the worst-case simultaneous lock is `3 × 100,000 = 300,000 ≤ 1,000,000`.
+- A drawn juror must satisfy `V ≤ stake × exposure multiple of the current mode`.
 
-**纪律**
+**Discipline**
 
-| 事件 | 处理 |
+| Event | Handling |
 |---|---|
-| 被终审推翻达 2 次 | 暂停 720 小时 |
-| 被终审推翻达 3 次 | 取消资格；满 8,760 小时（约 365 天）后自动恢复 |
-| 连续 5 次终审少数 | 活跃系数降为 50% |
-| 响应率低于 50% | 暂停 720 小时 |
+| Overturned by the final instance 2 times | Suspended for 720 hours |
+| Overturned by the final instance 3 times | Disqualified; automatically restored after 8,760 hours (about 365 days) |
+| 5 consecutive final-instance minority votes | Activity coefficient reduced to 50% |
+| Response rate below 50% | Suspended for 720 hours |
 
-### 5.4 质押上限与退出
+### 5.4 Stake cap and exit
 
-- 存款后总质押超过 3,000,000 AGT 的存款被拒绝。
-- 退出：首次质押后锁定 336 小时；申请退出后冷却 168 小时；无进行中的案件才可提走。
-- 设置上限的目的：防止少数大户垄断抽选与席位；避免多余质押抽走流动性池的流动性；控制单人风险暴露；使拆地址无套利。
+- Deposits that would bring the total stake above 3,000,000 AGT are rejected.
+- Exit: locked for 336 hours after the first stake; 168-hour cooldown after requesting exit; withdrawal only when there are no ongoing cases.
+- Purpose of the cap: prevent a few large holders from monopolizing draws and seats; avoid surplus stake draining liquidity from the liquidity pool; control single-person risk exposure; make address splitting unprofitable.
 
-### 5.5 线性权重与防拆分
+### 5.5 Linear weight and anti-splitting
 
 ```
-一个 200 万地址 → 权重 200 万
-两个 100 万地址 → 权重 100 万 + 100 万 = 200 万
+One 2-million address   → weight 2 million
+Two 1-million addresses → weight 1 million + 1 million = 2 million
 ```
 
-拆分不增加总权重。
+Splitting does not increase the total weight.
 
 ---
 
-## 6. 陪审规模、发布拦截与兜底
+## 6. Panel Size, Publish-Time Blocking, and Fallback
 
-### 6.1 规模
+### 6.1 Size
 
-| 池内合格仲裁者数量 | 模式 | 一审 | 终审 |
+| Eligible arbitrators in the pool | Mode | First instance | Final instance |
 |---|---|---:|---:|
-| ≥ 40 | 满编 | 11 | 21 |
-| 18 至 39 | 降级 | 5 | 9 |
-| < 18 | 兜底 | 3 名测试者，2 票通过 | — |
+| ≥ 40 | Full panel | 11 | 21 |
+| 18 to 39 | Degraded | 5 | 9 |
+| < 18 | Fallback | 3 testers, 2 votes to pass | — |
 
-- 终审排除一审全部成员。
-- 降级模式一审加终审需 14 个互不重复的陪审员，最小池 18 提供约 25% 冗余。
-- 通过票数为 `⌊人数 ÷ 2⌋ + 1`；最低有效揭示人数为 `⌈70% × 人数⌉`。
+- The final instance excludes all first-instance members.
+- Degraded mode needs 14 distinct jurors across the first and final instances; the minimum pool of 18 provides about 25% redundancy.
+- The passing vote count is `⌊jurors ÷ 2⌋ + 1`; the minimum valid reveal count is `⌈70% × jurors⌉`.
 
-### 6.2 暴露倍数
-
-```
-满编：μ = 11 × 0.30 = 3.3      （暴露倍数（满编）= 33000，单位为万分比）
-降级：μ =  5 × 0.30 = 1.5      （暴露倍数（降级）= 15000，单位为万分比）
-```
-
-模式取仲裁抽选合约中的满编状态，该状态带 168 小时的恢复迟滞。
-
-### 6.3 发布时拦截
-
-创建任务时必须执行：
+### 6.2 Exposure multiple
 
 ```
-争议标的上界 V上限 = 预留额 × 执行者份额比例 ÷ 10000（即 65%）
-
-若 合格仲裁者数量 < 最小池规模：  标的上限 U = 兜底标的上限
-否则若处于满编状态：              U = 暴露倍数（满编）÷ 10000 × 仲裁准入质押
-否则：                            U = 暴露倍数（降级）÷ 10000 × 仲裁准入质押
-
-要求 V上限 ≤ U，否则拒绝创建并提示"仲裁容量不足"
+Full panel: μ = 11 × 0.30 = 3.3      (exposure multiple (full panel) = 33000, in basis points)
+Degraded:   μ =  5 × 0.30 = 1.5      (exposure multiple (degraded) = 15000, in basis points)
 ```
 
-- 仲裁庭提供查询接口返回当前标的上限，供创建任务与前端使用。
-- 标的上限由仲裁准入质押推出，门槛调整后自动同步。
-- 仲裁庭未设置时跳过拦截。
+The mode takes the full-panel state from the arbitration draw contract, which has a 168-hour recovery hysteresis.
 
-### 6.4 兜底与高标的案件
+### 6.3 Publish-time blocking
 
-| 情形 | 处理 |
+The following must be executed when creating a task:
+
+```
+Disputed value upper bound V_cap = reserve × executor share ratio ÷ 10000 (i.e. 65%)
+
+If eligible arbitrator count < minimum pool size:   disputed value cap U = fallback disputed value cap
+Else if in full-panel state:                        U = exposure multiple (full panel) ÷ 10000 × arbitration admission stake
+Else:                                               U = exposure multiple (degraded) ÷ 10000 × arbitration admission stake
+
+Require V_cap ≤ U, otherwise reject creation with "insufficient arbitration capacity"
+```
+
+- The arbitration court provides a query interface returning the current disputed value cap, for task creation and the frontend.
+- The disputed value cap is derived from the arbitration admission stake and syncs automatically after a threshold change.
+- If the arbitration court is not configured, blocking is skipped.
+
+### 6.4 Fallback and high-value cases
+
+| Situation | Handling |
 |---|---|
-| 池 < 18 且 `V ≤ 兜底标的上限`（60,000） | 3 名测试者 2 票裁决，二元结果，不可申诉 |
-| 池 < 18 且 `V > 兜底标的上限` | 案件停留在"抽签中"，不进入兜底；任何人可重复触发抽签，池恢复后继续 |
-| 等待超过停滞等待时限（336 小时） | 治理角色可对该案件裁定，按常规路径执行；不罚没任何陪审员 |
+| Pool < 18 and `V ≤ fallback disputed value cap` (60,000) | 3 testers decide with 2 votes, binary outcome, not appealable |
+| Pool < 18 and `V > fallback disputed value cap` | The case stays "in draw" and does not enter fallback; anyone may retrigger the draw, and it continues once the pool recovers |
+| The wait exceeds the stalled wait limit (336 hours) | The governance role may rule on that case and execute via the regular path; no juror is slashed |
 
-兜底标的上限 `60,000 = 2 × 0.3 × 测试准入质押 10 万`。测试准入质押或发现率变化时同步调整。
+Fallback disputed value cap `60,000 = 2 × 0.3 × tester admission stake 100,000`. It is adjusted in sync when the tester admission stake or the detection rate changes.
 
 ---
 
-## 7. 罚没与奖励
+## 7. Slashing and Rewards
 
-### 7.1 基数
+### 7.1 Base
 
-罚没以本案锁仓 L 为基数。L 在陪审员确认席位时按当时标的锁定。只有持有锁仓的席位才会被罚。
+Slashing is based on this case's lock L. L is locked at the disputed value current when the juror confirms the seat. Only seats holding a lock can be slashed.
 
-### 7.2 仲裁罚没表
+### 7.2 Arbitration slashing table
 
-| 情形 | 触发 | 罚没 | 去向 |
+| Situation | Trigger | Slashing | Destination |
 |---|---|---|---|
-| 拒席 | 确认窗内未确认席位 | 0；计入响应率 | — |
-| 未提交 | 已确认席位，提交窗内未提交投票承诺 | 20% × L | 仲裁池 |
-| 未揭示 | 已提交承诺，揭示窗内未揭示 | 100% × L | 仲裁池 |
-| 一审被推翻 | 一审多数方被终审推翻 | 100% × L | 见 7.3 |
-| 终审少数 | 终审中的少数方 | 0（可通过参数调整，范围 0 到 30%） | — |
-| A 级串通 | 链上可验证的串通 | 没收全部质押 + 永久禁入 | 举报人 10%；仲裁池 90% |
+| Seat refusal | Seat not confirmed within the confirmation window | 0; counted in the response rate | — |
+| No commit | Confirmed seat, no vote commit within the commit window | 20% × L | Arbitration pool |
+| No reveal | Commit submitted, no reveal within the reveal window | 100% × L | Arbitration pool |
+| First instance overturned | First-instance majority overturned by the final instance | 100% × L | See 7.3 |
+| Final-instance minority | The minority in the final instance | 0 (adjustable via parameters, range 0 to 30%) | — |
+| Grade A collusion | On-chain verifiable collusion | Confiscate the full stake + permanent ban | Reporter 10%; arbitration pool 90% |
 
-规则：
-- 同一席位同一轮只取最重的一项罚没。
-- 罚没不超过本案锁仓。
-- 终审维持一审结论时，一审多数不追加质量罚。
-- 罚没后质押低于门槛，立即停抽；补足后立即恢复。
-- 无论罚没比例多少（含 100%），罚没后必须解除该案件的并发占位，使验证者的在办案件数与仍处于激活状态的案件锁一致。
-- 仅聊天截图类证据不得作为罚没依据。
+Rules:
+- For the same seat in the same round, only the heaviest single penalty applies.
+- Slashing does not exceed this case's lock.
+- When the final instance upholds the first-instance conclusion, no additional quality penalty is applied to the first-instance majority.
+- If the stake falls below the threshold after slashing, draws stop immediately; they resume immediately once topped up.
+- Regardless of the slashing ratio (including 100%), the case's concurrency occupancy must be released after slashing, so that the validator's ongoing case count matches the case locks still active.
+- Chat-screenshot-only evidence must not be grounds for slashing.
 
-### 7.3 推翻时的分配
+### 7.3 Allocation on overturn
 
 ```
-R         = F × 案件费多数派份额 ÷ 10000 ÷ 终审多数派人数
-申诉方实得 = min( 申诉方奖励倍数 × R,  Z )            默认 10 × R
-剩余额     = Z − 申诉方实得
-平台       = 剩余额 × 30%    → 平台金库
-正义方     = 剩余额 × 70%    → 终审多数派 ∪ 一审正确少数派，已揭示者人头均分
+R                   = F × case fee majority share ÷ 10000 ÷ number of final-instance majority jurors
+Challenger actual   = min( challenger reward multiple × R,  Z )            default 10 × R
+Remainder           = Z − challenger actual
+Platform            = remainder × 30%    → platform treasury
+Righteous party     = remainder × 70%    → final-instance majority ∪ correct first-instance minority, split equally per revealed person
 ```
 
-- 申诉成功时，申诉保证金 `2 × F` 全额退还。
-- 申诉失败时，保证金按案件费分配规则处理，一审与终审均不追加质量罚。
-- 分配总额必须恒等于实际罚没额，尾差归入最后一份。
-- 一审与终审人员互斥，正义方两部分无重叠。
+- When the appeal succeeds, the appeal bond `2 × F` is refunded in full.
+- When the appeal fails, the bond is handled by the case fee allocation rules, with no additional quality penalty for either the first or the final instance.
+- The distributed total must always equal the actual slashed amount, with any rounding remainder going to the last share.
+- First-instance and final-instance personnel are mutually exclusive, so the two parts of the righteous party do not overlap.
 
-### 7.4 案件费
+### 7.4 Case fee
 
 ```
 F = max( 5% × V, 6 AGT )
-败诉案件费：多数派 70% / 胜诉方 20% / 平台 10%
-申诉保证金 = 2 × F
-出席费上限 = 0.5 AGT / 人 / 案
+Losing case fee: majority 70% / winning side 20% / platform 10%
+Appeal bond = 2 × F
+Attendance fee cap = 0.5 AGT / person / case
 ```
 
-### 7.5 串通
+### 7.5 Collusion
 
-| 项 | 规则 |
+| Item | Rule |
 |---|---|
-| A 级 | 全额没收质押 + 永久禁入；举报人 10%，其余 90% 进仲裁池 |
-| 触发入口 | 仲裁结算合约的串通举报接口：由协议签名者对"被举报地址、举报人、证据哈希、随机数、截止时间"签名，举报人提交；被举报地址可以是任意验证者（仲裁者、测试者），不要求在案件陪审团内 |
-| 执行 | 校验签名后全额没收，并将该地址写入永久禁入名单（见 8.2） |
-| 治理直接处置 | 治理角色仍可直接执行全额没收，同样触发禁入 |
+| Grade A | Full confiscation of stake + permanent ban; reporter 10%, the remaining 90% into the arbitration pool |
+| Trigger entry point | The collusion reporting interface of the arbitration settlement contract: a protocol signer signs "reported address, reporter, evidence hash, nonce, deadline" and the reporter submits it; the reported address may be any validator (arbitrator, tester) and need not be on the case's panel |
+| Execution | After signature verification, confiscate in full and write the address into the permanent ban list (see 8.2) |
+| Direct governance action | The governance role may still execute full confiscation directly, which likewise triggers the ban |
 
-### 7.6 测试者罚没
+### 7.6 Tester slashing
 
-| 情形 | 触发 | 罚没 | 去向 |
+| Situation | Trigger | Slashing | Destination |
 |---|---|---|---|
-| 超时未交报告 | 接受任务后在报告窗口（含延长窗）内未交报告 | `min( 测试者未交报告罚没倍数 × 应得报酬, 测试者罚没占质押上限 × 质押 )`，默认 5 倍、封顶 10% | 仲裁池 |
-| A 级串通 | 同 7.5 | 没收全部质押 | 同 7.5 |
+| Report not submitted before the timeout | No report submitted within the report window (including any extension) after accepting the task | `min( tester miss-report slashing multiple × earned reward, tester slashing stake cap × stake )`, default 5×, capped at 10% | Arbitration pool |
+| Grade A collusion | Same as 7.5 | Confiscate the full stake | Same as 7.5 |
 
-- 应得报酬 = 该测试者在本任务应得份额（测试池 15% ÷ 测试者人数）。
-- 测试者罚没不占用并发额度，也不依赖案件锁仓。
-- 测试者不是申诉方。
+- Earned reward = the share this tester should earn on this task (tester pool 15% ÷ number of testers).
+- Tester slashing does not consume the concurrency quota and does not depend on case locks.
+- Testers are not challengers.
 
-### 7.7 算例
+### 7.7 Worked examples
 
-**T3 满额**：`V = 39 万`，满编，一审 11 人、多数 6 人。
+**T3 full**: `V = 390,000`, full panel, first instance 11 jurors, majority 6.
 
-| 项 | 数值 |
+| Item | Value |
 |---|---:|
-| 案件费 F | 19,500 |
-| 单案锁仓 L | 19,500 |
-| 单席多数费 `R = 0.7 × 19,500 ÷ 6` | 2,275 |
-| 申诉保证金 | 39,000 |
-| 罚没总额 `Z = 6 × 19,500` | 117,000 |
-| 申诉方 `10 × R` | 22,750 |
-| 剩余额 | 94,250 |
-| 平台 30% | 28,275 |
-| 正义方 70% | 65,975（终审 11 人均为多数时人均约 5,998） |
-| 盈亏平衡的被推翻概率 | 约 10.4% |
+| Case fee F | 19,500 |
+| Per-case lock L | 19,500 |
+| Per-seat majority fee `R = 0.7 × 19,500 ÷ 6` | 2,275 |
+| Appeal bond | 39,000 |
+| Total slashed `Z = 6 × 19,500` | 117,000 |
+| Challenger `10 × R` | 22,750 |
+| Remainder | 94,250 |
+| Platform 30% | 28,275 |
+| Righteous party 70% | 65,975 (about 5,998 each when all 11 final-instance jurors are in the majority) |
+| Break-even overturn probability | about 10.4% |
 
-**T5（28 天）**：`V = 273 万`，满编，一审多数 6 人。
+**T5 (28 days)**: `V = 2.73 million`, full panel, first-instance majority 6.
 
-| 项 | 数值 |
+| Item | Value |
 |---|---:|
-| 案件费 F | 136,500 |
-| 单案锁仓 `L = min(136,500, 100,000)` | 100,000 |
-| 单席多数费 `R = 0.7 × 136,500 ÷ 6` | 15,925 |
-| 罚没总额 `Z = 6 × 100,000` | 600,000 |
-| 申诉方 `10 × R` | 159,250 |
-| 剩余额 | 440,750 |
-| 平台 30% | 132,225 |
-| 正义方 70% | 308,525（11 人均分约 28,048） |
+| Case fee F | 136,500 |
+| Per-case lock `L = min(136,500, 100,000)` | 100,000 |
+| Per-seat majority fee `R = 0.7 × 136,500 ÷ 6` | 15,925 |
+| Total slashed `Z = 6 × 100,000` | 600,000 |
+| Challenger `10 × R` | 159,250 |
+| Remainder | 440,750 |
+| Platform 30% | 132,225 |
+| Righteous party 70% | 308,525 (about 28,048 each for 11 people) |
 
-**T1**：`V = 1,365`，`F = 68.25`，`L = 68.25`，`R ≈ 7.96`。
+**T1**: `V = 1,365`, `F = 68.25`, `L = 68.25`, `R ≈ 7.96`.
 
 ---
 
-## 8. 实现需求
+## 8. Implementation Requirements
 
-> 合约为可升级合约，存储布局快照在 `protocol/storage-layout/*.json`，修改只能追加变量。接口定义变化后须重新生成 `shared/abi`，并同步到后端、前端、工具包三个仓库的 `vendor/shared`。
-> 本章函数与变量标识为代码实际名称，说明列为中文要求。
+> Contracts are upgradeable; storage layout snapshots live in `protocol/storage-layout/*.json`, and changes may only append variables. After interface definitions change, `shared/abi` must be regenerated and synced to `vendor/shared` in the backend, frontend, and toolkit repositories.
+> Function and variable identifiers in this chapter are the actual code names; the description column states the requirements.
 
-### 8.1 第一优先级：全额罚没后的解锁
+### 8.1 Top priority: unlock after full slashing
 
-结算合约中的解锁步骤必须按"案件是否仍处于激活状态"判断是否解锁，不得按锁仓余额是否非零判断。验证者质押合约需对外提供"案件是否激活"的查询，供结算合约使用。验收：验收 1、验收 2。
+The unlock step in the settlement contract must decide unlocking by "whether the case is still active", not by whether the lock balance is non-zero. The validator staking contract must expose a query for "whether the case is active" for the settlement contract to use. Acceptance: Acceptance 1, Acceptance 2.
 
-### 8.2 验证者质押合约
+### 8.2 Validator staking contract
 
-合约：`ValidatorStaking`
+Contract: `ValidatorStaking`
 
-| 需求 | 说明 |
+| Requirement | Description |
 |---|---|
-| 角色化资格 | 新增 `meetsMinimum(validator, role)`，角色分为测试者与仲裁者，阈值分别取测试准入质押与仲裁准入质押；资格按当前质押实时判定 |
-| 移除动态要求额 | 资格不再依赖动态质押要求额及其更新、检查点逻辑；相关参数移除 |
-| 存款上限 | 存款时按存款总额上限（3,000,000）校验 |
-| 线性权重 | 新增 `weightOf(validator, cap)`，返回 `min(质押, 上限)` |
-| 测试者罚没接口 | 新增 `slashByRole`，不占并发、不依赖案件锁仓，仅授权测试者分配合约（新增测试者角色） |
-| 永久禁入 | 全额没收执行后将地址记入禁入名单；名单内地址不能存款，角色化资格恒为否 |
-| 解锁案件 | 对锁仓余额为 0 的激活案件必须可解锁 |
+| Role-based eligibility | Add `meetsMinimum(validator, role)`, with roles tester and arbitrator, using the tester admission stake and the arbitration admission stake as thresholds respectively; eligibility is determined in real time from the current stake |
+| Remove the dynamic requirement | Eligibility no longer depends on the dynamic stake requirement or its update/checkpoint logic; related parameters are removed |
+| Deposit cap | Validate against the total deposit cap (3,000,000) on deposit |
+| Linear weight | Add `weightOf(validator, cap)`, returning `min(stake, cap)` |
+| Tester slashing interface | Add `slashByRole`, which consumes no concurrency and does not depend on case locks, authorized only to the tester allocation contract (new tester role) |
+| Permanent ban | After full confiscation, record the address in the ban list; addresses on the list cannot deposit and always fail role-based eligibility |
+| Unlock case | Active cases with a zero lock balance must be unlockable |
 
-### 8.3 仲裁抽选合约
+### 8.3 Arbitration draw contract
 
-合约：`ArbitrationSelection`
+Contract: `ArbitrationSelection`
 
-| 需求 | 说明 |
+| Requirement | Description |
 |---|---|
-| 基础资格判定 `_baseEligible` | 仅检查：仲裁者角色化资格、暂停、响应率、债务、纪律取消资格；注册表查询失败（未注册）按无债务、无暂停放行 |
-| 恢复 | 取消资格后以时间恢复：满取消资格恢复时长（8,760 小时） |
-| 权重 `_weight` | 仲裁权重上限内的线性质押 × 响应率 × 活跃系数 |
-| 可选判定 `_selectable` | 暴露校验 `V ≤ 质押 × 当前模式暴露倍数`，模式按满编状态取两档倍数之一 |
-| 治理白名单 | 仅批量入池，不豁免质押要求 |
+| Base eligibility `_baseEligible` | Checks only: arbitrator role eligibility, suspension, response rate, debt, disciplinary disqualification; a failed registry query (not registered) is treated as no debt and no suspension |
+| Restoration | After disqualification, restore by time: the full disqualification restoration duration (8,760 hours) |
+| Weight `_weight` | Linear stake within the arbitration weight cap × response rate × activity coefficient |
+| Selectability `_selectable` | Exposure check `V ≤ stake × exposure multiple of the current mode`, with the mode taking one of the two multiples based on the full-panel state |
+| Governance whitelist | Bulk pool entry only; exempts no staking requirement |
 
-### 8.4 仲裁庭合约与规则库
+### 8.4 Arbitration court contract and rules library
 
-合约：`ArbitrationCourt`、`CourtRules`
+Contracts: `ArbitrationCourt`, `CourtRules`
 
-| 需求 | 说明 |
+| Requirement | Description |
 |---|---|
-| 抽签 `drawPanel` | 池低于最小池规模时：`V ≤ 兜底标的上限` 才进入兜底，否则案件保持"抽签中" |
-| 停滞案件裁定 `resolveStalledCase` | 治理角色；仅在案件处于"抽签中"、因池不足而等待且已超过停滞等待时限时可调用；裁定后走常规执行路径 |
-| 标的上限查询 `maxDisputeValue()` | 返回 6.3 的标的上限 U |
-| 陪审规模 | 池阈值读取最小池规模 |
-| 锁仓计算 | `L = min(max(5% × V, 锁仓下限), 锁仓占质押上限 × 质押)` |
+| Panel draw `drawPanel` | When the pool is below the minimum pool size: enter fallback only if `V ≤ fallback disputed value cap`; otherwise the case remains "in draw" |
+| Stalled case ruling `resolveStalledCase` | Governance role; callable only when the case is "in draw", waiting because the pool is insufficient, and past the stalled wait limit; after the ruling it follows the regular execution path |
+| Disputed value cap query `maxDisputeValue()` | Returns the disputed value cap U of 6.3 |
+| Panel size | Pool thresholds read the minimum pool size |
+| Lock computation | `L = min(max(5% × V, lock floor), lock stake cap × stake)` |
 
-### 8.5 仲裁投票合约
+### 8.5 Arbitration voting contract
 
-合约：`ArbitrationVoting`
+Contract: `ArbitrationVoting`
 
-- 新增"某陪审员在某轮是否已提交承诺"的查询，并让逐轮状态同时返回提交状态，使结算能区分"未提交"与"已提交未揭示"。
-- 投票合约的接口定义同步更新。
+- Add a query for "whether a given juror has committed in a given round", and make the per-round state also return the commit state, so settlement can distinguish "no commit" from "committed but not revealed".
+- The voting contract's interface definitions are updated accordingly.
 
-### 8.6 仲裁结算合约
+### 8.6 Arbitration settlement contract
 
-合约：`ArbitrationSettlement`
+Contract: `ArbitrationSettlement`
 
-| 需求 | 说明 |
+| Requirement | Description |
 |---|---|
-| 逐轮结算 | 未提交 → 按未提交罚没比例；已提交未揭示 → 按未揭示罚没比例；终审少数 → 按终审少数罚没比例 |
-| 推翻分配 | 按 7.3：申诉方 `min(申诉方奖励倍数 × R, Z)`；剩余按推翻罚没平台份额给平台金库、按推翻罚没正义方份额给正义方；尾差归最后一份 |
-| 校验 | 推翻罚没平台份额与正义方份额之和等于 10000 |
-| 解锁 | 见 8.1 |
-| 平台金库地址 | 新增配置项 |
+| Per-round settlement | No commit → by the no-commit slashing ratio; committed but not revealed → by the no-reveal slashing ratio; final-instance minority → by the final-instance minority slashing ratio |
+| Overturn allocation | Per 7.3: challenger `min(challenger reward multiple × R, Z)`; the remainder goes to the platform treasury by the overturn platform share and to the righteous party by the overturn righteous share; the rounding remainder goes to the last share |
+| Validation | The overturn platform share plus the righteous share equals 10000 |
+| Unlock | See 8.1 |
+| Platform treasury address | New configuration item |
 
-### 8.7 测试者分配合约
+### 8.7 Tester allocation contract
 
-合约：`TesterAssignment`
+Contract: `TesterAssignment`
 
-| 需求 | 说明 |
+| Requirement | Description |
 |---|---|
-| 入池与抽选 | 加入测试池与抽选判定使用测试者角色化资格 |
-| 权重 | 线性，上限为测试权重上限 |
-| 超时罚没 | 报告窗口（含延长窗）结束后，对未交报告者调用 `slashByRole`；"应得报酬"由任务托管合约在分配时传入 |
+| Pool entry and draw | Joining the tester pool and draw eligibility use tester role-based eligibility |
+| Weight | Linear, capped at the tester weight cap |
+| Timeout slashing | After the report window (including any extension) ends, call `slashByRole` on those who did not report; the "earned reward" is passed by the task escrow contract at allocation time |
 
-### 8.8 任务托管合约
+### 8.8 Task escrow contract
 
-合约：`TaskEscrow`
+Contract: `TaskEscrow`
 
-- 创建任务时执行 6.3 的校验，新增错误"仲裁容量不足"，携带争议标的上界与标的上限两个数值。
+- Perform the 6.3 validation at task creation, adding the error "insufficient arbitration capacity", carrying both the disputed value upper bound and the disputed value cap.
 
-### 8.9 参数文件与文档
+### 8.9 Parameter files and documentation
 
-- 更新 `shared/params/params.json`、`shared/params/ranges.json`，以及后端、前端、工具包三个仓库中 `vendor/shared/params` 的副本；`ParamKeys.sol` 新增常量；参数注册表的初始化范围随 `ranges.json` 重新生成。
-- 回写 `01-RULES.md` 的 2.3（仲裁资格）、5.1（验证者质押）、第七章（规模、案件费、惩罚）、8.5、8.6，并同步各仓库中的副本。
-- 前端：展示角色化门槛、池规模与模式、发布时标的上限、测试者罚没；发布页对超限任务给出明确提示。
-- 后端：索引罚没事件及罚没原因；缓存当前标的上限；更新与门槛相关的接口与文案。
+- Update `shared/params/params.json`, `shared/params/ranges.json`, and the `vendor/shared/params` copies in the backend, frontend, and toolkit repositories; add constants to `ParamKeys.sol`; the parameter registry initialization ranges are regenerated from `ranges.json`.
+- Write back to `01-RULES.md` sections 2.3 (arbitration eligibility), 5.1 (validator staking), Chapter 7 (panel size, case fee, penalties), 8.5, and 8.6, and sync the copies in each repository.
+- Frontend: display role-based thresholds, pool size and mode, the publish-time disputed value cap, and tester slashing; the publish page gives a clear message for over-limit tasks.
+- Backend: index slashing events and slashing reasons; cache the current disputed value cap; update threshold-related endpoints and copy.
 
 ---
 
-## 9. 参数表
+## 9. Parameter Table
 
-### 9.1 新增与取值
+### 9.1 New parameters and values
 
-| 参数名称 | 代码标识 | 值 | 范围 |
+| Parameter | Code identifier | Value | Range |
 |---|---|---:|---|
-| 仲裁准入质押 | `arbitratorMinStakeAgt` | 1,000,000 | 100,000 到 5,000,000 |
-| 测试准入质押 | `testerMinStakeAgt` | 100,000 | 1,000 到 200,000 |
-| 存款总额上限 | `validatorStakeAgt.voluntaryMax` | 3,000,000 | 20,000 到 10,000,000 |
-| 仲裁权重上限 | `arbitratorWeightCapAgt` | 3,000,000 | 1,000,000 到 10,000,000 |
-| 测试权重上限 | `testerWeightCapAgt` | 200,000 | 20,000 到 1,000,000 |
-| 暴露倍数（满编） | `arbExposureMultiplierBps.Full` | 33000 | 10000 到 60000 |
-| 暴露倍数（降级） | `arbExposureMultiplierBps.Degraded` | 15000 | 5000 到 30000 |
-| 兜底标的上限 | `arbFallbackMaxDisputeValueAgt` | 60,000 | 1,000 到 100,000 |
-| 停滞等待时限（小时） | `arbPendingMaxHours` | 336 | 72 到 720 |
-| 最小池规模 | `arbMinimumPoolSize` | 18 | 14 到 30 |
-| 满编池规模阈值 | `arbFullPanelThreshold` | 40 | 30 到 80 |
-| 锁仓比例（万分比） | `caseLockBps` | 500 | 200 到 1000 |
-| 锁仓下限 | `caseLockMinAgt` | 50 | 0.5 到 500 |
-| 锁仓占质押上限（万分比） | `caseLockStakeCapBps` | 1000 | 1000 到 3000 |
-| 未提交罚没比例（万分比） | `missedCommitSlashBps` | 2000 | 0 到 5000 |
-| 未揭示罚没比例（万分比） | `missedRevealSlashBps` | 10000 | 0 到 10000 |
-| 终审少数罚没比例（万分比） | `finalMinoritySlashBps` | 0 | 0 到 3000 |
-| 申诉方奖励倍数 | `challengerRewardMultiple` | 10 | 1 到 20 |
-| 推翻罚没平台份额（万分比） | `overturnPlatformShareBps` | 3000 | 固定（与下项之和为 10000） |
-| 推翻罚没正义方份额（万分比） | `overturnRighteousShareBps` | 7000 | 固定 |
-| 申诉保证金倍数（万分比） | `appealBondMultiplierBps` | 20000 | 15000 到 30000 |
-| 取消资格恢复时长（小时） | `arbDisqualifyHours` | 8760 | 2160 到 17520 |
-| 测试者未交报告罚没倍数 | `testerMissReportSlashMultiple` | 5 | 1 到 10 |
-| 测试者罚没占质押上限（万分比） | `testerSlashStakeCapBps` | 1000 | 500 到 2000 |
-| T5 最长天数 | `tierDaysMax.T5` | 28 | 14 到 120 |
-| 并发案件上限 | `arbitratorConcurrentCasesMax` | 3 | 1 到 5 |
-| 首次质押锁定时长（小时） | `validatorInitialLockHours` | 336 | 168 到 720 |
-| 退出冷却时长（小时） | `validatorExitCooldownHours` | 168 | 72 到 336 |
-| 最低响应率（万分比） | `arbResponseRateMinBps` | 5000 | 3000 到 8000 |
-| 暂停所需被推翻次数 | `arbOverturnPauseCount` | 2 | 2 到 4 |
-| 取消资格所需被推翻次数 | `arbOverturnDisqualifyCount` | 3 | 3 到 6 |
-| 触发降权的连续终审少数次数 | `arbMinorityStreakPenaltyCount` | 5 | 3 到 10 |
+| Arbitration admission stake | `arbitratorMinStakeAgt` | 1,000,000 | 100,000 to 5,000,000 |
+| Tester admission stake | `testerMinStakeAgt` | 100,000 | 1,000 to 200,000 |
+| Total deposit cap | `validatorStakeAgt.voluntaryMax` | 3,000,000 | 20,000 to 10,000,000 |
+| Arbitration weight cap | `arbitratorWeightCapAgt` | 3,000,000 | 1,000,000 to 10,000,000 |
+| Tester weight cap | `testerWeightCapAgt` | 200,000 | 20,000 to 1,000,000 |
+| Exposure multiple (full panel) | `arbExposureMultiplierBps.Full` | 33000 | 10000 to 60000 |
+| Exposure multiple (degraded) | `arbExposureMultiplierBps.Degraded` | 15000 | 5000 to 30000 |
+| Fallback disputed value cap | `arbFallbackMaxDisputeValueAgt` | 60,000 | 1,000 to 100,000 |
+| Stalled wait limit (hours) | `arbPendingMaxHours` | 336 | 72 to 720 |
+| Minimum pool size | `arbMinimumPoolSize` | 18 | 14 to 30 |
+| Full-panel pool size threshold | `arbFullPanelThreshold` | 40 | 30 to 80 |
+| Lock ratio (bps) | `caseLockBps` | 500 | 200 to 1000 |
+| Lock floor | `caseLockMinAgt` | 50 | 0.5 to 500 |
+| Lock stake cap (bps) | `caseLockStakeCapBps` | 1000 | 1000 to 3000 |
+| No-commit slashing ratio (bps) | `missedCommitSlashBps` | 2000 | 0 to 5000 |
+| No-reveal slashing ratio (bps) | `missedRevealSlashBps` | 10000 | 0 to 10000 |
+| Final-instance minority slashing ratio (bps) | `finalMinoritySlashBps` | 0 | 0 to 3000 |
+| Challenger reward multiple | `challengerRewardMultiple` | 10 | 1 to 20 |
+| Overturn slashing platform share (bps) | `overturnPlatformShareBps` | 3000 | Fixed (sums to 10000 with the item below) |
+| Overturn slashing righteous share (bps) | `overturnRighteousShareBps` | 7000 | Fixed |
+| Appeal bond multiple (bps) | `appealBondMultiplierBps` | 20000 | 15000 to 30000 |
+| Disqualification restoration duration (hours) | `arbDisqualifyHours` | 8760 | 2160 to 17520 |
+| Tester miss-report slashing multiple | `testerMissReportSlashMultiple` | 5 | 1 to 10 |
+| Tester slashing stake cap (bps) | `testerSlashStakeCapBps` | 1000 | 500 to 2000 |
+| T5 maximum days | `tierDaysMax.T5` | 28 | 14 to 120 |
+| Concurrent case cap | `arbitratorConcurrentCasesMax` | 3 | 1 to 5 |
+| Initial stake lock duration (hours) | `validatorInitialLockHours` | 336 | 168 to 720 |
+| Exit cooldown duration (hours) | `validatorExitCooldownHours` | 168 | 72 to 336 |
+| Minimum response rate (bps) | `arbResponseRateMinBps` | 5000 | 3000 to 8000 |
+| Overturn count required for suspension | `arbOverturnPauseCount` | 2 | 2 to 4 |
+| Overturn count required for disqualification | `arbOverturnDisqualifyCount` | 3 | 3 to 6 |
+| Consecutive final-instance minority count that triggers the downgrade | `arbMinorityStreakPenaltyCount` | 5 | 3 to 10 |
 
-### 9.2 移除
+### 9.2 Removed
 
-| 参数名称 | 代码标识 |
+| Parameter | Code identifier |
 |---|---|
-| 原统一暴露倍数 | `arbitrationExposureMultiplier` |
-| 原未投票罚没比例 | `missedVoteSlashBps` |
-| 原推翻分配：终审多数份额 | `overturnFinalMajorityShareBps` |
-| 原推翻分配：受害方份额 | `overturnVictimShareBps` |
-| 原推翻分配：销毁份额 | `overturnBurnShareBps` |
-| 原仲裁者质押时长要求 | `arbitratorStakeAgeHours` |
-| 原仲裁者一致测试次数要求 | `arbitratorAlignedTestsMin` |
-| 原动态质押要求额下限、上限 | `validatorStakeAgt.min`、`validatorStakeAgt.dynamicMax` |
-| 原动态质押要求额的收入窗口、收入倍数、日调整幅度、补足宽限时长 | `validatorIncomeWindowHours`、`validatorIncomeMultiplierBps`、`validatorStakeDailyAdjustmentBps`、`validatorTopUpGraceHours` |
+| Original unified exposure multiple | `arbitrationExposureMultiplier` |
+| Original no-vote slashing ratio | `missedVoteSlashBps` |
+| Original overturn allocation: final majority share | `overturnFinalMajorityShareBps` |
+| Original overturn allocation: victim share | `overturnVictimShareBps` |
+| Original overturn allocation: burn share | `overturnBurnShareBps` |
+| Original arbitrator stake duration requirement | `arbitratorStakeAgeHours` |
+| Original arbitrator aligned-test count requirement | `arbitratorAlignedTestsMin` |
+| Original dynamic stake requirement floor and ceiling | `validatorStakeAgt.min`, `validatorStakeAgt.dynamicMax` |
+| Original dynamic stake requirement income window, income multiple, daily adjustment, and top-up grace duration | `validatorIncomeWindowHours`, `validatorIncomeMultiplierBps`, `validatorStakeDailyAdjustmentBps`, `validatorTopUpGraceHours` |
 
 ---
 
-## 10. 上线与迁移
+## 10. Launch and Migration
 
-### 10.1 冷启动与门槛爬坡
+### 10.1 Cold start and threshold ramp
 
-启用 1,000,000 门槛需要至少 18 个地址各质押 100 万（1,800 万 AGT）。启动期按下表调整仲裁准入质押；标的上限随门槛自动缩放。
+Enabling the 1,000,000 threshold requires at least 18 addresses each staking 1,000,000 (18 million AGT). During the startup period the arbitration admission stake is adjusted per the table below; the disputed value cap scales automatically with the threshold.
 
-| 阶段 | 仲裁准入质押 | 满编 V 上限 | 降级 V 上限 |
+| Stage | Arbitration admission stake | Full-panel V cap | Degraded V cap |
 |---|---:|---:|---:|
-| 启动期 | 100,000 | 33 万 | 15 万 |
-| 过渡期 | 500,000 | 165 万 | 75 万 |
-| 稳态 | 1,000,000 | 330 万 | 150 万 |
+| Startup period | 100,000 | 330,000 | 150,000 |
+| Transition period | 500,000 | 1.65 million | 750,000 |
+| Steady state | 1,000,000 | 3.3 million | 1.5 million |
 
-- 池规模不足 18 期间，标的上限等于兜底标的上限；兜底标的上限与测试准入质押同步调整。
-- 门槛上调须提前 7 天公布，生效后 7 天内补足质押，否则不具备抽选资格。
+- While the pool is below 18, the disputed value cap equals the fallback disputed value cap; the fallback disputed value cap is adjusted in sync with the tester admission stake.
+- A threshold increase must be announced 7 days in advance; stakes must be topped up within 7 days after it takes effect, otherwise draw eligibility is lost.
 
-### 10.2 存量
+### 10.2 Existing stakes
 
-- 现有验证者质押须补足到对应门槛后才能入池；已有质押可正常退出。
-- 动态要求额机制移除后，不再依据原要求额判定资格。
+- Existing validator stakes must be topped up to the corresponding threshold before entering the pool; existing stakes may exit normally.
+- After the dynamic requirement mechanism is removed, eligibility is no longer judged against the original requirement.
 
-### 10.3 币价
+### 10.3 Token price
 
-门槛以 AGT 数量计，不设美元地板。每季度评估仲裁准入质押、测试准入质押与标的上限；币价大幅变化时按 10.1 的公告规则通过治理调整。
+Thresholds are denominated in AGT amounts, with no USD floor. The arbitration admission stake, tester admission stake, and disputed value cap are reviewed quarterly; when the token price changes substantially, adjust through governance under the announcement rules of 10.1.
 
-### 10.4 实施顺序
+### 10.4 Implementation order
 
 ```mermaid
 flowchart TD
-    fixUnlock[第一优先级 全额罚没后解锁]
-    roleStake[第二优先级 角色化门槛与移除动态要求额]
-    eligibility[第二优先级 仲裁资格仅看质押]
-    weights[第二优先级 线性权重与角色上限]
-    voting[第三优先级 提交状态查询]
-    penalties[第三优先级 未提交与未揭示分罚]
-    overturn[第三优先级 推翻分配]
-    cap[第三优先级 暴露倍数与发布拦截]
-    fallback[第三优先级 兜底上限与治理裁定]
-    tester[第四优先级 测试者超时罚没]
-    docs[第四优先级 文档与前后端同步]
+    fixUnlock[Priority 1: unlock after full slashing]
+    roleStake[Priority 2: role-based thresholds and removal of the dynamic requirement]
+    eligibility[Priority 2: arbitration eligibility based only on stake]
+    weights[Priority 2: linear weight and role caps]
+    voting[Priority 3: commit state query]
+    penalties[Priority 3: separate penalties for no commit and no reveal]
+    overturn[Priority 3: overturn allocation]
+    cap[Priority 3: exposure multiple and publish-time blocking]
+    fallback[Priority 3: fallback cap and governance ruling]
+    tester[Priority 4: tester timeout slashing]
+    docs[Priority 4: documentation and frontend/backend sync]
 
     fixUnlock --> roleStake
     roleStake --> eligibility
@@ -613,127 +613,127 @@ flowchart TD
 
 ---
 
-## 11. 验收标准
+## 11. Acceptance Criteria
 
-### 11.1 缺陷与不变量
+### 11.1 Defects and invariants
 
-| 编号 | 用例 |
+| ID | Test case |
 |---|---|
-| 验收 1 | 陪审员在某案被 100% 罚没后，该案不再处于激活状态、在办案件数递减、已锁定额同步减少 |
-| 验收 2 | 上述陪审员冷却期满后可成功提走质押 |
-| 验收 3 | 不变量：任意时刻已锁定额 ≤ 质押；在办案件数等于激活中的案件锁数；罚没总额等于各接收方到账合计，无尾差丢失 |
+| Acceptance 1 | After a juror is 100% slashed in a case, that case is no longer active, the ongoing case count decreases, and the locked amount decreases accordingly |
+| Acceptance 2 | After the cooldown ends, the juror above can successfully withdraw the stake |
+| Acceptance 3 | Invariant: at any time locked amount ≤ stake; the ongoing case count equals the number of active case locks; the total slashed equals the sum received by all recipients, with no rounding remainder lost |
 
-### 11.2 准入与上限
+### 11.2 Admission and caps
 
-| 编号 | 用例 |
+| ID | Test case |
 |---|---|
-| 验收 4 | 质押 999,999 不能加入仲裁池；1,000,000 可加入 |
-| 验收 5 | 质押 99,999 不能加入测试池；100,000 可加入 |
-| 验收 6 | 未在注册表登记、无测试记录的 100 万质押地址可加入仲裁池并被抽中 |
-| 验收 7 | 恰为门槛的仲裁者被罚没一次后立即不再被抽选；补足后立即恢复 |
-| 验收 8 | 存款后总质押超过 3,000,000 被拒绝 |
-| 验收 9 | 同一份质押同时满足两个池，同任务内仍互斥 |
-| 验收 10 | 权重线性：一个 200 万地址与两个 100 万地址总权重相同 |
-| 验收 11 | 测试者质押 50 万时权重等同 20 万 |
+| Acceptance 4 | A stake of 999,999 cannot join the arbitration pool; 1,000,000 can join |
+| Acceptance 5 | A stake of 99,999 cannot join the tester pool; 100,000 can join |
+| Acceptance 6 | An address with 1,000,000 staked, unregistered in the registry and with no testing history, can join the arbitration pool and be drawn |
+| Acceptance 7 | An arbitrator exactly at the threshold is no longer drawn immediately after one slashing; eligibility is restored immediately once topped up |
+| Acceptance 8 | A total stake above 3,000,000 after deposit is rejected |
+| Acceptance 9 | The same stake satisfies both pools, and mutual exclusion within a task still holds |
+| Acceptance 10 | Weight is linear: one 2-million address and two 1-million addresses have the same total weight |
+| Acceptance 11 | A tester with 500,000 staked has the same weight as 200,000 |
 
-### 11.3 标的上限与发布拦截
+### 11.3 Disputed value cap and publish-time blocking
 
-| 编号 | 用例 |
+| ID | Test case |
 |---|---|
-| 验收 12 | 满编池下争议标的上界 273 万可发布；超过 330 万被拒 |
-| 验收 13 | 降级池下争议标的上界 175.5 万被拒；140 万可发布 |
-| 验收 14 | 池 < 18 时，争议标的上界大于 60,000 的任务被拒 |
-| 验收 15 | T5 运行天数超过 28 被拒 |
-| 验收 16 | 已发布任务发生争议时，若池降级导致 V 超限：案件保持"抽签中"、不进入兜底；池恢复后可继续 |
-| 验收 17 | V 超过"质押 × 当前模式暴露倍数"的陪审员不被抽中 |
+| Acceptance 12 | With a full panel, a disputed value upper bound of 2.73 million can be published; above 3.3 million is rejected |
+| Acceptance 13 | With a degraded pool, a disputed value upper bound of 1.755 million is rejected; 1.4 million can be published |
+| Acceptance 14 | When the pool is < 18, a task whose disputed value upper bound exceeds 60,000 is rejected |
+| Acceptance 15 | A T5 run duration above 28 is rejected |
+| Acceptance 16 | If a published task becomes disputed and the degraded pool makes V over the limit: the case stays "in draw" and does not enter fallback; it continues once the pool recovers |
+| Acceptance 17 | A juror whose V exceeds "stake × exposure multiple of the current mode" is not drawn |
 
-### 11.4 罚没与奖励
+### 11.4 Slashing and rewards
 
-| 编号 | 用例 |
+| ID | Test case |
 |---|---|
-| 验收 18 | 已确认席位未提交：罚 20% × L，入仲裁池 |
-| 验收 19 | 已提交未揭示：罚 100% × L，入仲裁池 |
-| 验收 20 | 未确认席位：无罚没 |
-| 验收 21 | 终审少数默认不罚；终审少数罚没比例调大后生效 |
-| 验收 22 | 一审多数被推翻：每人罚 L；申诉方实得 `min(10 × R, Z)`；剩余 30% 平台、70% 正义方；总额恒等 |
-| 验收 23 | 正义方含一审与终审一致的少数派；未揭示者不分 |
-| 验收 24 | `V = 273 万` 时 `L = 10 万`；`V = 39 万` 时 `L = 1.95 万` |
-| 验收 25 | 终审维持时，一审多数不追加质量罚 |
-| 验收 26 | A 级串通：全额没收、地址永久禁入、举报人得 10% |
-| 验收 27 | 被推翻 2 次暂停、3 次取消资格；满 8,760 小时后恢复 |
-| 验收 28 | 测试者超时未交报告：罚 `min(5 × 应得报酬, 质押 × 10%)`，入仲裁池 |
-| 验收 29 | 测试者罚没不占在办案件数 |
+| Acceptance 18 | Confirmed seat without commit: penalty 20% × L, into the arbitration pool |
+| Acceptance 19 | Committed but not revealed: penalty 100% × L, into the arbitration pool |
+| Acceptance 20 | Unconfirmed seat: no slashing |
+| Acceptance 21 | Final-instance minority is not penalized by default; it takes effect once the final-instance minority slashing ratio is raised |
+| Acceptance 22 | First-instance majority overturned: each is penalized L; the challenger actually receives `min(10 × R, Z)`; the remainder is 30% platform, 70% righteous party; the total is always equal |
+| Acceptance 23 | The righteous party includes the first-instance minority that agreed with the final instance; non-revealers receive nothing |
+| Acceptance 24 | `L = 100,000` when `V = 2.73 million`; `L = 19,500` when `V = 390,000` |
+| Acceptance 25 | When the final instance upholds, no additional quality penalty is applied to the first-instance majority |
+| Acceptance 26 | Grade A collusion: full confiscation, permanent ban of the address, reporter gets 10% |
+| Acceptance 27 | 2 overturns → suspension, 3 overturns → disqualification; restored after 8,760 hours |
+| Acceptance 28 | Tester misses the report before the timeout: penalty `min(5 × earned reward, stake × 10%)`, into the arbitration pool |
+| Acceptance 29 | Tester slashing does not consume the ongoing case count |
 
-### 11.5 兜底与停滞
+### 11.5 Fallback and stalls
 
-| 编号 | 用例 |
+| ID | Test case |
 |---|---|
-| 验收 30 | 池 < 18 且 `V ≤ 60,000`：走 3 名测试者 2 票兜底 |
-| 验收 31 | 池 < 18 且 `V > 60,000`：不走兜底，保持"抽签中" |
-| 验收 32 | 等待超过 336 小时后，治理可裁定停滞案件；未超时调用被拒；裁定不罚没陪审员 |
+| Acceptance 30 | Pool < 18 and `V ≤ 60,000`: 3 testers with 2 votes decide |
+| Acceptance 31 | Pool < 18 and `V > 60,000`: no fallback; the case stays "in draw" |
+| Acceptance 32 | After waiting more than 336 hours, governance may rule on a stalled case; calls before the timeout are rejected; the ruling does not slash jurors |
 
-### 11.6 回归
+### 11.6 Regression
 
-| 编号 | 用例 |
+| ID | Test case |
 |---|---|
-| 验收 33 | 发布者质押公式、任务生命周期、分期释放、发行逻辑不变；仲裁场景测试与仲裁不变量测试全部通过 |
-| 验收 34 | 存储布局检查通过（快照文件只追加） |
+| Acceptance 33 | The publisher stake formula, task lifecycle, tranche release, and emission logic are unchanged; all arbitration scenario tests and arbitration invariant tests pass |
+| Acceptance 34 | The storage layout check passes (snapshot files are append-only) |
 
-涉及的测试文件：`test-solidity/unit/ValidatorStaking.t.sol`、`unit/TesterAssignment.t.sol`、`scenario/ArbitrationScenario.t.sol`、`invariant/ArbitrationInvariants.t.sol`，以及任务托管合约发布拦截的单元测试。
+Test files involved: `test-solidity/unit/ValidatorStaking.t.sol`, `unit/TesterAssignment.t.sol`, `scenario/ArbitrationScenario.t.sol`, `invariant/ArbitrationInvariants.t.sol`, plus the unit tests for publish-time blocking in the task escrow contract.
 
 ---
 
-## 12. 假设与运营约束
+## 12. Assumptions and Operational Constraints
 
-| 项 | 内容 | 失效时的措施 |
+| Item | Content | Mitigation if invalid |
 |---|---|---|
-| 串通发现率 p = 30% | 决定所有暴露倍数、标的上限、T5 天数、兜底上限 | 下调两档暴露倍数与兜底标的上限，缩短 T5 最长天数 |
-| 争议标的上界 = 0.65 × 预留额（执行者份额参数） | 发布拦截的上界 | 实际 V 低于该值时拦截偏保守，不会不安全 |
-| 测试者月收入约 6,000 到 7,000 AGT | 测试准入质押的原始依据（初版 2 万，现为 10 万） | 用链上近 30 天测试者收入中位数重新标定 |
-| 收入主要来自复核份额 | 100 万门槛的可持续性 | 任务量不足时放缓门槛爬坡 |
+| Collusion detection rate p = 30% | Determines all exposure multiples, the disputed value cap, T5 days, and the fallback cap | Lower the exposure multiples for both modes and the fallback disputed value cap, and shorten the T5 maximum days |
+| Disputed value upper bound = 0.65 × reserve (executor share parameter) | The upper bound for publish-time blocking | When the actual V is below this value, blocking is conservative but never unsafe |
+| Tester monthly income about 6,000 to 7,000 AGT | The original basis for the tester admission stake (20,000 initially, now 100,000) | Recalibrate using the median on-chain tester income over the last 30 days |
+| Revenue mainly from the review share | Sustainability of the 1,000,000 threshold | Slow the threshold ramp when task volume is insufficient |
 
-### 12.1 逻辑闭环说明
+### 12.1 How the logic closes
 
-本期不做的项不影响主流程闭合。各环节如何闭合，以及依赖什么：
+The items not done this phase do not prevent the main flow from closing. How each link closes and what it depends on:
 
-| 环节 | 闭合方式 | 依赖 |
+| Link | How it closes | Dependency |
 |---|---|---|
-| 准入与资格 | 质押实时判定，罚后低于门槛立即停抽 | 无外部依赖 |
-| 单案风险上限 | `V ≤ μ × S`，发布时拦截，已发布案件池不足时等待或治理裁定 | 发现率假设 |
-| 过程失职（未提交、未揭示） | 锁仓内罚没，链上即时执行 | 无外部依赖 |
-| 一审错误 | 被终审推翻则罚 100% × L，并奖励申诉方与正义方 | 无外部依赖 |
-| 终审错误或串通 | 终审为终局，无链上罚没；靠 A 级串通举报全额没收，期望损失 `k × p × S ≥ V` | 协议签名者对举报出具签名；发现率取决于实际发现情况 |
-| 拆地址 / 多地址占席 | 每案证据中的回避名单与来源权重占比上限；线性权重；每个地址需 100 万质押 | 协议签名的案件证明（开案时提交，缺失则无法抽签） |
-| 池不足 | 兜底（`V ≤ 60,000`）或等待 + 治理裁定 | 治理角色 |
-| 测试者失职 | 超时未交报告罚没；作恶按 A 级串通处理 | 见下 |
+| Admission and eligibility | Stake is judged in real time; draws stop immediately when a penalty drops it below the threshold | No external dependency |
+| Single-case risk cap | `V ≤ μ × S`, blocked at publish time; for published cases with an insufficient pool, wait or rule by governance | Detection rate assumption |
+| Process negligence (no commit, no reveal) | Slashed within the lock, executed on-chain immediately | No external dependency |
+| First-instance error | Overturned by the final instance → penalty 100% × L, with rewards to the challenger and the righteous party | No external dependency |
+| Final-instance error or collusion | The final instance is final with no on-chain slashing; grade A collusion reports confiscating in full provide an expected loss of `k × p × S ≥ V` | A protocol signer signs the report; the detection rate depends on what is actually detected |
+| Address splitting / multiple addresses holding seats | Recusal list and source weight share cap in the per-case evidence; linear weight; each address requires 1,000,000 stake | Protocol-signed case proof (submitted when the case opens; without it the draw cannot proceed) |
+| Insufficient pool | Fallback (`V ≤ 60,000`) or wait + governance ruling | Governance role |
+| Tester negligence | Timeout slashing for a missing report; malice is handled as grade A collusion | See below |
 
-对"不做"各项的闭合结论：
-- **B 级串通委员会、协议复核层、30 天罚没锁仓账户**：终审为终局、罚没即时执行，三者互相不依赖，缺少它们不会留下悬空环节。代价是只有协议签名者认定的 A 级证据才能罚没，证据不足的串通不受罚，实际发现率会低于假设，由上表"串通发现率"一行的失效措施兜住。
-- **关联簇**：回避与来源占比由每案证据承担，关联簇字段不是必需路径。
-- **测试者质量罚**：测试者给出不实报告，没有链上成本。该风险由发布者评审与拒绝、争议仲裁，以及 A 级串通处理来约束；属于接受的残余风险。测试者质押为 10 万，单个测试者的影响面受任务的测试份额限制。
+Closure conclusions for the "not doing" items:
+- **Grade B collusion committee, protocol review layer, 30-day slashing lock account**: the final instance is final and slashing executes immediately; the three do not depend on each other, so omitting them leaves no dangling link. The cost is that only grade A evidence recognized by a protocol signer can trigger slashing; collusion with insufficient evidence goes unpunished, and the actual detection rate will be below the assumption, covered by the mitigation in the "collusion detection rate" row above.
+- **Related clusters**: recusal and source share are handled by the per-case evidence; the related-cluster field is not a required path.
+- **Tester quality penalty**: a tester submitting a false report bears no on-chain cost. This risk is constrained by publisher review and rejection, dispute arbitration, and grade A collusion handling; it is an accepted residual risk. The tester stake is 100,000, and a single tester's impact is bounded by the task's testing share.
 
-适用边界：
-- 唯一门槛 100 万只能安全覆盖 `V ≤ 330 万`（满编）；T5 超过 28 天不在覆盖范围。
-- 降级模式下 T4 超过约 35 天、T5 超过约 14 天的任务不在覆盖范围，由发布时拦截保证不会发布。
-- 终审为终局，串通只能靠举报与 A 级证据处理。
+Applicability boundaries:
+- The sole 1,000,000 threshold can safely cover only `V ≤ 3.3 million` (full panel); T5 beyond 28 days is out of coverage.
+- In degraded mode, tasks with T4 beyond about 35 days and T5 beyond about 14 days are out of coverage, and publish-time blocking ensures they are not published.
+- The final instance is final, so collusion can only be handled via reporting and grade A evidence.
 
 ---
 
-## 附录：公式速查
+## Appendix: Formula Quick Reference
 
 ```
-暴露倍数          μ = k × p，  k = ⌊终审人数 ÷ 2⌋ + 1
-安全条件          V ≤ μ × S
-单案锁仓          L = min( max( 5% × V, 50 ),  10% × S )
-案件费            F = max( 5% × V, 6 )
-单席多数费        R = 0.7 × F ÷ 终审多数派人数
-申诉方奖励        min( 10 × R, Z )
-剩余额            Z − 申诉方奖励；平台 30%、正义方 70%
-盈亏平衡概率      R ÷ ( R + L )
-任务预留额        Y = 最高档日费 × 运行天数
-争议标的上界      V上限 = 0.65 × Y
-发布者所需质押    10 + 10% × 在途预留额合计
-抽选权重          min( 质押, 角色权重上限 ) × 响应率 × 活跃系数
-流动性约束        池规模 × S ≤ 2 亿 AGT
-收入约束          S ≤ 年收入 ÷ 25%
+Exposure multiple            μ = k × p,  k = ⌊final jurors ÷ 2⌋ + 1
+Safety condition             V ≤ μ × S
+Per-case lock                L = min( max( 5% × V, 50 ),  10% × S )
+Case fee                     F = max( 5% × V, 6 )
+Per-seat majority fee        R = 0.7 × F ÷ number of final-instance majority jurors
+Challenger reward            min( 10 × R, Z )
+Remainder                    Z − challenger reward; platform 30%, righteous party 70%
+Break-even probability       R ÷ ( R + L )
+Task reserve                 Y = highest-tier daily fee × run days
+Disputed value upper bound   V_cap = 0.65 × Y
+Publisher required stake     10 + 10% × total in-flight reserves
+Draw weight                  min( stake, role weight cap ) × response rate × activity coefficient
+Liquidity constraint         pool size × S ≤ 200 million AGT
+Revenue constraint           S ≤ annual revenue ÷ 25%
 ```
