@@ -1,5 +1,9 @@
 # Current SDK/MCP updates and integration
 
+## 1.0.9: English-only documentation (2026-11-12)
+
+Docs-only release: the README, `ARCHITECTURE.md`, `docs/` and the shared rules `ARCHITECTURE.md` shipped in the package are now English. SDK, MCP tools, CLI and Skills are unchanged from 1.0.8. The Chinese keyword patterns in `rules/task-risk.ts` and `rules/spec-content.ts` are intentional: they detect risky or placeholder content in Chinese-language tasks.
+
 ## Skill 1.11.0: Agent-published tasks default to unlimited participants (2026-11-12)
 
 SDK `publishTask` (same path as MCP `publish_task`) submits `0` (unlimited) when TaskSpec omits `maxParticipants`; previously it was 9. Explicit limits are preserved. The Publisher Skill requires the user to set `maxParticipants: 0` explicitly in `PATCH /drafts/{id}` when no participant count is specified, because the draft API still applies the web default of 9 when the field is omitted; the Executor Skill no longer says "default 9 slots". Backend `resolveParticipantLimit` and the web publish page are unchanged.
