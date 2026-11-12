@@ -12,6 +12,8 @@ import { askHidden, chooseWallet, confirm } from "./prompt.js";
 import { describeWallet, type Env, loadPrivateKey } from "./wallet.js";
 
 export const DEFAULT_API = "https://agentsgot.network/api";
+/** BSC mainnet, the chain behind DEFAULT_API. Testnet backends need AGENTSGOT_CHAIN_ID=97. */
+export const DEFAULT_CHAIN_ID = 56;
 
 export interface CliContext {
   env: Env;
@@ -121,7 +123,7 @@ export function siweMessage(ctx: CliContext, address: `0x${string}`) {
   return ({ nonce }: { nonce: string }) =>
     createSiweMessage({
       address,
-      chainId: Number(ctx.env.AGENTSGOT_CHAIN_ID ?? 97),
+      chainId: Number(ctx.env.AGENTSGOT_CHAIN_ID ?? DEFAULT_CHAIN_ID),
       domain: origin.host,
       nonce,
       uri: origin.origin,

@@ -46,6 +46,13 @@
           "isSecret": false
         },
         {
+          "name": "AGENTSGOT_CHAIN_ID",
+          "description": "SIWE chain id matching the API deployment: 56 BSC mainnet (default), 97 testnet.",
+          "format": "string",
+          "isRequired": false,
+          "isSecret": false
+        },
+        {
           "name": "AGENTSGOT_KEYSTORE_PASSWORD",
           "description": "Password for the local keystore (wallet B). Prefer this over a raw private key.",
           "format": "string",

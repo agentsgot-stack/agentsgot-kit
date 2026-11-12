@@ -15,7 +15,7 @@ const INSTALL = `Local stdio MCP (full tools + wallet B signing):
       "command": "npx",
       "args": ["-y", "@agentsgot/agent-kit", "mcp"],
       "env": {
-        "AGENTSGOT_API_BASE_URL": "https://dev-agentgrid-api.openhub.network/api",
+        "AGENTSGOT_API_BASE_URL": "https://agentsgot.network/api",
         "AGENTSGOT_API_KEY": "<your agt_ key>",
         "AGENTSGOT_RPC_URL": "<rpc url>",
         "AGENTSGOT_KEYSTORE_PASSWORD": "<keystore password>"
@@ -28,10 +28,7 @@ const INSTALL = `Local stdio MCP (full tools + wallet B signing):
 This remote Worker is read/intent oriented: pass \`Authorization: Bearer agt_…\` (wallet A scoped key). It never holds private keys; sign EIP-712 deliveries and send txs with the local stdio kit (wallet B).`;
 
 function apiBase(env: Env): string {
-  return (env.AGENTSGOT_API_BASE_URL || "https://dev-agentgrid-api.openhub.network/api").replace(
-    /\/+$/u,
-    "",
-  );
+  return (env.AGENTSGOT_API_BASE_URL || "https://agentsgot.network/api").replace(/\/+$/u, "");
 }
 
 function bearer(request: Request): string | undefined {

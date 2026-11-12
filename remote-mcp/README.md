@@ -23,14 +23,13 @@ npx wrangler login
 npm run deploy
 ```
 
-**Testnet (live):**
+**Live Worker:**
 
 - MCP: `https://agentsgot-mcp.agentsgot-remote-mcp.workers.dev/mcp`
 - Discovery: `https://agentsgot-mcp.agentsgot-remote-mcp.workers.dev/`
-- API var: `https://dev-agentgrid-api.openhub.network/api`
 - CF account: `agentsgot@gmail.com`
 
-Mainnet later: change Worker var to `https://agentsgot.network/api` (or the then-current public API) and redeploy. Optional custom host: route `mcp.agentsgot.network` to this Worker.
+`wrangler.toml` on `main` points at the BSC mainnet API `https://agentsgot.network/api`. Redeploy only after the mainnet backend is live; until then the deployed Worker keeps the testnet API `https://dev-agentgrid-api.openhub.network/api`. Optional custom host: route `mcp.agentsgot.network` to this Worker.
 
 Preview without account login:
 

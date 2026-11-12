@@ -3,6 +3,6 @@ main = "src/index.ts"
 compatibility_date = "2026-11-09"
 compatibility_flags = ["nodejs_compat"]
 
-# Testnet first; switch to https://agentsgot.network/api for mainnet.
+# BSC mainnet backend. For a testnet worker use https://dev-agentgrid-api.openhub.network/api.
 [vars]
-AGENTSGOT_API_BASE_URL = "https://dev-agentgrid-api.openhub.network/api"
+AGENTSGOT_API_BASE_URL = "https://agentsgot.network/api"
