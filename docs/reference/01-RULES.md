@@ -110,7 +110,7 @@ AGT 总量 `tokenTotalAgt = 1,000,000,000 AGT`，构造时一次性铸造：
 |---|---|---|---|---|
 | 发布者 | 发布任务、预留质押、提前截止、评审、发起争议 | 持有足够可用质押 | 任何钱包 | — |
 | 执行者 | 独立完成任务并提交交付 | 钱包签名登录；不在冷却期 | 自由接单，提交免费 | 挖矿执行者 65%，T0 后分期解锁 |
-| 测试者 | 对每份交付逐条评估、打分；参与申诉重测 | 验证者质押 ≥ 测试准入质押（20,000 AGT）、在线 | 在线报名池中加权随机抽 3 人 | 挖矿测试者 15% |
+| 测试者 | 对每份交付逐条评估、打分；参与申诉重测 | 验证者质押 ≥ 测试准入质押（100,000 AGT）、在线 | 在线报名池中加权随机抽 3 人 | 挖矿测试者 15% |
 | 复核者 | 核验测试结论与分配计算 | 仲裁者资格（冷启动见 §2.3） | 仲裁者池中加权随机抽 `k` 人 | 以仲裁者池成员身份参与挖矿仲裁者 10% |
 | 争议仲裁者 | 对申诉、争议与维护期缺陷做终局裁决 | 仲裁者资格 | 仲裁者池中新抽，回避本任务所有参与者 | 挖矿仲裁者 10%（办案期间权重加成）+ 申诉费 |
 
@@ -134,7 +134,7 @@ AGT 总量 `tokenTotalAgt = 1,000,000,000 AGT`，构造时一次性铸造：
 
 测试者、复核者、仲裁者共用同一份验证者质押；同一任务内角色互斥。
 
-- **质押要求（角色化固定门槛）**：测试准入质押 `testerMinStakeAgt = 20,000 AGT`；仲裁准入质押 `arbitratorMinStakeAgt = 1,000,000 AGT`（复核者同仲裁者）。资格按当前质押实时判定，不再有动态要求额。同一份质押可同时满足两个池。
+- **质押要求（角色化固定门槛）**：测试准入质押 `testerMinStakeAgt = 100,000 AGT`；仲裁准入质押 `arbitratorMinStakeAgt = 1,000,000 AGT`（复核者同仲裁者）。资格按当前质押实时判定，不再有动态要求额。同一份质押可同时满足两个池。
 - **存款上限**：存款后总质押不得超过 `validatorStakeAgt.voluntaryMax = 3,000,000 AGT`。
 - **锁定与退出**：首次质押后锁定 14 天；申请退出后冷却 7 天；无进行中的案件才可提走。
 - **状态**：`Active`（可被抽取）；`CoolingDown`（申请退出冷却中）；`Inactive`（无质押）。`Grace` 仅为历史兼容保留，不再产生。
@@ -573,7 +573,7 @@ meetsMinimum(验证者, 仲裁者) = 质押 ≥ arbitratorMinStakeAgt    且未�
 
 | 符号 | 参数键 | 规则值（AGT） | 合约值（wei） |
 |---|---|---:|---:|
-| 测试准入质押 | `testerMinStakeAgt` | 20,000 | `20000 × 10^18` |
+| 测试准入质押 | `testerMinStakeAgt` | 100,000 | `100000 × 10^18` |
 | 仲裁准入质押 | `arbitratorMinStakeAgt` | 1,000,000 | `1000000 × 10^18` |
 | `S_max` | `validatorStakeAgt.voluntaryMax` | 3,000,000 | `3000000 × 10^18` |
 | 测试权重上限 | `testerWeightCapAgt` | 200,000 | `200000 × 10^18` |
@@ -585,7 +585,7 @@ meetsMinimum(验证者, 仲裁者) = 质押 ≥ arbitratorMinStakeAgt    且未�
 
 **案件锁定：** `L = min( max(5% · V, L_min), 10% · 质押 )`，`V = 65% · C`（§4.3），全部为 wei。`L_min = caseLockMinAgt = 50 AGT = 50 × 10^18 wei`。
 
-**发布拦截：** 创建任务时 `V上限 = R × deductionExecBps / 10000`（65%）必须不超过仲裁庭 `maxDisputeValue()`：池 < `arbMinimumPoolSize`（18）时为兜底上限 12,000 AGT；满编时 `3.3 × 仲裁准入质押`；降级时 `1.5 × 仲裁准入质押`。超出则以 `ArbitrationCapacityInsufficient` 拒绝。
+**发布拦截：** 创建任务时 `V上限 = R × deductionExecBps / 10000`（65%）必须不超过仲裁庭 `maxDisputeValue()`：池 < `arbMinimumPoolSize`（18）时为兜底上限 60,000 AGT；满编时 `3.3 × 仲裁准入质押`；降级时 `1.5 × 仲裁准入质押`。超出则以 `ArbitrationCapacityInsufficient` 拒绝。
 
 ### 5.2 发布者基础质押
 
@@ -630,7 +630,7 @@ seed = keccak256( blockhash(B_target), 任务 ID, 阶段, 轮次 )
 |---|---:|---:|---:|
 | ≥ 40 | 11 | 21 | 3.3 |
 | 18–39 | 5 | 9 | 1.5 |
-| < 18 | 仅 `V ≤ 12,000 AGT` 时 3 名测试者 2 票兜底；否则案件保持"抽签中"，超过 336 小时由治理 `resolveStalledCase` 裁定 | — | — |
+| < 18 | 仅 `V ≤ 60,000 AGT` 时 3 名测试者 2 票兜底；否则案件保持"抽签中"，超过 336 小时由治理 `resolveStalledCase` 裁定 | — | — |
 
 ### 7.2 流程（申诉 → 重测 → 仲裁）
 
@@ -753,7 +753,7 @@ seed = keccak256( blockhash(B_target), 任务 ID, 阶段, 轮次 )
 | 参数 | 默认值 |
 |---|---|
 | 验证者锁定/退出冷却 | 14 / 7 天 |
-| `testerMinStakeAgt` / `arbitratorMinStakeAgt` | 20,000 / 1,000,000 AGT |
+| `testerMinStakeAgt` / `arbitratorMinStakeAgt` | 100,000 / 1,000,000 AGT |
 | `validatorStakeAgt.voluntaryMax` | 3,000,000 AGT = `3000000e18` wei |
 | `testerWeightCapAgt` / `arbitratorWeightCapAgt` | 200,000 / 3,000,000 AGT |
 | 案件锁定 | `min(max(5%·V, L_min), 10%·质押)`，wei |
@@ -763,7 +763,7 @@ seed = keccak256( blockhash(B_target), 任务 ID, 阶段, 轮次 )
 | `caseFeeMinAgt` | 废弃（任务申诉与争议改用申诉费） |
 | `attendanceFeeMaxAgt` | 0.5 AGT = `5 × 10^17` wei |
 | 暴露倍数 满编/降级 | 33000 / 15000 bps |
-| 兜底标的上限 `arbFallbackMaxDisputeValueAgt` | 12,000 AGT |
+| 兜底标的上限 `arbFallbackMaxDisputeValueAgt` | 60,000 AGT |
 | 停滞等待时限 `arbPendingMaxHours` | 336 小时 |
 | 并发上限 | 3 件 |
 | 发布者基础质押 | `P_min + 10%·Σ 在途预留`，wei |
@@ -781,7 +781,7 @@ seed = keccak256( blockhash(B_target), 任务 ID, 阶段, 轮次 )
 | 申诉重测人数 | 3 |
 | 仲裁面板 ≥40 | 11 / 21 人 |
 | 仲裁面板 18–39 | 5 / 9 人 |
-| 兜底复审 | 3 人 2 票，仅 `V ≤ 12,000 AGT` |
+| 兜底复审 | 3 人 2 票，仅 `V ≤ 60,000 AGT` |
 | 最低有效揭示 | 70% |
 | 申诉费分配 | 100% 由有效揭示的仲裁员均分 |
 | 终审费 | 2 × 申诉费 |

@@ -235,10 +235,10 @@ describe("escalation and timing", () => {
 
 describe("staking", () => {
   it("uses fixed role thresholds", () => {
-    expect(validatorRoleMinimum("TESTER", defaultParams)).toBe(agtToWei(20_000));
+    expect(validatorRoleMinimum("TESTER", defaultParams)).toBe(agtToWei(100_000));
     expect(validatorRoleMinimum("ARBITRATOR", defaultParams)).toBe(agtToWei(1_000_000));
-    expect(qualifiedValidatorRoles(agtToWei(19_999), defaultParams)).toEqual([]);
-    expect(qualifiedValidatorRoles(agtToWei(20_000), defaultParams)).toEqual(["TESTER"]);
+    expect(qualifiedValidatorRoles(agtToWei(99_999), defaultParams)).toEqual([]);
+    expect(qualifiedValidatorRoles(agtToWei(100_000), defaultParams)).toEqual(["TESTER"]);
     expect(qualifiedValidatorRoles(agtToWei(1_000_000), defaultParams)).toEqual([
       "TESTER",
       "ARBITRATOR",
