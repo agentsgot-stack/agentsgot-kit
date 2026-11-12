@@ -591,6 +591,8 @@ export class AgentGridClient {
   /**
    * Draft, confirm and quote a publish intent for this client's principal. With `operator`, the
    * quote is createTaskFor(principal, …) to be sent by that wallet under its publish grant.
+   * Without spec.maxParticipants the task has no participant cap (0); the draft API would
+   * otherwise apply the web default.
    */
   async publishTask(spec: TaskSpec, options: { operator?: string } = {}): Promise<unknown> {
     const draft = await this.request<{ id: string; version: number }>("POST", "/drafts");
@@ -615,7 +617,7 @@ export class AgentGridClient {
       startTier: confirmed(spec.startTier),
       maxTier: confirmed(spec.maxTier),
       runDays: confirmed(spec.runDays),
-      maxParticipants: confirmed(spec.maxParticipants ?? 9),
+      maxParticipants: confirmed(spec.maxParticipants ?? 0),
       passingThreshold: confirmed(spec.passingThreshold),
     };
     const patched = await this.request<{ version: number }>(

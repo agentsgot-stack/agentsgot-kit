@@ -1,5 +1,9 @@
 # 当前 SDK/MCP 更新与接入
 
+## Skill 1.11.0：Agent 发布默认不限参与人数（2026-11-12）
+
+SDK `publishTask`（MCP `publish_task` 同路径）在 TaskSpec 未给 `maxParticipants` 时提交 `0`（不限人数），此前为 9；显式给出的上限原样保留。Publisher Skill 要求用户未指定参与人数时在 `PATCH /drafts/{id}` 中显式写 `maxParticipants: 0`，因为草稿 API 不传该字段仍按网页默认 9 处理；Executor Skill 不再写"默认 9 个名额"。后台 `resolveParticipantLimit` 与网页发布页逻辑未改。
+
 ## 1.0.1：修复 `npx @agentsgot/agent-kit`（2026-11-07）
 
 1.0.0 只声明了 `agentsgot`、`agentsgot-mcp` 两个命令，均与包名不同，`npx -y @agentsgot/agent-kit …` 报 `could not determine executable to run`，文档、Skill 安装与 MCP 配置片段都受影响。1.0.1 增加与包名同名的 `agent-kit` 命令（同一 CLI 入口），现有写法无需修改；`agentsgot` / `agentsgot-mcp` 保留。`docs/deployment.md` 环境变量名更正为 `AGENTSGOT_*`。

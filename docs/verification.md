@@ -1,5 +1,12 @@
 # 当前 SDK/MCP 检查记录
 
+## Skill 1.11.0：Agent 发布默认不限参与人数（2026-11-12）
+
+- `pnpm run build:skills`：退出 0，写出 5 个文件；`node scripts/build-skills.mjs --check`：退出 0，无漂移。
+- `npx vitest run`：退出 0，13 个文件 288 项通过；`client.test.ts` 断言未传 `maxParticipants` 时草稿字段为 `0`，显式传 5 时保留 5。
+- `pnpm lint`：退出 0。
+- `skills/dist` 已同步到 web `public/skills/*/SKILL.md` 与 `public/.well-known/agent-skills.json`（1.11.0）；后台与网页发布逻辑未改，未连接后台、钱包或发送交易。
+
 ## remote-mcp Worker 测网部署（2026-11-09）
 
 - `wrangler login`：`agentsgot@gmail.com`（Account `Agentsgot@gmail.com's Account`）。
