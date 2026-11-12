@@ -702,7 +702,7 @@ export class AgentGridMcpServer {
       consequences: `${owner} stays the publisher: the reserve comes from its stake and is drawn from its grant allowance, refunds return to it and the task is listed under its account. The local wallet only signs and pays gas; it may accept the result and amend the spec once, but appeals and maintenance disputes still need ${owner}'s own wallet.`,
       grant: operatorState.operator?.active
         ? "Active. The key owner can change or revoke it in Agent Center (PublisherStaking.setPublishOperator)."
-        : `Not granted. ${owner} can authorize ${local} in Agent Center → publish operator (PublisherStaking.setPublishOperator(${local}, allowance, expiresAt)); after that this agent publishes for it without browser signing per task.`,
+        : `Not granted. ${owner} can authorize ${local} in Agent Center → Credentials → API Key with "Publish tasks" (PublisherStaking.setPublishOperator(${local}, allowance, expiresAt)); after that this agent publishes for it without browser signing per task.`,
     };
     const ready = [
       operator?.canPublish && "operator",
