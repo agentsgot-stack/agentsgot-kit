@@ -145,6 +145,11 @@ interface SentCheckpoint {
 export const RESEND_AFTER_MS = 10 * 60_000;
 /** A deadline closer than this raises a deadline_warning event. */
 export const DEADLINE_WARNING_MS = 6 * 3600_000;
+/**
+ * Consecutive produceWork failures after which the claim is released. Heartbeats would otherwise
+ * keep an undeliverable claim alive, holding the slot and blocking the publisher's early close.
+ */
+export const MAX_DELIVERY_FAILURES = 3;
 
 /**
  * Next-actions driven runner for one or more roles. Each `tick()` pulls
@@ -271,7 +276,23 @@ export class RoleRunner {
       case "SUBMIT_DELIVERY": {
         if (!handlers.produceWork || !taskId)
           return this.result(item, "skipped", "no produceWork handler; deliver manually");
-        const work = await handlers.produceWork(await client.getTask(taskId));
+        const failuresKey = `delivery-failures:${id}`;
+        let work: Awaited<ReturnType<NonNullable<RoleHandlers["produceWork"]>>>;
+        try {
+          work = await handlers.produceWork(await client.getTask(taskId));
+        } catch (error) {
+          const failures = ((await this.options.checkpoints.get<number>(failuresKey)) ?? 0) + 1;
+          await this.options.checkpoints.set(failuresKey, failures);
+          if (failures < MAX_DELIVERY_FAILURES) throw error;
+          await client.releaseClaim(id);
+          await this.options.checkpoints.set(failuresKey, 0);
+          return this.result(
+            item,
+            "done",
+            `released claim after ${failures} failed delivery attempts: ${message(error)}`,
+          );
+        }
+        await this.options.checkpoints.set(failuresKey, 0);
         const signed = await client.submitWork({
           claimId: id,
           files: work.files,

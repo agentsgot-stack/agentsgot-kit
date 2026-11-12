@@ -4,6 +4,7 @@ import {
   AgentGridError,
   deadlineMode,
   InMemoryCheckpointAdapter,
+  MAX_DELIVERY_FAILURES,
   mergedSchedules,
   type NextAction,
   RoleRunner,
@@ -52,6 +53,36 @@ describe("RoleRunner", () => {
     expect(c.commitTesterDraw).toHaveBeenCalledWith("t1");
     expect(c.revealTesterDraw).toHaveBeenCalledWith("t1");
     expect(report.events.map(({ type }) => type)).toEqual(["delivery_signed", "testers_drawn"]);
+  });
+
+  it("releases a claim after repeated delivery failures instead of heartbeating it forever", async () => {
+    const c = client(
+      [item({ kind: "SUBMIT_DELIVERY", role: "executor", subject: { kind: "CLAIM", id: "c1" } })],
+      {
+        getTask: vi.fn(async () => ({ taskId: "t1" })),
+        releaseClaim: vi.fn(async () => ({})),
+        submitWork: vi.fn(),
+      },
+    );
+    const runner = new RoleRunner({
+      client: c,
+      roles: ["executor"],
+      checkpoints: new InMemoryCheckpointAdapter(),
+      handlers: {
+        produceWork: async () => {
+          throw new Error("LLM HTTP 402");
+        },
+      },
+    });
+    for (let tick = 1; tick < MAX_DELIVERY_FAILURES; tick += 1) {
+      expect((await runner.tick()).handled[0]?.outcome).toBe("error");
+      expect(c.releaseClaim).not.toHaveBeenCalled();
+    }
+    const report = await runner.tick();
+    expect(c.releaseClaim).toHaveBeenCalledWith("c1");
+    expect(c.submitWork).not.toHaveBeenCalled();
+    expect(report.handled[0]).toMatchObject({ outcome: "done" });
+    expect(report.handled[0]?.detail).toMatch(/released claim/u);
   });
 
   it("retries reveal on the next tick when the seed block is not mined", async () => {
