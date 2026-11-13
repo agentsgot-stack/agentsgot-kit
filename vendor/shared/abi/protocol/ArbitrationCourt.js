@@ -240,12 +240,53 @@ export const arbitrationCourtAbi = [
   },
   {
     "type": "function",
+    "name": "commitVoteFor",
+    "inputs": [
+      {
+        "name": "caseId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "juror",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "commitments",
+        "type": "bytes32[]",
+        "internalType": "bytes32[]"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "confirmSeat",
     "inputs": [
       {
         "name": "caseId",
         "type": "bytes32",
         "internalType": "bytes32"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "confirmSeatFor",
+    "inputs": [
+      {
+        "name": "caseId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "juror",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "outputs": [],
@@ -656,6 +697,39 @@ export const arbitrationCourtAbi = [
   },
   {
     "type": "function",
+    "name": "revealVoteFor",
+    "inputs": [
+      {
+        "name": "caseId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "juror",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "satisfied",
+        "type": "bool[]",
+        "internalType": "bool[]"
+      },
+      {
+        "name": "reasonHashes",
+        "type": "bytes32[]",
+        "internalType": "bytes32[]"
+      },
+      {
+        "name": "salt",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "rulingOf",
     "inputs": [
       {
@@ -844,6 +918,24 @@ export const arbitrationCourtAbi = [
         "name": "caseId",
         "type": "bytes32",
         "internalType": "bytes32"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "waiveAppealFor",
+    "inputs": [
+      {
+        "name": "caseId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "party",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "outputs": [],

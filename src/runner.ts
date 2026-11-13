@@ -42,8 +42,8 @@ export interface RoleHandlers {
   }>;
   /**
    * Executor: after postResult, decide whether to waive the appeal window or open an appeal.
-   * Waive must be sent from the posted executor wallet (wallet A); a delegated local signer
-   * cannot submit waiveAppeal on-chain.
+   * Waive is sent by the posted executor wallet, or by a delegated local signer holding the
+   * executor's arbitration operator grant (ValidatorStaking.setArbitrationOperator).
    */
   decideAppeal?(input: {
     task: GetTaskResponse;

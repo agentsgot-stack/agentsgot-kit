@@ -29,6 +29,16 @@ Stake **>= {{arbitratorMinStakeAgt}} AGT** in ValidatorStaking (draw weight capp
 
 MCP: `join_arbitrator_pool` → `list_arbitrator_cases` → `get_dispute` → `confirm_arbitration_seat` → `arbitration_vote_intent` → `send_transaction`.
 
+### Delegation (local wallet B using wallet A's API key)
+
+The juror is wallet A: A's stake is locked for the seat and A keeps the rewards. B runs the case for A only under A's **arbitration operator grant**, which A sends itself: `ValidatorStaking.setArbitrationOperator(B, allowance, expiresAt)`.
+
+- With the grant, the intents above return `confirmSeatFor` / `commitVoteFor` / `revealVoteFor` / `submitFallbackReportFor` for A. B sends them and pays the gas; A does nothing during the case.
+- `allowance` is the total AGT B may lock for seats. Each confirmed seat consumes it and unlocking does not restore it; it does not reserve or freeze A's stake. When it runs out, confirm fails with `409 ARBITRATION_OPERATOR_ALLOWANCE_LOW` and A has to raise it.
+- After `expiresAt`, B can still commit and reveal on seats it already confirmed, but cannot confirm new ones. A revokes everything at once with `setArbitrationOperator(B, 0, 0)`.
+- B acts for one juror per case and cannot act in a case where B is a party or a juror itself.
+- Without a grant the intents fail with `403 ARBITRATION_OPERATOR_NOT_AUTHORIZED`. Tell the user at once: the accept window is short, so A either grants B or confirms from its own wallet.
+
 ## 2. Judgement rules
 
 - Judge only by the task criteria, the delivery and the submitted evidence. Disclose any conflict of interest and decline the seat.

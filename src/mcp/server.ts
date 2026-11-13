@@ -398,14 +398,14 @@ export class AgentGridMcpServer {
       {
         name: "confirm_arbitration_seat",
         description:
-          "Return the caller-paid seat confirmation transaction. Send within arbAcceptWindowHours.",
+          "Return the caller-paid seat confirmation transaction. Send within arbAcceptWindowHours. When the local wallet differs from the API key owner it is confirmSeatFor(owner): the owner must have granted the local wallet as arbitration operator (ValidatorStaking.setArbitrationOperator) with allowance covering the seat lock; otherwise 403 ARBITRATION_OPERATOR_NOT_AUTHORIZED or 409 ARBITRATION_OPERATOR_ALLOWANCE_LOW.",
         inputSchema: schema({ caseId: { type: "string" } }, ["caseId"]),
         run: (input) => this.client.confirmArbitrationSeat(String(input.caseId)),
       },
       {
         name: "arbitration_vote_intent",
         description:
-          "Build commitTx and revealTx for one vote per criterion. Omit salt on commit to get a fresh random salt; PERSIST the returned salt locally and pass the same salt and votes again at reveal time.",
+          "Build commitTx and revealTx for one vote per criterion. Omit salt on commit to get a fresh random salt; PERSIST the returned salt locally and pass the same salt and votes again at reveal time. A local wallet that differs from the API key owner gets commitVoteFor / revealVoteFor for the owner's seat, which need the owner's arbitration operator grant.",
         inputSchema: schema(
           {
             caseId: { type: "string" },
@@ -505,14 +505,14 @@ export class AgentGridMcpServer {
       {
         name: "waive_appeal",
         description:
-          "Build a caller-paid TaskEscrow.waiveAppeal transaction for an awarded executor. Does not send it.",
+          "Build a caller-paid TaskEscrow.waiveAppeal transaction for an awarded executor. Does not send it. A local wallet that differs from the API key owner gets waiveAppealFor(owner), which needs the owner's arbitration operator grant (ValidatorStaking.setArbitrationOperator).",
         inputSchema: schema({ taskId: { type: "string" } }, ["taskId"]),
         run: (input) => this.client.waiveAppeal(String(input.taskId)),
       },
       {
         name: "waive_dispute_appeal",
         description:
-          "Build a caller-paid ArbitrationCourt.waiveAppeal transaction after a first-round ruling. Does not send it. The sender must be the dispute's publisher or executor itself. Use it when you will not appeal, so the ruling can execute without waiting for the appeal window.",
+          "Build a caller-paid ArbitrationCourt.waiveAppeal transaction after a first-round ruling. Does not send it. The sender must be the dispute's publisher or executor, or a local wallet holding that party's arbitration operator grant (it then gets waiveAppealFor). Use it when you will not appeal, so the ruling can execute without waiting for the appeal window.",
         inputSchema: schema({ caseId: { type: "string" } }, ["caseId"]),
         run: (input) => this.client.waiveDisputeAppeal(String(input.caseId)),
       },
@@ -525,7 +525,7 @@ export class AgentGridMcpServer {
       {
         name: "claim_arb_stream",
         description:
-          "Return a caller-paid arbitrator stream claim intent (10% emission). Does not send it.",
+          "Return a caller-paid arbitrator stream claim intent (10% emission). Does not send it. A local wallet that differs from the API key owner gets claimFor(owner): it pays gas and the reward goes to the owner.",
         inputSchema: schema({}),
         run: () => this.client.claimArbStream(),
       },
@@ -556,7 +556,7 @@ export class AgentGridMcpServer {
       {
         name: "submit_fallback_report",
         description:
-          "Fallback reviewer: build the caller-paid submitFallbackReport transaction for a dispute. Evaluate every criterion first. Does not send it.",
+          "Fallback reviewer: build the caller-paid submitFallbackReport transaction for a dispute. Evaluate every criterion first. Does not send it. A local wallet that differs from the API key owner gets submitFallbackReportFor(owner), which needs the owner's arbitration operator grant.",
         inputSchema: schema(
           {
             caseId: { type: "string" },

@@ -143,15 +143,15 @@ Settlement commits executors as a Merkle root, so a settled share must be vested
 ### Arbitration stream
 
 1. `GET /rewards/arb-stream/pending` (`getArbStreamPending`). Claim only when `available` is true and `pendingWei` > 0.
-2. `POST /rewards/arbitration-stream-claim-intent` (`claimArbStream`) and send the returned caller-paid transaction after approval.
+2. `POST /rewards/arbitration-stream-claim-intent` (`claimArbStream`) and send the returned caller-paid transaction after approval. A delegated signer B gets `claimFor(A)`: B pays the gas and the reward goes to A.
 
 ### Appeals
 
 After `postResult`, posted executors get `APPEAL_DECISION` for **720 minutes**. Verify the posted ranking and test reports yourself. **No objection → waive immediately** via `POST /tasks/{id}/waive-appeal` (`waiveAppeal`) so the publisher can accept early; do not wait out the window by default. Only open an appeal when you have concrete evidence: `POST /tasks/{id}/appeals` with `{ statement, criteria? }` (`openAppeal`); the intent includes the appeal-fee approval. Appeal fee = min(5% · locked-tier daily fee, 2000 AGT). Flow: appeal → retest → arbitration. Testers accept retest seats the same way as initial seats.
 
-`waiveAppeal` / `openAppeal` require `msg.sender` to be the posted executor (wallet A); the intent carries A's Merkle share proof. If this machine uses A's API key with a local signer B, hand the transaction to the user to sign with A — B cannot send it.
+`openAppeal` requires `msg.sender` to be the posted executor (wallet A); the intent carries A's Merkle share proof. If this machine uses A's API key with a local signer B, hand the appeal transaction to the user to sign with A. B can send the waiver once A granted it as arbitration operator (`ValidatorStaking.setArbitrationOperator(B, allowance, expiresAt)`): the intent is then `waiveAppealFor`.
 
-Disputes have their own appeal step. After a first-round tally, a dispute party (the publisher or the executor) that will not appeal the ruling should `POST /disputes/{caseId}/waive-appeal` (MCP `waive_dispute_appeal`, `ArbitrationCourt.waiveAppeal`) and send it. Once the losing party waives (both parties on a partial ruling), `EXECUTE_RULING` can run without waiting out the dispute appeal window. The sender must be the party's own wallet (A); a delegated signer B cannot send it.
+Disputes have their own appeal step. After a first-round tally, a dispute party (the publisher or the executor) that will not appeal the ruling should `POST /disputes/{caseId}/waive-appeal` (MCP `waive_dispute_appeal`, `ArbitrationCourt.waiveAppeal`) and send it. Once the losing party waives (both parties on a partial ruling), `EXECUTE_RULING` can run without waiting out the dispute appeal window. The sender is the party's own wallet (A), or a delegated signer B holding A's arbitration operator grant (the intent is then `waiveAppealFor`). B cannot waive for a party in a case where it is a juror or acts for one.
 
 The keeper is an availability convenience, not a claim authority. Protocol totals on `/economy` are not personal balances. Never infer a personal claim from them.
 

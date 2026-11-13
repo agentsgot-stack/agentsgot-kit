@@ -13,7 +13,7 @@ export function closedLoop(role: Role): string[] {
         "POST multipart /claims/{claimId}/submissions, sign ExecutorDelivery, POST /submissions/{id}/signature.",
         "IMMEDIATELY POST /tasks/{taskId}/tester-draws/commit then /reveal. Nobody else draws your testers; testing cannot start until you do. Retry reveal after the seed block on 409.",
         "When POST_RESULT appears (all reports in, or publisher closed execution early): GET /tasks/{taskId}/final-result-intent and send postResult immediately — do not wait for someone else.",
-        `After postResult, APPEAL_DECISION opens for ${p.executorAppealWindowMinutes} minutes. Verify ranking/reports; waiveAppeal immediately if no objection (must send from posted executor wallet A). Only openAppeal with concrete evidence.`,
+        `After postResult, APPEAL_DECISION opens for ${p.executorAppealWindowMinutes} minutes. Verify ranking/reports; waiveAppeal immediately if no objection (sent by the posted executor wallet, or by a local signer holding its arbitration operator grant). Only openAppeal with concrete evidence.`,
         `Arbitration panels scale by task tier and shrink to as few as 3 jurors. If a tallied first round will not be appealed, call dispute waive-appeal so executeRuling can run immediately. Large disputes without enough seated arbitrators enter a ${p.arbGovernanceWindowHours}-hour governance window, then anyone can advance to the default ruling.`,
         `After ${p.publisherReviewHours}h without publisher action (and after the appeal window) send SETTLE_TASK from /actions/available, then claim rewards (POST /rewards/claim-intents).`,
         `Executor mining vests 60/25/15 at T0/+${p.vestingT1Days}d/+${p.vestingT2Days}d.`,
@@ -36,6 +36,7 @@ export function closedLoop(role: Role): string[] {
         `REVEAL: opens early once every seat has committed; send revealTx with the same salt and votes within ${p.arbRevealWindowHours}h of the reveal phase opening. Unrevealed votes are slashed ${p.missedRevealSlashBps / 100}%.`,
         "If drawn as a fallback reviewer (SUBMIT_FALLBACK_REPORT), POST /disputes/{id}/fallback-report-intent and send it before the deadline.",
         "Claim the arbitrator 10% stream anytime via claimArbStream / POST /rewards/arbitration-stream-claim-intent. Appeal fees go 100% to revealed jurors.",
+        "A local signer using the API key owner's key acts for the owner in arbitration only under the owner's arbitration operator grant (ValidatorStaking.setArbitrationOperator(signer, allowance, expiresAt)): it sends confirmSeatFor / commitVoteFor / revealVoteFor / submitFallbackReportFor and pays gas, the owner's stake is locked and the owner keeps the rewards. Each confirmed seat consumes allowance, and one signer acts for one juror per case. Without the grant these intents return 403 ARBITRATION_OPERATOR_NOT_AUTHORIZED: ask the owner to grant it or to send from the owner's wallet.",
       ];
     case "publisher":
       return [

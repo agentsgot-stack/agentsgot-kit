@@ -337,23 +337,54 @@ export class AgentGridClient {
     return this.request("POST", `/tasks/${taskId}/appeals`, input);
   }
 
-  /** TaskEscrow.waiveAppeal intent for an awarded executor. */
+  /**
+   * Names the local wallet as the sender of an arbitration transaction. The API returns the plain
+   * call when that wallet is the authenticated account. For a delegated signer it returns the
+   * `…For` variant, which the contracts accept under the account's arbitration operator grant
+   * (ValidatorStaking.setArbitrationOperator); the account keeps the role and the rewards.
+   */
+  private arbitrationSender(): { operator: string } {
+    return { operator: this.options.wallet.address };
+  }
+
+  /** TaskEscrow.waiveAppeal intent for an awarded executor (waiveAppealFor from its operator). */
   waiveAppeal(taskId: string): Promise<WaiveTaskAppealResponse> {
-    return this.request("POST", `/tasks/${taskId}/waive-appeal`);
+    return this.request(
+      "POST",
+      `/tasks/${taskId}/waive-appeal`,
+      undefined,
+      undefined,
+      this.arbitrationSender(),
+    );
   }
 
   /** ArbitrationCourt.waiveAppeal intent for a dispute party after a first-round tally. */
   waiveDisputeAppeal(caseId: string): Promise<WaiveDisputeAppealResponse> {
-    return this.request("POST", `/disputes/${caseId}/waive-appeal`);
+    return this.request(
+      "POST",
+      `/disputes/${caseId}/waive-appeal`,
+      undefined,
+      undefined,
+      this.arbitrationSender(),
+    );
   }
 
   getArbStreamPending(): Promise<GetArbitrationStreamPendingResponse> {
     return this.request("GET", "/rewards/arb-stream/pending");
   }
 
-  /** ArbitrationStream.claim intent for this wallet. */
+  /**
+   * ArbitrationStream claim intent for the authenticated account. A delegated signer gets
+   * claimFor(account): it pays the gas and the reward still goes to the account.
+   */
   claimArbStream(): Promise<CreateArbitrationStreamClaimIntentResponse> {
-    return this.request("POST", "/rewards/arbitration-stream-claim-intent");
+    return this.request(
+      "POST",
+      "/rewards/arbitration-stream-claim-intent",
+      undefined,
+      undefined,
+      this.arbitrationSender(),
+    );
   }
 
   /** Tester seat mining for this wallet, including partial and fully claimed states. */
@@ -500,7 +531,13 @@ export class AgentGridClient {
 
   /** Off-chain build of the caller-paid seat confirmation. Send within arbAcceptWindowHours. */
   confirmArbitrationSeat(caseId: string): Promise<ConfirmArbitrationSeatResponse> {
-    return this.request("POST", `/disputes/${caseId}/confirm`);
+    return this.request(
+      "POST",
+      `/disputes/${caseId}/confirm`,
+      undefined,
+      undefined,
+      this.arbitrationSender(),
+    );
   }
 
   /**
@@ -512,14 +549,26 @@ export class AgentGridClient {
     votes: readonly ArbitrationVote[],
     salt: string = randomSalt(),
   ): Promise<CreateArbitrationVoteIntentResponse> {
-    return this.request("POST", `/disputes/${caseId}/vote-intent`, { salt, votes });
+    return this.request(
+      "POST",
+      `/disputes/${caseId}/vote-intent`,
+      { salt, votes },
+      undefined,
+      this.arbitrationSender(),
+    );
   }
 
   createFallbackReportIntent(
     caseId: string,
     input: { approved: boolean; criteria: readonly TestCriterionResult[]; summary: string },
   ): Promise<CreateFallbackReportIntentResponse> {
-    return this.request("POST", `/disputes/${caseId}/fallback-report-intent`, input);
+    return this.request(
+      "POST",
+      `/disputes/${caseId}/fallback-report-intent`,
+      input,
+      undefined,
+      this.arbitrationSender(),
+    );
   }
 
   /**
