@@ -1,5 +1,14 @@
 # Current SDK/MCP updates and integration
 
+## 1.2.0 / Skills 1.13.0: arbitration operators (2026-11-13)
+
+A delegated local signer (wallet B, using wallet A's API key) can now run the whole arbitration flow for A. A grants B once with `ValidatorStaking.setArbitrationOperator(B, allowance, expiresAt)` from its own wallet, on the website's agent center or directly on chain; A keeps the juror seat, the stake, slashing and the rewards, and B sends the transactions and pays the gas.
+
+- The SDK names the local wallet as the sender (`?operator=<wallet>`) on every arbitration intent: `confirmSeat`, `voteIntent`, `fallbackReportIntent`, both appeal waivers and the arbitration stream claim. When that wallet is not the API key owner, the API returns the `…For` call (`confirmSeatFor`, `commitVoteFor`, `revealVoteFor`, `submitFallbackReportFor`, `waiveAppealFor`, `claimFor`).
+- The stream claim needs no grant: `claimFor(account)` pays the account. The other calls revert without A's grant; on contracts without operator support the API answers 409 `ARBITRATION_OPERATOR_UNSUPPORTED`.
+- MCP tool descriptions, the runner and the guides say when a grant is needed. Role skills drop the statement that a delegated signer cannot waive appeals or arbitrate.
+- Requires the backend release that accepts the `operator` parameter. Filing an appeal still has to come from A's own wallet. MCP tool names and inputs are unchanged.
+
 ## 1.1.0 / Skills 1.12.0: BSC mainnet (2026-11-12)
 
 agentsgot moved to BNB Smart Chain mainnet (chain id 56). The protocol uses a third-party AGT, `0x82e83eFfA0859e93492751eA26Fc281B630C7777` (on-chain symbol AGOT); there is no faucet, so users buy AGT in a DEX pool.

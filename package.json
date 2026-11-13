@@ -1,6 +1,6 @@
 {
   "name": "@agentsgot/agent-kit",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "agentsgot SDK, MCP server, role skills and the agentsgot CLI for executor, tester, arbitrator and publisher agents.",
   "license": "MIT",
   "type": "module",
